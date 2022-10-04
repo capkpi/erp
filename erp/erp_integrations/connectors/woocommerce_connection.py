@@ -3,59 +3,59 @@ import hashlib
 import hmac
 import json
 
-import frappe
-from frappe import _
-from frappe.utils import cstr
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr
 
 
 def verify_request():
-	woocommerce_settings = frappe.get_doc("Woocommerce Settings")
+	woocommerce_settings = capkpi.get_doc("Woocommerce Settings")
 	sig = base64.b64encode(
 		hmac.new(
-			woocommerce_settings.secret.encode("utf8"), frappe.request.data, hashlib.sha256
+			woocommerce_settings.secret.encode("utf8"), capkpi.request.data, hashlib.sha256
 		).digest()
 	)
 
 	if (
-		frappe.request.data
-		and not sig == frappe.get_request_header("X-Wc-Webhook-Signature", "").encode()
+		capkpi.request.data
+		and not sig == capkpi.get_request_header("X-Wc-Webhook-Signature", "").encode()
 	):
-		frappe.throw(_("Unverified Webhook Data"))
-	frappe.set_user(woocommerce_settings.creation_user)
+		capkpi.throw(_("Unverified Webhook Data"))
+	capkpi.set_user(woocommerce_settings.creation_user)
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def order(*args, **kwargs):
 	try:
 		_order(*args, **kwargs)
 	except Exception:
 		error_message = (
-			frappe.get_traceback() + "\n\n Request Data: \n" + json.loads(frappe.request.data).__str__()
+			capkpi.get_traceback() + "\n\n Request Data: \n" + json.loads(capkpi.request.data).__str__()
 		)
-		frappe.log_error(error_message, "WooCommerce Error")
+		capkpi.log_error(error_message, "WooCommerce Error")
 		raise
 
 
 def _order(*args, **kwargs):
-	woocommerce_settings = frappe.get_doc("Woocommerce Settings")
-	if frappe.flags.woocomm_test_order_data:
-		order = frappe.flags.woocomm_test_order_data
+	woocommerce_settings = capkpi.get_doc("Woocommerce Settings")
+	if capkpi.flags.woocomm_test_order_data:
+		order = capkpi.flags.woocomm_test_order_data
 		event = "created"
 
-	elif frappe.request and frappe.request.data:
+	elif capkpi.request and capkpi.request.data:
 		verify_request()
 		try:
-			order = json.loads(frappe.request.data)
+			order = json.loads(capkpi.request.data)
 		except ValueError:
 			# woocommerce returns 'webhook_id=value' for the first request which is not JSON
-			order = frappe.request.data
-		event = frappe.get_request_header("X-Wc-Webhook-Event")
+			order = capkpi.request.data
+		event = capkpi.get_request_header("X-Wc-Webhook-Event")
 
 	else:
 		return "success"
 
 	if event == "created":
-		sys_lang = frappe.get_single("System Settings").language or "en"
+		sys_lang = capkpi.get_single("System Settings").language or "en"
 		raw_billing_data = order.get("billing")
 		raw_shipping_data = order.get("shipping")
 		customer_name = raw_billing_data.get("first_name") + " " + raw_billing_data.get("last_name")
@@ -66,13 +66,13 @@ def _order(*args, **kwargs):
 
 def link_customer_and_address(raw_billing_data, raw_shipping_data, customer_name):
 	customer_woo_com_email = raw_billing_data.get("email")
-	customer_exists = frappe.get_value("Customer", {"woocommerce_email": customer_woo_com_email})
+	customer_exists = capkpi.get_value("Customer", {"woocommerce_email": customer_woo_com_email})
 	if not customer_exists:
 		# Create Customer
-		customer = frappe.new_doc("Customer")
+		customer = capkpi.new_doc("Customer")
 	else:
 		# Edit Customer
-		customer = frappe.get_doc("Customer", {"woocommerce_email": customer_woo_com_email})
+		customer = capkpi.get_doc("Customer", {"woocommerce_email": customer_woo_com_email})
 		old_name = customer.customer_name
 
 	customer.customer_name = customer_name
@@ -81,20 +81,20 @@ def link_customer_and_address(raw_billing_data, raw_shipping_data, customer_name
 	customer.save()
 
 	if customer_exists:
-		frappe.rename_doc("Customer", old_name, customer_name)
+		capkpi.rename_doc("Customer", old_name, customer_name)
 		for address_type in (
 			"Billing",
 			"Shipping",
 		):
 			try:
-				address = frappe.get_doc(
+				address = capkpi.get_doc(
 					"Address", {"woocommerce_email": customer_woo_com_email, "address_type": address_type}
 				)
 				rename_address(address, customer)
 			except (
-				frappe.DoesNotExistError,
-				frappe.DuplicateEntryError,
-				frappe.ValidationError,
+				capkpi.DoesNotExistError,
+				capkpi.DuplicateEntryError,
+				capkpi.ValidationError,
 			):
 				pass
 	else:
@@ -110,7 +110,7 @@ def create_contact(data, customer):
 	if not email and not phone:
 		return
 
-	contact = frappe.new_doc("Contact")
+	contact = capkpi.new_doc("Contact")
 	contact.first_name = data.get("first_name")
 	contact.last_name = data.get("last_name")
 	contact.is_primary_contact = 1
@@ -129,14 +129,14 @@ def create_contact(data, customer):
 
 
 def create_address(raw_data, customer, address_type):
-	address = frappe.new_doc("Address")
+	address = capkpi.new_doc("Address")
 
 	address.address_line1 = raw_data.get("address_1", "Not Provided")
 	address.address_line2 = raw_data.get("address_2", "Not Provided")
 	address.city = raw_data.get("city", "Not Provided")
 	address.woocommerce_email = customer.woocommerce_email
 	address.address_type = address_type
-	address.country = frappe.get_value("Country", {"code": raw_data.get("country", "IN").lower()})
+	address.country = capkpi.get_value("Country", {"code": raw_data.get("country", "IN").lower()})
 	address.state = raw_data.get("state")
 	address.pincode = raw_data.get("postcode")
 	address.phone = raw_data.get("phone")
@@ -153,16 +153,16 @@ def rename_address(address, customer):
 	address.address_title = customer.customer_name
 	address.save()
 
-	frappe.rename_doc("Address", old_address_title, new_address_title)
+	capkpi.rename_doc("Address", old_address_title, new_address_title)
 
 
 def link_items(items_list, woocommerce_settings, sys_lang):
 	for item_data in items_list:
 		item_woo_com_id = cstr(item_data.get("product_id"))
 
-		if not frappe.db.get_value("Item", {"woocommerce_id": item_woo_com_id}, "name"):
+		if not capkpi.db.get_value("Item", {"woocommerce_id": item_woo_com_id}, "name"):
 			# Create Item
-			item = frappe.new_doc("Item")
+			item = capkpi.new_doc("Item")
 			item.item_code = _("woocommerce - {0}", sys_lang).format(item_woo_com_id)
 			item.stock_uom = woocommerce_settings.uom or _("Nos", sys_lang)
 			item.item_group = _("WooCommerce Products", sys_lang)
@@ -174,7 +174,7 @@ def link_items(items_list, woocommerce_settings, sys_lang):
 
 
 def create_sales_order(order, woocommerce_settings, customer_name, sys_lang):
-	new_sales_order = frappe.new_doc("Sales Order")
+	new_sales_order = capkpi.new_doc("Sales Order")
 	new_sales_order.customer = customer_name
 
 	new_sales_order.po_no = new_sales_order.woocommerce_id = order.get("id")
@@ -183,7 +183,7 @@ def create_sales_order(order, woocommerce_settings, customer_name, sys_lang):
 	created_date = order.get("date_created").split("T")
 	new_sales_order.transaction_date = created_date[0]
 	delivery_after = woocommerce_settings.delivery_after_days or 7
-	new_sales_order.delivery_date = frappe.utils.add_days(created_date[0], delivery_after)
+	new_sales_order.delivery_date = capkpi.utils.add_days(created_date[0], delivery_after)
 
 	new_sales_order.company = woocommerce_settings.company
 
@@ -192,19 +192,19 @@ def create_sales_order(order, woocommerce_settings, customer_name, sys_lang):
 	new_sales_order.insert()
 	new_sales_order.submit()
 
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def set_items_in_sales_order(new_sales_order, woocommerce_settings, order, sys_lang):
-	company_abbr = frappe.db.get_value("Company", woocommerce_settings.company, "abbr")
+	company_abbr = capkpi.db.get_value("Company", woocommerce_settings.company, "abbr")
 
 	default_warehouse = _("Stores - {0}", sys_lang).format(company_abbr)
-	if not frappe.db.exists("Warehouse", default_warehouse) and not woocommerce_settings.warehouse:
-		frappe.throw(_("Please set Warehouse in Woocommerce Settings"))
+	if not capkpi.db.exists("Warehouse", default_warehouse) and not woocommerce_settings.warehouse:
+		capkpi.throw(_("Please set Warehouse in Woocommerce Settings"))
 
 	for item in order.get("line_items"):
 		woocomm_item_id = item.get("product_id")
-		found_item = frappe.get_doc("Item", {"woocommerce_id": cstr(woocomm_item_id)})
+		found_item = capkpi.get_doc("Item", {"woocommerce_id": cstr(woocomm_item_id)})
 
 		ordered_items_tax = item.get("total_tax")
 

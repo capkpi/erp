@@ -1,5 +1,5 @@
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.accounts.report.tds_payable_monthly.tds_payable_monthly import (
 	get_result,
@@ -11,7 +11,7 @@ from erp.accounts.utils import get_fiscal_year
 def execute(filters=None):
 	validate_filters(filters)
 
-	filters.naming_series = frappe.db.get_single_value("Buying Settings", "supp_master_name")
+	filters.naming_series = capkpi.db.get_single_value("Buying Settings", "supp_master_name")
 
 	columns = get_columns(filters)
 	tds_docs, tds_accounts, tax_category_map, journal_entry_party_map = get_tds_docs(filters)
@@ -25,12 +25,12 @@ def execute(filters=None):
 def validate_filters(filters):
 	"""Validate if dates are properly set and lie in the same fiscal year"""
 	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date must be before To Date"))
+		capkpi.throw(_("From Date must be before To Date"))
 
 	from_year = get_fiscal_year(filters.from_date)[0]
 	to_year = get_fiscal_year(filters.to_date)[0]
 	if from_year != to_year:
-		frappe.throw(_("From Date and To Date lie in different Fiscal Year"))
+		capkpi.throw(_("From Date and To Date lie in different Fiscal Year"))
 
 	filters["fiscal_year"] = from_year
 

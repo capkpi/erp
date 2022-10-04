@@ -1,4 +1,4 @@
-frappe.ui.form.on('Chart of Accounts Importer', {
+capkpi.ui.form.on('Chart of Accounts Importer', {
 	onload: function (frm) {
 		frm.set_value("company", "");
 		frm.set_value("import_file", "");
@@ -12,7 +12,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 		frm.set_df_property('import_file_section', 'hidden', frm.doc.company ? 0 : 1);
 
 		if (frm.doc.import_file) {
-			frappe.run_serially([
+			capkpi.run_serially([
 				() => generate_tree_preview(frm),
 				() => create_import_button(frm),
 				() => frm.set_df_property('chart_preview', 'hidden', 0)
@@ -24,7 +24,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 	},
 
 	download_template: function(frm) {
-		var d = new frappe.ui.Dialog({
+		var d = new capkpi.ui.Dialog({
 			title: __("Download Template"),
 			fields: [
 				{
@@ -59,7 +59,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 				var data = d.get_values();
 
 				if (!data.template_type) {
-					frappe.throw(__('Please select <b>Template Type</b> to download template'));
+					capkpi.throw(__('Please select <b>Template Type</b> to download template'));
 				}
 
 				open_url_post(
@@ -87,7 +87,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 	company: function (frm) {
 		if (frm.doc.company) {
 			// validate that no Gl Entry record for the company exists.
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.chart_of_accounts_importer.chart_of_accounts_importer.validate_company",
 				args: {
 					company: frm.doc.company
@@ -95,7 +95,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 				callback: function(r) {
 					if(r.message===false) {
 						frm.set_value("company", "");
-						frappe.throw(__("Transactions against the Company already exist! Chart of Accounts can only be imported for a Company with no transactions."));
+						capkpi.throw(__("Transactions against the Company already exist! Chart of Accounts can only be imported for a Company with no transactions."));
 					} else {
 						frm.trigger("refresh");
 					}
@@ -107,7 +107,7 @@ frappe.ui.form.on('Chart of Accounts Importer', {
 
 var create_import_button = function(frm) {
 	frm.page.set_primary_action(__("Import"), function () {
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.accounts.doctype.chart_of_accounts_importer.chart_of_accounts_importer.import_coa",
 			args: {
 				file_name: frm.doc.import_file,
@@ -137,7 +137,7 @@ var create_reset_button = function(frm) {
 var validate_coa = function(frm) {
 	if (frm.doc.import_file) {
 		let parent = __('All Accounts');
-		return frappe.call({
+		return capkpi.call({
 			'method': 'erp.accounts.doctype.chart_of_accounts_importer.chart_of_accounts_importer.get_coa',
 			'args': {
 				file_name: frm.doc.import_file,
@@ -160,7 +160,7 @@ var generate_tree_preview = function(frm) {
 	$(frm.fields_dict['chart_tree'].wrapper).empty(); // empty wrapper to load new data
 
 	// generate tree structure based on the csv data
-	return new frappe.ui.Tree({
+	return new capkpi.ui.Tree({
 		parent: $(frm.fields_dict['chart_tree'].wrapper),
 		label: parent,
 		expandable: true,

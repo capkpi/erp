@@ -1,8 +1,8 @@
 import json
 import random
 
-import frappe
-from frappe.utils import add_days, nowdate
+import capkpi
+from capkpi.utils import add_days, nowdate
 from six import iteritems
 
 from erp.demo.domains import data
@@ -19,8 +19,8 @@ def setup_data():
 	setup_item_price()
 	show_item_groups_in_website()
 	import_json("BOM", submit=True)
-	frappe.db.commit()
-	frappe.clear_cache()
+	capkpi.db.commit()
+	capkpi.clear_cache()
 
 
 def setup_workstation():
@@ -32,11 +32,11 @@ def setup_workstation():
 		"Packing and Testing Station",
 	]
 	for w in workstations:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Workstation",
 				"workstation_name": w,
-				"holiday_list": frappe.get_all("Holiday List")[0].name,
+				"holiday_list": capkpi.get_all("Holiday List")[0].name,
 				"hour_rate_consumable": int(random.random() * 20),
 				"hour_rate_electricity": int(random.random() * 10),
 				"hour_rate_labour": int(random.random() * 40),
@@ -48,16 +48,16 @@ def setup_workstation():
 
 def show_item_groups_in_website():
 	"""set show_in_website=1 for Item Groups"""
-	products = frappe.get_doc("Item Group", "Products")
+	products = capkpi.get_doc("Item Group", "Products")
 	products.show_in_website = 1
 	products.route = "products"
 	products.save()
 
 
 def setup_asset():
-	assets = json.loads(open(frappe.get_app_path("erp", "demo", "data", "asset.json")).read())
+	assets = json.loads(open(capkpi.get_app_path("erp", "demo", "data", "asset.json")).read())
 	for d in assets:
-		asset = frappe.new_doc("Asset")
+		asset = capkpi.new_doc("Asset")
 		asset.update(d)
 		asset.purchase_date = add_days(nowdate(), -random.randint(20, 1500))
 		asset.next_depreciation_date = add_days(asset.purchase_date, 30)
@@ -71,13 +71,13 @@ def setup_asset():
 
 
 def setup_item():
-	items = json.loads(open(frappe.get_app_path("erp", "demo", "data", "item.json")).read())
+	items = json.loads(open(capkpi.get_app_path("erp", "demo", "data", "item.json")).read())
 	for i in items:
-		item = frappe.new_doc("Item")
+		item = capkpi.new_doc("Item")
 		item.update(i)
 		if hasattr(item, "item_defaults") and item.item_defaults[0].default_warehouse:
 			item.item_defaults[0].company = data.get("Manufacturing").get("company_name")
-			warehouse = frappe.get_all(
+			warehouse = capkpi.get_all(
 				"Warehouse", filters={"warehouse_name": item.item_defaults[0].default_warehouse}, limit=1
 			)
 			if warehouse:
@@ -86,7 +86,7 @@ def setup_item():
 
 
 def setup_product_bundle():
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"doctype": "Product Bundle",
 			"new_item_code": "Wind Mill A Series with Spare Bearing",
@@ -100,7 +100,7 @@ def setup_product_bundle():
 
 
 def setup_item_price():
-	frappe.db.sql("delete from `tabItem Price`")
+	capkpi.db.sql("delete from `tabItem Price`")
 
 	standard_selling = {
 		"Base Bearing Plate": 28,
@@ -142,7 +142,7 @@ def setup_item_price():
 
 	for price_list in ("standard_buying", "standard_selling"):
 		for item, rate in iteritems(locals().get(price_list)):
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Item Price",
 					"price_list": price_list.replace("_", " ").title(),

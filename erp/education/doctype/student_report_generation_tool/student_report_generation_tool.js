@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Student Report Generation Tool', {
+capkpi.ui.form.on('Student Report Generation Tool', {
 	onload: function(frm) {
 		frm.set_query("academic_term",function(){
 			return{
@@ -30,7 +30,7 @@ frappe.ui.form.on('Student Report Generation Tool', {
 
 	student: function(frm) {
 		if (frm.doc.student) {
-			frappe.call({
+			capkpi.call({
 				method:"erp.education.api.get_current_enrollment",
 				args: {
 					"student": frm.doc.student,
@@ -51,7 +51,7 @@ frappe.ui.form.on('Student Report Generation Tool', {
 
 	terms: function(frm) {
 		if(frm.doc.terms) {
-			return frappe.call({
+			return capkpi.call({
 				method: 'erp.setup.doctype.terms_and_conditions.terms_and_conditions.get_terms_and_conditions',
 				args: {
 					template_name: frm.doc.terms,

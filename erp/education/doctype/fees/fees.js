@@ -1,9 +1,9 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on("Fees", {
+capkpi.ui.form.on("Fees", {
 	setup: function(frm) {
 		frm.add_fetch("fee_structure", "receivable_account", "receivable_account");
 		frm.add_fetch("fee_structure", "income_account", "income_account");
@@ -48,7 +48,7 @@ frappe.ui.form.on("Fees", {
 			};
 		});
 		if (!frm.doc.posting_date) {
-			frm.doc.posting_date = frappe.datetime.get_today();
+			frm.doc.posting_date = capkpi.datetime.get_today();
 		}
 
 		erp.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
@@ -64,7 +64,7 @@ frappe.ui.form.on("Fees", {
 		}
 		if(frm.doc.docstatus > 0) {
 			frm.add_custom_button(__('Accounting Ledger'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					voucher_no: frm.doc.name,
 					from_date: frm.doc.posting_date,
 					to_date: moment(frm.doc.modified).format('YYYY-MM-DD'),
@@ -72,10 +72,10 @@ frappe.ui.form.on("Fees", {
 					group_by: '',
 					show_cancelled_entries: frm.doc.docstatus === 2
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			}, __("View"));
 			frm.add_custom_button(__("Payments"), function() {
-				frappe.set_route("List", "Payment Entry", {"Payment Entry Reference.reference_name": frm.doc.name});
+				capkpi.set_route("List", "Payment Entry", {"Payment Entry Reference.reference_name": frm.doc.name});
 			}, __("View"));
 		}
 		if(frm.doc.docstatus===1 && frm.doc.outstanding_amount>0) {
@@ -94,7 +94,7 @@ frappe.ui.form.on("Fees", {
 
 	student: function(frm) {
 		if (frm.doc.student) {
-			frappe.call({
+			capkpi.call({
 				method:"erp.education.api.get_current_enrollment",
 				args: {
 					"student": frm.doc.student,
@@ -113,9 +113,9 @@ frappe.ui.form.on("Fees", {
 
 	make_payment_request: function(frm) {
 		if (!frm.doc.student_email) {
-			frappe.msgprint(__("Please set the Email ID for the Student to send the Payment Request"));
+			capkpi.msgprint(__("Please set the Email ID for the Student to send the Payment Request"));
 		} else {
-			frappe.call({
+			capkpi.call({
 				method:"erp.accounts.doctype.payment_request.payment_request.make_payment_request",
 				args: {
 					"dt": frm.doc.doctype,
@@ -126,8 +126,8 @@ frappe.ui.form.on("Fees", {
 				},
 				callback: function(r) {
 					if(!r.exc){
-						var doc = frappe.model.sync(r.message);
-						frappe.set_route("Form", doc[0].doctype, doc[0].name);
+						var doc = capkpi.model.sync(r.message);
+						capkpi.set_route("Form", doc[0].doctype, doc[0].name);
 					}
 				}
 			});
@@ -135,15 +135,15 @@ frappe.ui.form.on("Fees", {
 	},
 
 	make_payment_entry: function(frm) {
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.accounts.doctype.payment_entry.payment_entry.get_payment_entry",
 			args: {
 				"dt": frm.doc.doctype,
 				"dn": frm.doc.name
 			},
 			callback: function(r) {
-				var doc = frappe.model.sync(r.message);
-				frappe.set_route("Form", doc[0].doctype, doc[0].name);
+				var doc = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doc[0].doctype, doc[0].name);
 			}
 		});
 	},
@@ -153,13 +153,13 @@ frappe.ui.form.on("Fees", {
 	},
 
 	academic_term: function() {
-		frappe.ui.form.trigger("Fees", "program");
+		capkpi.ui.form.trigger("Fees", "program");
 	},
 
 	fee_structure: function(frm) {
 		frm.set_value("components" ,"");
 		if (frm.doc.fee_structure) {
-			frappe.call({
+			capkpi.call({
 				method: "erp.education.api.get_fee_components",
 				args: {
 					"fee_structure": frm.doc.fee_structure
@@ -167,7 +167,7 @@ frappe.ui.form.on("Fees", {
 				callback: function(r) {
 					if (r.message) {
 						$.each(r.message, function(i, d) {
-							var row = frappe.model.add_child(frm.doc, "Fee Component", "components");
+							var row = capkpi.model.add_child(frm.doc, "Fee Component", "components");
 							row.fees_category = d.fees_category;
 							row.description = d.description;
 							row.amount = d.amount;
@@ -190,7 +190,7 @@ frappe.ui.form.on("Fees", {
 });
 
 
-frappe.ui.form.on("Fee Component", {
+capkpi.ui.form.on("Fee Component", {
 	amount: function(frm) {
 		frm.trigger("calculate_total_amount");
 	}

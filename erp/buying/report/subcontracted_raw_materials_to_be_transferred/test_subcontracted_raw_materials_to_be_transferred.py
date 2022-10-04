@@ -1,12 +1,12 @@
 # Python bytecode 2.7 (62211)
-# Embedded file name: /Users/anuragmishra/frappe-develop/apps/erp/erp/buying/report/subcontracted_raw_materials_to_be_transferred/test_subcontracted_raw_materials_to_be_transferred.py
+# Embedded file name: /Users/anuragmishra/capkpi-develop/apps/erp/erp/buying/report/subcontracted_raw_materials_to_be_transferred/test_subcontracted_raw_materials_to_be_transferred.py
 # Compiled at: 2019-05-06 10:24:35
 # Decompiled by https://python-decompiler.com
 
 import json
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
 
 from erp.buying.doctype.purchase_order.purchase_order import make_rm_stock_entry
 from erp.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
@@ -31,13 +31,13 @@ class TestSubcontractedItemToBeTransferred(CapKPITestCase):
 		se = transfer_subcontracted_raw_materials(po)
 
 		col, data = execute(
-			filters=frappe._dict(
+			filters=capkpi._dict(
 				{
 					"supplier": po.supplier,
-					"from_date": frappe.utils.get_datetime(
-						frappe.utils.add_to_date(po.transaction_date, days=-10)
+					"from_date": capkpi.utils.get_datetime(
+						capkpi.utils.add_to_date(po.transaction_date, days=-10)
 					),
-					"to_date": frappe.utils.get_datetime(frappe.utils.add_to_date(po.transaction_date, days=10)),
+					"to_date": capkpi.utils.get_datetime(capkpi.utils.add_to_date(po.transaction_date, days=10)),
 				}
 			)
 		)
@@ -94,7 +94,7 @@ def transfer_subcontracted_raw_materials(po):
 		},
 	]
 	rm_item_string = json.dumps(rm_item)
-	se = frappe.get_doc(make_rm_stock_entry(po.name, rm_item_string))
+	se = capkpi.get_doc(make_rm_stock_entry(po.name, rm_item_string))
 	se.from_warehouse = "_Test Warehouse - _TC"
 	se.to_warehouse = "_Test Warehouse - _TC"
 	se.stock_entry_type = "Send to Subcontractor"

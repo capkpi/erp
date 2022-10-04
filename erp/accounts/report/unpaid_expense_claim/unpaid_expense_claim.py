@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -29,7 +29,7 @@ def get_unclaimed_expese_claims(filters):
 	if filters.get("employee"):
 		cond = "ec.employee = %(employee)s"
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			ec.employee, ec.employee_name, ec.name, ec.total_sanctioned_amount, ec.total_amount_reimbursed,

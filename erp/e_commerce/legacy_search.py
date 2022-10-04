@@ -1,6 +1,6 @@
-import frappe
-from frappe.search.full_text_search import FullTextSearch
-from frappe.utils import strip_html_tags
+import capkpi
+from capkpi.search.full_text_search import FullTextSearch
+from capkpi.utils import strip_html_tags
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.fields import ID, KEYWORD, TEXT, Schema
 from whoosh.qparser import FieldsPlugin, MultifieldParser, WildcardPlugin
@@ -38,7 +38,7 @@ class ProductSearch(FullTextSearch):
 
 	def get_document_to_index(self, item):
 		try:
-			item = frappe.get_doc("Item", item)
+			item = capkpi.get_doc("Item", item)
 			title = item.item_name
 			keywords = [item.item_group]
 
@@ -56,7 +56,7 @@ class ProductSearch(FullTextSearch):
 			elif item.description:
 				content = strip_html_tags(item.description)
 
-			return frappe._dict(
+			return capkpi._dict(
 				title=title,
 				name=item.name,
 				path=item.route,
@@ -103,7 +103,7 @@ class ProductSearch(FullTextSearch):
 		content_highlights = result.highlights("content")
 		keyword_highlights = result.highlights("keywords")
 
-		return frappe._dict(
+		return capkpi._dict(
 			title=result["title"],
 			path=result["path"],
 			keywords=result["keywords"],
@@ -114,7 +114,7 @@ class ProductSearch(FullTextSearch):
 
 
 def get_all_published_items():
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Website Item", filters={"variant_of": "", "published": 1}, pluck="item_code"
 	)
 

@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 
-frappe.ui.form.on('Program Enrollment', {
+capkpi.ui.form.on('Program Enrollment', {
 	setup: function(frm) {
 		frm.add_fetch('fee_structure', 'total_amount', 'amount');
 	},
@@ -56,7 +56,7 @@ frappe.ui.form.on('Program Enrollment', {
 	program: function(frm) {
 		frm.events.get_courses(frm);
 		if (frm.doc.program) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.education.api.get_fee_schedule',
 				args: {
 					'program': frm.doc.program,
@@ -76,16 +76,16 @@ frappe.ui.form.on('Program Enrollment', {
 	},
 
 	student_category: function() {
-		frappe.ui.form.trigger('Program Enrollment', 'program');
+		capkpi.ui.form.trigger('Program Enrollment', 'program');
 	},
 
 	academic_year: function() {
-		frappe.ui.form.trigger('Program Enrollment', 'program');
+		capkpi.ui.form.trigger('Program Enrollment', 'program');
 	},
 
 	get_courses: function(frm) {
 		frm.set_value('courses',[]);
-		frappe.call({
+		capkpi.call({
 			method: 'get_courses',
 			doc:frm.doc,
 			callback: function(r) {
@@ -97,7 +97,7 @@ frappe.ui.form.on('Program Enrollment', {
 	}
 });
 
-frappe.ui.form.on('Program Enrollment Course', {
+capkpi.ui.form.on('Program Enrollment Course', {
 	courses_add: function(frm){
 		frm.fields_dict['courses'].grid.get_field('course').get_query = function(doc) {
 			var course_list = [];

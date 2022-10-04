@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
-from frappe.model.mapper import get_mapped_doc
+import capkpi
+from capkpi.model.document import Document
+from capkpi.model.mapper import get_mapped_doc
 
 
 class FeeStructure(Document):
@@ -18,7 +18,7 @@ class FeeStructure(Document):
 			self.total_amount += d.amount
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_fee_schedule(source_name, target_doc=None):
 	return get_mapped_doc(
 		"Fee Structure",

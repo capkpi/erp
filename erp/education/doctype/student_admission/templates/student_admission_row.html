@@ -1,14 +1,14 @@
 <div class="web-list-item transaction-list-item">
-	{% set today = frappe.utils.getdate(frappe.utils.nowdate()) %}
+	{% set today = capkpi.utils.getdate(capkpi.utils.nowdate()) %}
 	<a href = "{{ doc.route }}" class="no-underline">
 		<div class="row">
 			<div class="col-sm-4 bold">
 				<span class="indicator
-				{% if frappe.utils.getdate(doc.admission_end_date) == today %}
+				{% if capkpi.utils.getdate(doc.admission_end_date) == today %}
 					red
-				{% elif frappe.utils.getdate(doc.admission_end_date) > today >= frappe.utils.getdate(doc.admission_start_date)%}
+				{% elif capkpi.utils.getdate(doc.admission_end_date) > today >= capkpi.utils.getdate(doc.admission_start_date)%}
 					green
-				{% elif frappe.utils.getdate(doc.admission_start_date) > today %}
+				{% elif capkpi.utils.getdate(doc.admission_start_date) > today %}
 					blue
 				{% else %}
 					gray
@@ -28,7 +28,7 @@
 					Starts on
 				</span>
 				<div class="text-muted bold">
-					{{ frappe.format_date(doc.admission_start_date) }}
+					{{ capkpi.format_date(doc.admission_start_date) }}
 				</div>
 			</div>
 			<div class="col-sm-3 small">
@@ -36,7 +36,7 @@
 					Ends on
 				</span>
 				<div class=" text-muted bold">
-					{{ frappe.format_date(doc.admission_end_date) }}
+					{{ capkpi.format_date(doc.admission_end_date) }}
 				</div>
 			</div>
 		</div>

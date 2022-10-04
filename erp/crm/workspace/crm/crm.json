@@ -385,7 +385,7 @@
    "format": "{} Assigned",
    "label": "Opportunity",
    "link_to": "Opportunity",
-   "stats_filter": "{\"_assign\": [\"like\", '%' + frappe.session.user + '%']}",
+   "stats_filter": "{\"_assign\": [\"like\", '%' + capkpi.session.user + '%']}",
    "type": "DocType"
   },
   {

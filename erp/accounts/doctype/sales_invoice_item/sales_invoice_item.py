@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from frappe.model.document import Document
+from capkpi.model.document import Document
 
 
 class SalesInvoiceItem(Document):

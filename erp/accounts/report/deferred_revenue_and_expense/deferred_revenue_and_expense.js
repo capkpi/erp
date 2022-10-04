@@ -9,7 +9,7 @@ function get_filters() {
 			"label": __("Company"),
 			"fieldtype": "Link",
 			"options": "Company",
-			"default": frappe.defaults.get_user_default("Company"),
+			"default": capkpi.defaults.get_user_default("Company"),
 			"reqd": 1
 		},
 		{
@@ -20,13 +20,13 @@ function get_filters() {
 			"default": ["Fiscal Year"],
 			"reqd": 1,
 			on_change: function() {
-				let filter_based_on = frappe.query_report.get_filter_value('filter_based_on');
-				frappe.query_report.toggle_filter_display('from_fiscal_year', filter_based_on === 'Date Range');
-				frappe.query_report.toggle_filter_display('to_fiscal_year', filter_based_on === 'Date Range');
-				frappe.query_report.toggle_filter_display('period_start_date', filter_based_on === 'Fiscal Year');
-				frappe.query_report.toggle_filter_display('period_end_date', filter_based_on === 'Fiscal Year');
+				let filter_based_on = capkpi.query_report.get_filter_value('filter_based_on');
+				capkpi.query_report.toggle_filter_display('from_fiscal_year', filter_based_on === 'Date Range');
+				capkpi.query_report.toggle_filter_display('to_fiscal_year', filter_based_on === 'Date Range');
+				capkpi.query_report.toggle_filter_display('period_start_date', filter_based_on === 'Fiscal Year');
+				capkpi.query_report.toggle_filter_display('period_end_date', filter_based_on === 'Fiscal Year');
 
-				frappe.query_report.refresh();
+				capkpi.query_report.refresh();
 			}
 		},
 		{
@@ -48,7 +48,7 @@ function get_filters() {
 			"label": __("Start Year"),
 			"fieldtype": "Link",
 			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"default": capkpi.defaults.get_user_default("fiscal_year"),
 			"reqd": 1
 		},
 		{
@@ -56,7 +56,7 @@ function get_filters() {
 			"label": __("End Year"),
 			"fieldtype": "Link",
 			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"default": capkpi.defaults.get_user_default("fiscal_year"),
 			"reqd": 1
 		},
 		{
@@ -94,17 +94,17 @@ function get_filters() {
 	return filters;
 }
 
-frappe.query_reports["Deferred Revenue and Expense"] = {
+capkpi.query_reports["Deferred Revenue and Expense"] = {
 	"filters": get_filters(),
 	"formatter": function(value, row, column, data, default_formatter){
 		return default_formatter(value, row, column, data);
 	},
 	onload: function(report){
-		let fiscal_year = frappe.defaults.get_user_default("fiscal_year");
+		let fiscal_year = capkpi.defaults.get_user_default("fiscal_year");
 
-		frappe.model.with_doc("Fiscal Year", fiscal_year, function(r) {
-			var fy = frappe.model.get_doc("Fiscal Year", fiscal_year);
-			frappe.query_report.set_filter_value({
+		capkpi.model.with_doc("Fiscal Year", fiscal_year, function(r) {
+			var fy = capkpi.model.get_doc("Fiscal Year", fiscal_year);
+			capkpi.query_report.set_filter_value({
 				period_start_date: fy.year_start_date,
 				period_end_date: fy.year_end_date
 			});

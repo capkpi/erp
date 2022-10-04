@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import strip
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import strip
 
 
 class CouponCode(Document):
@@ -17,10 +17,10 @@ class CouponCode(Document):
 			if self.coupon_type == "Promotional":
 				self.coupon_code = "".join(i for i in self.coupon_name if not i.isdigit())[0:8].upper()
 			elif self.coupon_type == "Gift Card":
-				self.coupon_code = frappe.generate_hash()[:10].upper()
+				self.coupon_code = capkpi.generate_hash()[:10].upper()
 
 	def validate(self):
 		if self.coupon_type == "Gift Card":
 			self.maximum_use = 1
 			if not self.customer:
-				frappe.throw(_("Please select the customer."))
+				capkpi.throw(_("Please select the customer."))

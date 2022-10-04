@@ -3,10 +3,10 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestDisease(unittest.TestCase):
 	def test_treatment_period(self):
-		disease = frappe.get_doc("Disease", "Aphids")
+		disease = capkpi.get_doc("Disease", "Aphids")
 		self.assertEqual(disease.treatment_period, 3)

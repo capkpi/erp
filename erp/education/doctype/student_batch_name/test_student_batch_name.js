@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Student Batch Name', function(assert){
 	assert.expect(1);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Student Batch Name', [
+			return capkpi.tests.make('Student Batch Name', [
 				{batch_name: 'A'}
 			]);
 		},

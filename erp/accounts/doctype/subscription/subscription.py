@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils.data import (
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils.data import (
 	add_days,
 	add_to_date,
 	cint,
@@ -136,7 +136,7 @@ class Subscription(Document):
 		same billing interval
 		"""
 		if billing_cycle_data and len(billing_cycle_data) != 1:
-			frappe.throw(_("You can only have Plans with the same billing cycle in a Subscription"))
+			capkpi.throw(_("You can only have Plans with the same billing cycle in a Subscription"))
 
 	def get_billing_cycle_and_interval(self):
 		"""
@@ -145,7 +145,7 @@ class Subscription(Document):
 		You shouldn't need to call this directly. Use `get_billing_cycle` instead.
 		"""
 		plan_names = [plan.plan for plan in self.plans]
-		billing_info = frappe.db.sql(
+		billing_info = capkpi.db.sql(
 			"select distinct `billing_interval`, `billing_interval_count` "
 			"from `tabSubscription Plan` "
 			"where name in %s",
@@ -190,7 +190,7 @@ class Subscription(Document):
 		Used when the `Subscription` needs to decide what to do after the current generated
 		invoice is past it's due date and grace period.
 		"""
-		subscription_settings = frappe.get_single("Subscription Settings")
+		subscription_settings = capkpi.get_single("Subscription Settings")
 		if self.status == "Past Due Date" and self.is_past_grace_period():
 			self.status = "Cancelled" if cint(subscription_settings.cancel_after_grace) else "Unpaid"
 
@@ -203,7 +203,7 @@ class Subscription(Document):
 		elif self.status == "Active" and self.end_date and getdate() > getdate(self.end_date):
 			self.status = "Completed"
 		elif self.is_past_grace_period():
-			subscription_settings = frappe.get_single("Subscription Settings")
+			subscription_settings = capkpi.get_single("Subscription Settings")
 			self.status = "Cancelled" if cint(subscription_settings.cancel_after_grace) else "Unpaid"
 		elif self.current_invoice_is_past_due() and not self.is_past_grace_period():
 			self.status = "Past Due Date"
@@ -237,7 +237,7 @@ class Subscription(Document):
 		"""
 		current_invoice = self.get_current_invoice()
 		if self.current_invoice_is_past_due(current_invoice):
-			subscription_settings = frappe.get_single("Subscription Settings")
+			subscription_settings = capkpi.get_single("Subscription Settings")
 			grace_period = cint(subscription_settings.grace_period)
 
 			return getdate() > add_days(current_invoice.due_date, grace_period)
@@ -262,11 +262,11 @@ class Subscription(Document):
 
 		if len(self.invoices):
 			current = self.invoices[-1]
-			if frappe.db.exists(doctype, current.get("invoice")):
-				doc = frappe.get_doc(doctype, current.get("invoice"))
+			if capkpi.db.exists(doctype, current.get("invoice")):
+				doc = capkpi.get_doc(doctype, current.get("invoice"))
 				return doc
 			else:
-				frappe.throw(_("Invoice {0} no longer exists").format(current.get("invoice")))
+				capkpi.throw(_("Invoice {0} no longer exists").format(current.get("invoice")))
 
 	def is_new_subscription(self):
 		"""
@@ -287,20 +287,20 @@ class Subscription(Document):
 		"""
 		if self.trial_period_start and self.trial_period_end:
 			if getdate(self.trial_period_end) < getdate(self.trial_period_start):
-				frappe.throw(_("Trial Period End Date Cannot be before Trial Period Start Date"))
+				capkpi.throw(_("Trial Period End Date Cannot be before Trial Period Start Date"))
 
 		if self.trial_period_start and not self.trial_period_end:
-			frappe.throw(_("Both Trial Period Start Date and Trial Period End Date must be set"))
+			capkpi.throw(_("Both Trial Period Start Date and Trial Period End Date must be set"))
 
 		if self.trial_period_start and getdate(self.trial_period_start) > getdate(self.start_date):
-			frappe.throw(_("Trial Period Start date cannot be after Subscription Start Date"))
+			capkpi.throw(_("Trial Period Start date cannot be after Subscription Start Date"))
 
 	def validate_end_date(self):
 		billing_cycle_info = self.get_billing_cycle_data()
 		end_date = add_to_date(self.start_date, **billing_cycle_info)
 
 		if self.end_date and getdate(self.end_date) <= getdate(end_date):
-			frappe.throw(
+			capkpi.throw(
 				_("Subscription End Date must be after {0} as per the subscription plan").format(end_date)
 			)
 
@@ -309,10 +309,10 @@ class Subscription(Document):
 			billing_info = self.get_billing_cycle_and_interval()
 
 			if not self.end_date:
-				frappe.throw(_("Subscription End Date is mandatory to follow calendar months"))
+				capkpi.throw(_("Subscription End Date is mandatory to follow calendar months"))
 
 			if billing_info[0]["billing_interval"] != "Month":
-				frappe.throw(
+				capkpi.throw(
 					_("Billing Interval in Subscription Plan must be Month to follow calendar months")
 				)
 
@@ -341,13 +341,13 @@ class Subscription(Document):
 		"""
 		doctype = "Sales Invoice" if self.party_type == "Customer" else "Purchase Invoice"
 
-		invoice = frappe.new_doc(doctype)
+		invoice = capkpi.new_doc(doctype)
 
 		# For backward compatibility
 		# Earlier subscription didn't had any company field
 		company = self.get("company") or get_default_company()
 		if not company:
-			frappe.throw(
+			capkpi.throw(
 				_("Company is mandatory was generating invoice. Please set default company in Global Defaults")
 			)
 
@@ -365,7 +365,7 @@ class Subscription(Document):
 			invoice.customer = self.party
 		else:
 			invoice.supplier = self.party
-			if frappe.db.get_value("Supplier", self.party, "tax_withholding_category"):
+			if capkpi.db.get_value("Supplier", self.party, "tax_withholding_category"):
 				invoice.apply_tds = 1
 
 		# Add party currency to invoice
@@ -443,7 +443,7 @@ class Subscription(Document):
 		items = []
 		party = self.party
 		for plan in plans:
-			plan_doc = frappe.get_doc("Subscription Plan", plan.plan)
+			plan_doc = capkpi.get_doc("Subscription Plan", plan.plan)
 
 			item_code = plan_doc.item
 
@@ -452,7 +452,7 @@ class Subscription(Document):
 			else:
 				deferred_field = "enable_deferred_expense"
 
-			deferred = frappe.db.get_value("Item", item_code, deferred_field)
+			deferred = capkpi.db.get_value("Item", item_code, deferred_field)
 
 			if not prorate:
 				item = {
@@ -558,7 +558,7 @@ class Subscription(Document):
 			self.current_invoice_start, self.current_invoice_end
 		) and (self.is_postpaid_to_invoice() or self.is_prepaid_to_invoice()):
 
-			prorate = frappe.db.get_single_value("Subscription Settings", "prorate")
+			prorate = capkpi.db.get_single_value("Subscription Settings", "prorate")
 			self.generate_invoice(prorate)
 
 		if getdate() > getdate(self.current_invoice_end) and self.is_prepaid_to_invoice():
@@ -589,7 +589,7 @@ class Subscription(Document):
 		"""
 		current_invoice = self.get_current_invoice()
 		if not current_invoice:
-			frappe.throw(_("Current invoice {0} is missing").format(current_invoice.invoice))
+			capkpi.throw(_("Current invoice {0} is missing").format(current_invoice.invoice))
 		else:
 			if not self.has_outstanding_invoice():
 				self.status = "Active"
@@ -603,7 +603,7 @@ class Subscription(Document):
 				and (self.is_postpaid_to_invoice() or self.is_prepaid_to_invoice())
 			):
 
-				prorate = frappe.db.get_single_value("Subscription Settings", "prorate")
+				prorate = capkpi.db.get_single_value("Subscription Settings", "prorate")
 				self.generate_invoice(prorate)
 
 			if getdate() > getdate(self.current_invoice_end):
@@ -624,7 +624,7 @@ class Subscription(Document):
 		current_invoice = self.get_current_invoice()
 		invoice_list = [d.invoice for d in self.invoices]
 
-		outstanding_invoices = frappe.get_all(
+		outstanding_invoices = capkpi.get_all(
 			doctype, fields=["name"], filters={"status": ("!=", "Paid"), "name": ("in", invoice_list)}
 		)
 
@@ -642,7 +642,7 @@ class Subscription(Document):
 			to_generate_invoice = (
 				True if self.status == "Active" and not self.generate_invoice_at_period_start else False
 			)
-			to_prorate = frappe.db.get_single_value("Subscription Settings", "prorate")
+			to_prorate = capkpi.db.get_single_value("Subscription Settings", "prorate")
 			self.status = "Cancelled"
 			self.cancelation_date = nowdate()
 			if to_generate_invoice:
@@ -662,7 +662,7 @@ class Subscription(Document):
 			self.invoices = []
 			self.save()
 		else:
-			frappe.throw(_("You cannot restart a Subscription that is not cancelled."))
+			capkpi.throw(_("You cannot restart a Subscription that is not cancelled."))
 
 	def get_precision(self):
 		invoice = self.get_current_invoice()
@@ -704,7 +704,7 @@ def get_all_subscriptions():
 	"""
 	Returns all `Subscription` documents
 	"""
-	return frappe.db.get_all("Subscription", {"status": ("!=", "Cancelled")})
+	return capkpi.db.get_all("Subscription", {"status": ("!=", "Cancelled")})
 
 
 def process(data):
@@ -713,40 +713,40 @@ def process(data):
 	"""
 	if data:
 		try:
-			subscription = frappe.get_doc("Subscription", data["name"])
+			subscription = capkpi.get_doc("Subscription", data["name"])
 			subscription.process()
-			frappe.db.commit()
-		except frappe.ValidationError:
-			frappe.db.rollback()
-			frappe.db.begin()
-			frappe.log_error(frappe.get_traceback())
-			frappe.db.commit()
+			capkpi.db.commit()
+		except capkpi.ValidationError:
+			capkpi.db.rollback()
+			capkpi.db.begin()
+			capkpi.log_error(capkpi.get_traceback())
+			capkpi.db.commit()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def cancel_subscription(name):
 	"""
 	Cancels a `Subscription`. This will stop the `Subscription` from further invoicing the
 	`Subscriber` but all already outstanding invoices will not be affected.
 	"""
-	subscription = frappe.get_doc("Subscription", name)
+	subscription = capkpi.get_doc("Subscription", name)
 	subscription.cancel_subscription()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def restart_subscription(name):
 	"""
 	Restarts a cancelled `Subscription`. The `Subscription` will 'forget' the history of
 	all invoices it has generated
 	"""
-	subscription = frappe.get_doc("Subscription", name)
+	subscription = capkpi.get_doc("Subscription", name)
 	subscription.restart_subscription()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_subscription_updates(name):
 	"""
 	Use this to get the latest state of the given `Subscription`
 	"""
-	subscription = frappe.get_doc("Subscription", name)
+	subscription = capkpi.get_doc("Subscription", name)
 	subscription.process()

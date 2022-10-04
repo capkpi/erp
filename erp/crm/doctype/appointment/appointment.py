@@ -4,16 +4,16 @@
 
 from collections import Counter
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import get_url, getdate
-from frappe.utils.verified_command import get_signed_params
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import get_url, getdate
+from capkpi.utils.verified_command import get_signed_params
 
 
 class Appointment(Document):
 	def find_lead_by_email(self):
-		lead_list = frappe.get_list(
+		lead_list = capkpi.get_list(
 			"Lead", filters={"email_id": self.customer_email}, ignore_permissions=True
 		)
 		if lead_list:
@@ -21,7 +21,7 @@ class Appointment(Document):
 		return None
 
 	def find_customer_by_email(self):
-		customer_list = frappe.get_list(
+		customer_list = capkpi.get_list(
 			"Customer", filters={"email_id": self.customer_email}, ignore_permissions=True
 		)
 		if customer_list:
@@ -29,13 +29,13 @@ class Appointment(Document):
 		return None
 
 	def before_insert(self):
-		number_of_appointments_in_same_slot = frappe.db.count(
+		number_of_appointments_in_same_slot = capkpi.db.count(
 			"Appointment", filters={"scheduled_time": self.scheduled_time}
 		)
-		number_of_agents = frappe.db.get_single_value("Appointment Booking Settings", "number_of_agents")
+		number_of_agents = capkpi.db.get_single_value("Appointment Booking Settings", "number_of_agents")
 		if not number_of_agents == 0:
 			if number_of_appointments_in_same_slot >= number_of_agents:
-				frappe.throw(_("Time slot is not available"))
+				capkpi.throw(_("Time slot is not available"))
 		# Link lead
 		if not self.party:
 			lead = self.find_lead_by_email()
@@ -63,19 +63,19 @@ class Appointment(Document):
 		template = "confirm_appointment"
 		args = {
 			"link": verify_url,
-			"site_url": frappe.utils.get_url(),
+			"site_url": capkpi.utils.get_url(),
 			"full_name": self.customer_name,
 		}
-		frappe.sendmail(
+		capkpi.sendmail(
 			recipients=[self.customer_email],
 			template=template,
 			args=args,
 			subject=_("Appointment Confirmation"),
 		)
-		if frappe.session.user == "Guest":
-			frappe.msgprint(_("Please check your email to confirm the appointment"))
+		if capkpi.session.user == "Guest":
+			capkpi.msgprint(_("Please check your email to confirm the appointment"))
 		else:
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Appointment was created. But no lead was found. Please check the email to confirm")
 			)
 
@@ -83,13 +83,13 @@ class Appointment(Document):
 		# Sync Calendar
 		if not self.calendar_event:
 			return
-		cal_event = frappe.get_doc("Event", self.calendar_event)
+		cal_event = capkpi.get_doc("Event", self.calendar_event)
 		cal_event.starts_on = self.scheduled_time
 		cal_event.save(ignore_permissions=True)
 
 	def set_verified(self, email):
 		if not email == self.customer_email:
-			frappe.throw(_("Email verification failed."))
+			capkpi.throw(_("Email verification failed."))
 		# Create new lead
 		self.create_lead_and_link()
 		# Remove unverified status
@@ -98,13 +98,13 @@ class Appointment(Document):
 		self.auto_assign()
 		self.create_calendar_event()
 		self.save(ignore_permissions=True)
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	def create_lead_and_link(self):
 		# Return if already linked
 		if self.party:
 			return
-		lead = frappe.get_doc(
+		lead = capkpi.get_doc(
 			{
 				"doctype": "Lead",
 				"lead_name": self.customer_name,
@@ -118,7 +118,7 @@ class Appointment(Document):
 		self.party = lead.name
 
 	def auto_assign(self):
-		from frappe.desk.form.assign_to import add as add_assignemnt
+		from capkpi.desk.form.assign_to import add as add_assignemnt
 
 		existing_assignee = self.get_assignee_from_latest_opportunity()
 		if existing_assignee:
@@ -138,9 +138,9 @@ class Appointment(Document):
 	def get_assignee_from_latest_opportunity(self):
 		if not self.party:
 			return None
-		if not frappe.db.exists("Lead", self.party):
+		if not capkpi.db.exists("Lead", self.party):
 			return None
-		opporutnities = frappe.get_list(
+		opporutnities = capkpi.get_list(
 			"Opportunity",
 			filters={
 				"party_name": self.party,
@@ -150,24 +150,24 @@ class Appointment(Document):
 		)
 		if not opporutnities:
 			return None
-		latest_opportunity = frappe.get_doc("Opportunity", opporutnities[0].name)
+		latest_opportunity = capkpi.get_doc("Opportunity", opporutnities[0].name)
 		assignee = latest_opportunity._assign
 		if not assignee:
 			return None
-		assignee = frappe.parse_json(assignee)[0]
+		assignee = capkpi.parse_json(assignee)[0]
 		return assignee
 
 	def create_calendar_event(self):
 		if self.calendar_event:
 			return
-		appointment_event = frappe.get_doc(
+		appointment_event = capkpi.get_doc(
 			{
 				"doctype": "Event",
 				"subject": " ".join(["Appointment with", self.customer_name]),
 				"starts_on": self.scheduled_time,
 				"status": "Open",
 				"type": "Public",
-				"send_reminder": frappe.db.get_single_value("Appointment Booking Settings", "email_reminders"),
+				"send_reminder": capkpi.db.get_single_value("Appointment Booking Settings", "email_reminders"),
 				"event_participants": [
 					dict(reference_doctype=self.appointment_with, reference_docname=self.party)
 				],
@@ -189,13 +189,13 @@ class Appointment(Document):
 
 
 def _get_agents_sorted_by_asc_workload(date):
-	appointments = frappe.db.get_list("Appointment", fields="*")
+	appointments = capkpi.db.get_list("Appointment", fields="*")
 	agent_list = _get_agent_list_as_strings()
 	if not appointments:
 		return agent_list
 	appointment_counter = Counter(agent_list)
 	for appointment in appointments:
-		assigned_to = frappe.parse_json(appointment._assign)
+		assigned_to = capkpi.parse_json(appointment._assign)
 		if not assigned_to:
 			continue
 		if (assigned_to[0] in agent_list) and getdate(appointment.scheduled_time) == date:
@@ -207,14 +207,14 @@ def _get_agents_sorted_by_asc_workload(date):
 
 def _get_agent_list_as_strings():
 	agent_list_as_strings = []
-	agent_list = frappe.get_doc("Appointment Booking Settings").agent_list
+	agent_list = capkpi.get_doc("Appointment Booking Settings").agent_list
 	for agent in agent_list:
 		agent_list_as_strings.append(agent.user)
 	return agent_list_as_strings
 
 
 def _check_agent_availability(agent_email, scheduled_time):
-	appointemnts_at_scheduled_time = frappe.get_list(
+	appointemnts_at_scheduled_time = capkpi.get_list(
 		"Appointment", filters={"scheduled_time": scheduled_time}
 	)
 	for appointment in appointemnts_at_scheduled_time:
@@ -224,8 +224,8 @@ def _check_agent_availability(agent_email, scheduled_time):
 
 
 def _get_employee_from_user(user):
-	employee_docname = frappe.db.exists({"doctype": "Employee", "user_id": user})
+	employee_docname = capkpi.db.exists({"doctype": "Employee", "user_id": user})
 	if employee_docname:
-		# frappe.db.exists returns a tuple of a tuple
-		return frappe.get_doc("Employee", employee_docname[0][0])
+		# capkpi.db.exists returns a tuple of a tuple
+		return capkpi.get_doc("Employee", employee_docname[0][0])
 	return None

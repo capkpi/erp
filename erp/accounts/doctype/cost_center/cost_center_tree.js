@@ -1,4 +1,4 @@
-frappe.treeview_settings["Cost Center"] = {
+capkpi.treeview_settings["Cost Center"] = {
 	breadcrumb: "Accounts",
 	get_tree_root: false,
 	filters: [{
@@ -14,8 +14,8 @@ frappe.treeview_settings["Cost Center"] = {
 	menu_items:[
 		{
 			label: __('New Company'),
-			action: function() { frappe.new_doc("Company", true) },
-			condition: 'frappe.boot.user.can_create.indexOf("Company") !== -1'
+			action: function() { capkpi.new_doc("Company", true) },
+			condition: 'capkpi.boot.user.can_create.indexOf("Company") !== -1'
 		}
 	],
 	fields:[
@@ -33,20 +33,20 @@ frappe.treeview_settings["Cost Center"] = {
 
 		// tools
 		treeview.page.add_inner_button(__("Chart of Accounts"), function() {
-			frappe.set_route('Tree', 'Account', {company: get_company()});
+			capkpi.set_route('Tree', 'Account', {company: get_company()});
 		}, __('View'));
 
 		// make
 		treeview.page.add_inner_button(__("Budget List"), function() {
-			frappe.set_route('List', 'Budget', {company: get_company()});
+			capkpi.set_route('List', 'Budget', {company: get_company()});
 		}, __('Budget'));
 
 		treeview.page.add_inner_button(__("Monthly Distribution"), function() {
-			frappe.set_route('List', 'Monthly Distribution', {company: get_company()});
+			capkpi.set_route('List', 'Monthly Distribution', {company: get_company()});
 		}, __('Budget'));
 
 		treeview.page.add_inner_button(__("Budget Variance Report"), function() {
-			frappe.set_route('query-report', 'Budget Variance Report', {company: get_company()});
+			capkpi.set_route('query-report', 'Budget Variance Report', {company: get_company()});
 		}, __('Budget'));
 
 	}

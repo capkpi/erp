@@ -1,7 +1,7 @@
-import frappe
-from frappe import _
-from frappe.email import sendmail_to_system_managers
-from frappe.utils import (
+import capkpi
+from capkpi import _
+from capkpi.email import sendmail_to_system_managers
+from capkpi.utils import (
 	add_days,
 	add_months,
 	cint,
@@ -29,7 +29,7 @@ def validate_service_stop_date(doc):
 	)
 
 	old_stop_dates = {}
-	old_doc = frappe.db.get_all(
+	old_doc = capkpi.db.get_all(
 		"{0} Item".format(doc.doctype), {"parent": doc.name}, ["name", "service_stop_date"]
 	)
 
@@ -42,17 +42,17 @@ def validate_service_stop_date(doc):
 
 		if item.service_stop_date:
 			if date_diff(item.service_stop_date, item.service_start_date) < 0:
-				frappe.throw(_("Service Stop Date cannot be before Service Start Date"))
+				capkpi.throw(_("Service Stop Date cannot be before Service Start Date"))
 
 			if date_diff(item.service_stop_date, item.service_end_date) > 0:
-				frappe.throw(_("Service Stop Date cannot be after Service End Date"))
+				capkpi.throw(_("Service Stop Date cannot be after Service End Date"))
 
 		if (
 			old_stop_dates
 			and old_stop_dates.get(item.name)
 			and item.service_stop_date != old_stop_dates.get(item.name)
 		):
-			frappe.throw(_("Cannot change Service Stop Date for item in row {0}").format(item.idx))
+			capkpi.throw(_("Cannot change Service Stop Date for item in row {0}").format(item.idx))
 
 
 def build_conditions(process_type, account, company):
@@ -64,7 +64,7 @@ def build_conditions(process_type, account, company):
 	if account:
 		conditions += "AND %s='%s'" % (deferred_account, account)
 	elif company:
-		conditions += f"AND p.company = {frappe.db.escape(company)}"
+		conditions += f"AND p.company = {capkpi.db.escape(company)}"
 
 	return conditions
 
@@ -80,7 +80,7 @@ def convert_deferred_expense_to_expense(
 		end_date = add_days(today(), -1)
 
 	# check for the purchase invoice for which GL entries has to be done
-	invoices = frappe.db.sql_list(
+	invoices = capkpi.db.sql_list(
 		"""
 		select distinct item.parent
 		from `tabPurchase Invoice Item` item, `tabPurchase Invoice` p
@@ -96,10 +96,10 @@ def convert_deferred_expense_to_expense(
 
 	# For each invoice, book deferred expense
 	for invoice in invoices:
-		doc = frappe.get_doc("Purchase Invoice", invoice)
+		doc = capkpi.get_doc("Purchase Invoice", invoice)
 		book_deferred_income_or_expense(doc, deferred_process, end_date)
 
-	if frappe.flags.deferred_accounting_error:
+	if capkpi.flags.deferred_accounting_error:
 		send_mail(deferred_process)
 
 
@@ -114,7 +114,7 @@ def convert_deferred_revenue_to_income(
 		end_date = add_days(today(), -1)
 
 	# check for the sales invoice for which GL entries has to be done
-	invoices = frappe.db.sql_list(
+	invoices = capkpi.db.sql_list(
 		"""
 		select distinct item.parent
 		from `tabSales Invoice Item` item, `tabSales Invoice` p
@@ -129,10 +129,10 @@ def convert_deferred_revenue_to_income(
 	)  # nosec
 
 	for invoice in invoices:
-		doc = frappe.get_doc("Sales Invoice", invoice)
+		doc = capkpi.get_doc("Sales Invoice", invoice)
 		book_deferred_income_or_expense(doc, deferred_process, end_date)
 
-	if frappe.flags.deferred_accounting_error:
+	if capkpi.flags.deferred_accounting_error:
 		send_mail(deferred_process)
 
 
@@ -146,7 +146,7 @@ def get_booking_dates(doc, item, posting_date=None):
 		"deferred_revenue_account" if doc.doctype == "Sales Invoice" else "deferred_expense_account"
 	)
 
-	prev_gl_entry = frappe.db.sql(
+	prev_gl_entry = capkpi.db.sql(
 		"""
 		select name, posting_date from `tabGL Entry` where company=%s and account=%s and
 		voucher_type=%s and voucher_no=%s and voucher_detail_no=%s
@@ -157,7 +157,7 @@ def get_booking_dates(doc, item, posting_date=None):
 		as_dict=True,
 	)
 
-	prev_gl_via_je = frappe.db.sql(
+	prev_gl_via_je = capkpi.db.sql(
 		"""
 		SELECT p.name, p.posting_date FROM `tabJournal Entry` p, `tabJournal Entry Account` c
 		WHERE p.name = c.parent and p.company=%s and c.account=%s
@@ -291,7 +291,7 @@ def get_already_booked_amount(doc, item):
 		total_credit_debit, total_credit_debit_currency = "credit", "credit_in_account_currency"
 		deferred_account = "deferred_expense_account"
 
-	gl_entries_details = frappe.db.sql(
+	gl_entries_details = capkpi.db.sql(
 		"""
 		select sum({0}) as total_credit, sum({1}) as total_credit_in_account_currency, voucher_detail_no
 		from `tabGL Entry` where company=%s and account=%s and voucher_type=%s and voucher_no=%s and voucher_detail_no=%s
@@ -304,7 +304,7 @@ def get_already_booked_amount(doc, item):
 		as_dict=True,
 	)
 
-	journal_entry_details = frappe.db.sql(
+	journal_entry_details = capkpi.db.sql(
 		"""
 		SELECT sum(c.{0}) as total_credit, sum(c.{1}) as total_credit_in_account_currency, reference_detail_no
 		FROM `tabJournal Entry` p , `tabJournal Entry Account` c WHERE p.name = c.parent and
@@ -338,7 +338,7 @@ def book_deferred_income_or_expense(doc, deferred_process, posting_date=None):
 		"enable_deferred_revenue" if doc.doctype == "Sales Invoice" else "enable_deferred_expense"
 	)
 
-	accounts_frozen_upto = frappe.get_cached_value("Accounts Settings", "None", "acc_frozen_upto")
+	accounts_frozen_upto = capkpi.get_cached_value("Accounts Settings", "None", "acc_frozen_upto")
 
 	def _book_deferred_revenue_or_expense(
 		item, via_journal_entry, submit_journal_entry, book_deferred_entries_based_on
@@ -413,7 +413,7 @@ def book_deferred_income_or_expense(doc, deferred_process, posting_date=None):
 			)
 
 		# Returned in case of any errors because it tries to submit the same record again and again in case of errors
-		if frappe.flags.deferred_accounting_error:
+		if capkpi.flags.deferred_accounting_error:
 			return
 
 		if getdate(end_date) < getdate(posting_date) and not last_gl_entry:
@@ -422,12 +422,12 @@ def book_deferred_income_or_expense(doc, deferred_process, posting_date=None):
 			)
 
 	via_journal_entry = cint(
-		frappe.db.get_singles_value("Accounts Settings", "book_deferred_entries_via_journal_entry")
+		capkpi.db.get_singles_value("Accounts Settings", "book_deferred_entries_via_journal_entry")
 	)
 	submit_journal_entry = cint(
-		frappe.db.get_singles_value("Accounts Settings", "submit_journal_entries")
+		capkpi.db.get_singles_value("Accounts Settings", "submit_journal_entries")
 	)
-	book_deferred_entries_based_on = frappe.db.get_singles_value(
+	book_deferred_entries_based_on = capkpi.db.get_singles_value(
 		"Accounts Settings", "book_deferred_entries_based_on"
 	)
 
@@ -446,7 +446,7 @@ def process_deferred_accounting(posting_date=None):
 		posting_date = today()
 
 	if not cint(
-		frappe.db.get_singles_value(
+		capkpi.db.get_singles_value(
 			"Accounts Settings", "automatically_process_deferred_accounting_entry"
 		)
 	):
@@ -455,11 +455,11 @@ def process_deferred_accounting(posting_date=None):
 	start_date = add_months(today(), -1)
 	end_date = add_days(today(), -1)
 
-	companies = frappe.get_all("Company")
+	companies = capkpi.get_all("Company")
 
 	for company in companies:
 		for record_type in ("Income", "Expense"):
-			doc = frappe.get_doc(
+			doc = capkpi.get_doc(
 				dict(
 					doctype="Process Deferred Accounting",
 					company=company.name,
@@ -536,23 +536,23 @@ def make_gl_entries(
 	if gl_entries:
 		try:
 			make_gl_entries(gl_entries, cancel=(doc.docstatus == 2), merge_entries=True)
-			frappe.db.commit()
+			capkpi.db.commit()
 		except Exception as e:
-			if frappe.flags.in_test:
-				traceback = frappe.get_traceback()
-				frappe.log_error(
+			if capkpi.flags.in_test:
+				traceback = capkpi.get_traceback()
+				capkpi.log_error(
 					title=_("Error while processing deferred accounting for Invoice {0}").format(doc.name),
 					message=traceback,
 				)
 				raise e
 			else:
-				frappe.db.rollback()
-				traceback = frappe.get_traceback()
-				frappe.log_error(
+				capkpi.db.rollback()
+				traceback = capkpi.get_traceback()
+				capkpi.log_error(
 					title=_("Error while processing deferred accounting for Invoice {0}").format(doc.name),
 					message=traceback,
 				)
-				frappe.flags.deferred_accounting_error = True
+				capkpi.flags.deferred_accounting_error = True
 
 
 def send_mail(deferred_process):
@@ -583,7 +583,7 @@ def book_revenue_via_journal_entry(
 	if amount == 0:
 		return
 
-	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry = capkpi.new_doc("Journal Entry")
 	journal_entry.posting_date = posting_date
 	journal_entry.company = doc.company
 	journal_entry.voucher_type = (
@@ -629,28 +629,28 @@ def book_revenue_via_journal_entry(
 		if submit:
 			journal_entry.submit()
 
-		frappe.db.commit()
+		capkpi.db.commit()
 	except Exception:
-		frappe.db.rollback()
-		traceback = frappe.get_traceback()
-		frappe.log_error(
+		capkpi.db.rollback()
+		traceback = capkpi.get_traceback()
+		capkpi.log_error(
 			title=_("Error while processing deferred accounting for Invoice {0}").format(doc.name),
 			message=traceback,
 		)
 
-		frappe.flags.deferred_accounting_error = True
+		capkpi.flags.deferred_accounting_error = True
 
 
 def get_deferred_booking_accounts(doctype, voucher_detail_no, dr_or_cr):
 
 	if doctype == "Sales Invoice":
-		credit_account, debit_account = frappe.db.get_value(
+		credit_account, debit_account = capkpi.db.get_value(
 			"Sales Invoice Item",
 			{"name": voucher_detail_no},
 			["income_account", "deferred_revenue_account"],
 		)
 	else:
-		credit_account, debit_account = frappe.db.get_value(
+		credit_account, debit_account = capkpi.db.get_value(
 			"Purchase Invoice Item",
 			{"name": voucher_detail_no},
 			["deferred_expense_account", "expense_account"],

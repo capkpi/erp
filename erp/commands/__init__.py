@@ -2,8 +2,8 @@
 # MIT License. See license.txt
 
 import click
-import frappe
-from frappe.commands import get_site, pass_context
+import capkpi
+from capkpi.commands import get_site, pass_context
 
 
 def call_command(cmd, context):
@@ -21,23 +21,23 @@ def call_command(cmd, context):
 @pass_context
 def make_demo(context, site, domain="Manufacturing", days=100, resume=False, reinstall=False):
 	"Reinstall site and setup demo"
-	from frappe.commands.site import _reinstall
-	from frappe.installer import install_app
+	from capkpi.commands.site import _reinstall
+	from capkpi.installer import install_app
 
 	site = get_site(context)
 
 	if resume:
-		with frappe.init_site(site):
-			frappe.connect()
+		with capkpi.init_site(site):
+			capkpi.connect()
 			from erp.demo import demo
 
 			demo.simulate(days=days)
 	else:
 		if reinstall:
 			_reinstall(site, yes=True)
-		with frappe.init_site(site=site):
-			frappe.connect()
-			if not "erp" in frappe.get_installed_apps():
+		with capkpi.init_site(site=site):
+			capkpi.connect()
+			if not "erp" in capkpi.get_installed_apps():
 				install_app("erp")
 
 			# import needs site

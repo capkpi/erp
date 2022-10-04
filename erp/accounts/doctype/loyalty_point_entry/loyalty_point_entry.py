@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
-from frappe.utils import today
+import capkpi
+from capkpi.model.document import Document
+from capkpi.utils import today
 
 exclude_from_linked_with = True
 
@@ -17,7 +17,7 @@ def get_loyalty_point_entries(customer, loyalty_program, company, expiry_date=No
 	if not expiry_date:
 		expiry_date = today()
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select name, loyalty_points, expiry_date, loyalty_program_tier, invoice_type, invoice
 		from `tabLoyalty Point Entry`
@@ -31,8 +31,8 @@ def get_loyalty_point_entries(customer, loyalty_program, company, expiry_date=No
 
 
 def get_redemption_details(customer, loyalty_program, company):
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			"""
 		select redeem_against, sum(loyalty_points)
 		from `tabLoyalty Point Entry`

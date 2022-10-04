@@ -1,9 +1,9 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Contract", {
+capkpi.ui.form.on("Contract", {
 	onload: function(frm) {
-		frappe.db.get_value(
+		capkpi.db.get_value(
 			"Selling Settings",
 			"Selling Settings",
 			"contract_naming_by",
@@ -15,7 +15,7 @@ frappe.ui.form.on("Contract", {
 
 	contract_template: function (frm) {
 		if (frm.doc.contract_template) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.crm.doctype.contract_template.contract_template.get_contract_template',
 				args: {
 					template_name: frm.doc.contract_template,

@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from frappe import _
+from capkpi import _
 
 
 def get():

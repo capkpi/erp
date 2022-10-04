@@ -4,11 +4,11 @@
 
 import json
 
-import frappe
-from frappe import _, throw
-from frappe.model.workflow import get_workflow_name, is_transition_condition_satisfied
-from frappe.query_builder.functions import Sum
-from frappe.utils import (
+import capkpi
+from capkpi import _, throw
+from capkpi.model.workflow import get_workflow_name, is_transition_condition_satisfied
+from capkpi.query_builder.functions import Sum
+from capkpi.utils import (
 	add_days,
 	add_months,
 	cint,
@@ -59,7 +59,7 @@ from erp.stock.get_item_details import (
 from erp.utilities.transaction_base import TransactionBase
 
 
-class AccountMissingError(frappe.ValidationError):
+class AccountMissingError(capkpi.ValidationError):
 	pass
 
 
@@ -103,7 +103,7 @@ class AccountsController(TransactionBase):
 	def onload(self):
 		self.set_onload(
 			"make_payment_via_journal_entry",
-			frappe.db.get_single_value("Accounts Settings", "make_payment_via_journal_entry"),
+			capkpi.db.get_single_value("Accounts Settings", "make_payment_via_journal_entry"),
 		)
 
 		if self.is_new():
@@ -125,14 +125,14 @@ class AccountsController(TransactionBase):
 
 		if is_buying_invoice or is_supplier_payment:
 			supplier_name = self.supplier if is_buying_invoice else self.party
-			supplier = frappe.get_doc("Supplier", supplier_name)
+			supplier = capkpi.get_doc("Supplier", supplier_name)
 
 		if supplier and supplier_name and supplier.on_hold:
 			if (is_buying_invoice and supplier.hold_type in ["All", "Invoices"]) or (
 				is_supplier_payment and supplier.hold_type in ["All", "Payments"]
 			):
 				if not supplier.release_date or getdate(nowdate()) <= supplier.release_date:
-					frappe.msgprint(
+					capkpi.msgprint(
 						_("{0} is blocked so this transaction cannot proceed").format(supplier_name),
 						raise_exception=1,
 					)
@@ -205,11 +205,11 @@ class AccountsController(TransactionBase):
 
 	def on_trash(self):
 		# delete sl and gl entries on deletion of transaction
-		if frappe.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
-			frappe.db.sql(
+		if capkpi.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
+			capkpi.db.sql(
 				"delete from `tabGL Entry` where voucher_type=%s and voucher_no=%s", (self.doctype, self.name)
 			)
-			frappe.db.sql(
+			capkpi.db.sql(
 				"delete from `tabStock Ledger Entry` where voucher_type=%s and voucher_no=%s",
 				(self.doctype, self.name),
 			)
@@ -223,11 +223,11 @@ class AccountsController(TransactionBase):
 		for item in self.get("items"):
 			if item.get("enable_deferred_revenue") or item.get("enable_deferred_expense"):
 				if not item.get(field_map.get(self.doctype)):
-					default_deferred_account = frappe.db.get_value(
+					default_deferred_account = capkpi.db.get_value(
 						"Company", self.company, "default_" + field_map.get(self.doctype)
 					)
 					if not default_deferred_account:
-						frappe.throw(
+						capkpi.throw(
 							_(
 								"Row #{0}: Please update deferred revenue/expense account in item row or default account in company master"
 							).format(item.idx)
@@ -239,15 +239,15 @@ class AccountsController(TransactionBase):
 		for d in self.items:
 			if d.get("enable_deferred_revenue") or d.get("enable_deferred_expense"):
 				if not (d.service_start_date and d.service_end_date):
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Service Start and End Date is required for deferred accounting").format(d.idx)
 					)
 				elif getdate(d.service_start_date) > getdate(d.service_end_date):
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Service Start Date cannot be greater than Service End Date").format(d.idx)
 					)
 				elif getdate(self.posting_date) > getdate(d.service_end_date):
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Service End Date cannot be before Invoice Posting Date").format(d.idx)
 					)
 
@@ -302,7 +302,7 @@ class AccountsController(TransactionBase):
 			if is_paid:
 				if not self.cash_bank_account:
 					# show message that the amount is not paid
-					frappe.throw(
+					capkpi.throw(
 						_("Note: Payment Entry will not be created since 'Cash or Bank Account' was not specified")
 					)
 
@@ -317,7 +317,7 @@ class AccountsController(TransactionBase):
 				)
 
 	def set_missing_values(self, for_validate=False):
-		if frappe.flags.in_test:
+		if capkpi.flags.in_test:
 			for fieldname in ["posting_date", "transaction_date"]:
 				if self.meta.get_field(fieldname) and not self.get(fieldname):
 					self.set(fieldname, today())
@@ -363,12 +363,12 @@ class AccountsController(TransactionBase):
 
 		for item in self.get("items"):
 			if item.get(item_field) == self.get(party_account_field):
-				frappe.throw(
+				capkpi.throw(
 					_("Row {0}: {1} {2} cannot be same as {3} (Party Account) {4}").format(
 						item.idx,
-						frappe.bold(frappe.unscrub(item_field)),
+						capkpi.bold(capkpi.unscrub(item_field)),
 						item.get(item_field),
-						frappe.bold(frappe.unscrub(party_account_field)),
+						capkpi.bold(capkpi.unscrub(party_account_field)),
 						self.get(party_account_field),
 					)
 				)
@@ -385,12 +385,12 @@ class AccountsController(TransactionBase):
 			):
 				msg = _("Internal Sale or Delivery Reference missing.")
 				msg += _("Please create purchase from internal sale or delivery document itself")
-				frappe.throw(msg, title=_("Internal Sales Reference Missing"))
+				capkpi.throw(msg, title=_("Internal Sales Reference Missing"))
 
 	def disable_pricing_rule_on_internal_transfer(self):
 		if not self.get("ignore_pricing_rule") and self.is_internal_transfer():
 			self.ignore_pricing_rule = 1
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Disabled pricing rules since this {} is an internal transfer").format(self.doctype),
 				alert=1,
 			)
@@ -403,7 +403,7 @@ class AccountsController(TransactionBase):
 
 		if self.doctype == "Sales Invoice":
 			if not self.due_date:
-				frappe.throw(_("Due Date is mandatory"))
+				capkpi.throw(_("Due Date is mandatory"))
 
 			validate_due_date(
 				self.posting_date,
@@ -440,7 +440,7 @@ class AccountsController(TransactionBase):
 				args = "for_buying"
 
 			if self.meta.get_field(fieldname) and self.get(fieldname):
-				self.price_list_currency = frappe.db.get_value("Price List", self.get(fieldname), "currency")
+				self.price_list_currency = capkpi.db.get_value("Price List", self.get(fieldname), "currency")
 
 				if self.price_list_currency == self.company_currency:
 					self.plc_conversion_rate = 1.0
@@ -590,14 +590,14 @@ class AccountsController(TransactionBase):
 
 		elif pricing_rule_args.get("validate_applied_rule"):
 			for pricing_rule in get_applied_pricing_rules(item.get("pricing_rules")):
-				pricing_rule_doc = frappe.get_cached_doc("Pricing Rule", pricing_rule)
+				pricing_rule_doc = capkpi.get_cached_doc("Pricing Rule", pricing_rule)
 				for field in ["discount_percentage", "discount_amount", "rate"]:
 					if item.get(field) < pricing_rule_doc.get(field):
 						title = get_link_to_form("Pricing Rule", pricing_rule)
 
-						frappe.msgprint(
+						capkpi.msgprint(
 							_("Row {0}: user has not applied the rule {1} on the item {2}").format(
-								item.idx, frappe.bold(title), frappe.bold(item.item_code)
+								item.idx, capkpi.bold(title), capkpi.bold(item.item_code)
 							)
 						)
 
@@ -626,7 +626,7 @@ class AccountsController(TransactionBase):
 		if (self.is_new() or self.is_pos_profile_changed()) and not self.get("taxes"):
 			if self.company and not self.get("taxes_and_charges"):
 				# get the default tax master
-				self.taxes_and_charges = frappe.db.get_value(
+				self.taxes_and_charges = capkpi.db.get_value(
 					tax_master_doctype, {"is_default": 1, "company": self.company}
 				)
 
@@ -636,7 +636,7 @@ class AccountsController(TransactionBase):
 		if (
 			self.doctype == "Sales Invoice"
 			and self.is_pos
-			and self.pos_profile != frappe.db.get_value("Sales Invoice", self.name, "pos_profile")
+			and self.pos_profile != capkpi.db.get_value("Sales Invoice", self.name, "pos_profile")
 		):
 			return True
 
@@ -653,17 +653,17 @@ class AccountsController(TransactionBase):
 
 	def validate_enabled_taxes_and_charges(self):
 		taxes_and_charges_doctype = self.meta.get_options("taxes_and_charges")
-		if frappe.db.get_value(taxes_and_charges_doctype, self.taxes_and_charges, "disabled"):
-			frappe.throw(
+		if capkpi.db.get_value(taxes_and_charges_doctype, self.taxes_and_charges, "disabled"):
+			capkpi.throw(
 				_("{0} '{1}' is disabled").format(taxes_and_charges_doctype, self.taxes_and_charges)
 			)
 
 	def validate_tax_account_company(self):
 		for d in self.get("taxes"):
 			if d.account_head:
-				tax_account_company = frappe.db.get_value("Account", d.account_head, "company")
+				tax_account_company = capkpi.db.get_value("Account", d.account_head, "company")
 				if tax_account_company != self.company:
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Account {1} does not belong to company {2}").format(
 							d.idx, d.account_head, self.company
 						)
@@ -675,7 +675,7 @@ class AccountsController(TransactionBase):
 		posting_date = args.get("posting_date") or self.get("posting_date")
 		fiscal_years = get_fiscal_years(posting_date, company=self.company)
 		if len(fiscal_years) > 1:
-			frappe.throw(
+			capkpi.throw(
 				_("Multiple fiscal years exist for the date {0}. Please set company in Fiscal Year").format(
 					formatdate(posting_date)
 				)
@@ -683,7 +683,7 @@ class AccountsController(TransactionBase):
 		else:
 			fiscal_year = fiscal_years[0][0]
 
-		gl_dict = frappe._dict(
+		gl_dict = capkpi._dict(
 			{
 				"company": self.company,
 				"posting_date": posting_date,
@@ -704,7 +704,7 @@ class AccountsController(TransactionBase):
 		)
 
 		accounting_dimensions = get_accounting_dimensions()
-		dimension_dict = frappe._dict()
+		dimension_dict = capkpi._dict()
 
 		for dimension in accounting_dimensions:
 			dimension_dict[dimension] = self.get(dimension)
@@ -742,7 +742,7 @@ class AccountsController(TransactionBase):
 		if self.doctype != "Purchase Receipt":
 			for item in self.items:
 				if not item.qty:
-					frappe.throw(_("Item quantity can not be zero"))
+					capkpi.throw(_("Item quantity can not be zero"))
 
 	def validate_account_currency(self, account, account_currency=None):
 		valid_currency = [self.company_currency]
@@ -750,7 +750,7 @@ class AccountsController(TransactionBase):
 			valid_currency.append(self.currency)
 
 		if account_currency not in valid_currency:
-			frappe.throw(
+			capkpi.throw(
 				_("Account {0} is invalid. Account Currency must be {1}").format(
 					account, (" " + _("or") + " ").join(valid_currency)
 				)
@@ -759,17 +759,17 @@ class AccountsController(TransactionBase):
 	def clear_unallocated_advances(self, childtype, parentfield):
 		self.set(parentfield, self.get(parentfield, {"allocated_amount": ["not in", [0, None, ""]]}))
 
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""delete from `tab%s` where parentfield=%s and parent = %s
 			and allocated_amount = 0"""
 			% (childtype, "%s", "%s"),
 			(parentfield, self.name),
 		)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def apply_shipping_rule(self):
 		if self.shipping_rule:
-			shipping_rule = frappe.get_doc("Shipping Rule", self.shipping_rule)
+			shipping_rule = capkpi.get_doc("Shipping Rule", self.shipping_rule)
 			shipping_rule.apply(self)
 			self.calculate_taxes_and_totals()
 
@@ -783,11 +783,11 @@ class AccountsController(TransactionBase):
 			shipping_field = self.meta.get_field(fieldname)
 			if shipping_field and shipping_field.fieldtype == "Link":
 				if self.get(fieldname):
-					return frappe.get_doc("Address", self.get(fieldname))
+					return capkpi.get_doc("Address", self.get(fieldname))
 
 		return {}
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def set_advances(self):
 		"""Returns list of advances against Account, Party, Reference"""
 
@@ -852,7 +852,7 @@ class AccountsController(TransactionBase):
 
 	def is_inclusive_tax(self):
 		is_inclusive = cint(
-			frappe.db.get_single_value("Accounts Settings", "show_inclusive_tax_in_print")
+			capkpi.db.get_single_value("Accounts Settings", "show_inclusive_tax_in_print")
 		)
 
 		if is_inclusive:
@@ -875,7 +875,7 @@ class AccountsController(TransactionBase):
 			advance_entries_against_si = [d.reference_name for d in self.get("advances")]
 			for d in advance_entries:
 				if not advance_entries_against_si or d.reference_name not in advance_entries_against_si:
-					frappe.msgprint(
+					capkpi.msgprint(
 						_(
 							"Payment Entry {0} is linked against Order {1}, check if it should be pulled as advance in this invoice."
 						).format(d.reference_name, d.against_order)
@@ -909,14 +909,14 @@ class AccountsController(TransactionBase):
 					party_account = self.credit_to if is_purchase_invoice else self.debit_to
 					party_type = "Supplier" if is_purchase_invoice else "Customer"
 
-					gain_loss_account = frappe.db.get_value("Company", self.company, "exchange_gain_loss_account")
+					gain_loss_account = capkpi.db.get_value("Company", self.company, "exchange_gain_loss_account")
 					if not gain_loss_account:
-						frappe.throw(
+						capkpi.throw(
 							_("Please set default Exchange Gain/Loss Account in Company {}").format(self.get("company"))
 						)
 					account_currency = get_account_currency(gain_loss_account)
 					if account_currency != self.company_currency:
-						frappe.throw(
+						capkpi.throw(
 							_("Currency for {0} must be {1}").format(gain_loss_account, self.company_currency)
 						)
 
@@ -982,7 +982,7 @@ class AccountsController(TransactionBase):
 		lst = []
 		for d in self.get("advances"):
 			if flt(d.allocated_amount) > 0:
-				args = frappe._dict(
+				args = capkpi._dict(
 					{
 						"voucher_type": d.reference_type,
 						"voucher_no": d.reference_name,
@@ -1006,7 +1006,7 @@ class AccountsController(TransactionBase):
 							else self.grand_total
 						),
 						"outstanding_amount": self.outstanding_amount,
-						"difference_account": frappe.db.get_value(
+						"difference_account": capkpi.db.get_value(
 							"Company", self.company, "exchange_gain_loss_account"
 						),
 						"exchange_gain_loss": flt(d.get("exchange_gain_loss")),
@@ -1023,11 +1023,11 @@ class AccountsController(TransactionBase):
 		from erp.accounts.utils import unlink_ref_doc_from_payment_entries
 
 		if self.doctype in ["Sales Invoice", "Purchase Invoice"]:
-			if frappe.db.get_single_value("Accounts Settings", "unlink_payment_on_cancellation_of_invoice"):
+			if capkpi.db.get_single_value("Accounts Settings", "unlink_payment_on_cancellation_of_invoice"):
 				unlink_ref_doc_from_payment_entries(self)
 
 		elif self.doctype in ["Sales Order", "Purchase Order"]:
-			if frappe.db.get_single_value(
+			if capkpi.db.get_single_value(
 				"Accounts Settings", "unlink_advance_payment_on_cancelation_of_order"
 			):
 				unlink_ref_doc_from_payment_entries(self)
@@ -1042,7 +1042,7 @@ class AccountsController(TransactionBase):
 
 		linked_po = list(
 			set(
-				frappe.get_all(
+				capkpi.get_all(
 					"Purchase Order Item",
 					filters={
 						"sales_order": self.name,
@@ -1055,13 +1055,13 @@ class AccountsController(TransactionBase):
 		)
 
 		if linked_po:
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Purchase Order Item",
 				{"sales_order": self.name, "sales_order_item": ["in", so_items], "docstatus": ["<", 2]},
 				{"sales_order": None, "sales_order_item": None},
 			)
 
-			frappe.msgprint(_("Purchase Orders {0} are un-linked").format("\n".join(linked_po)))
+			capkpi.msgprint(_("Purchase Orders {0} are un-linked").format("\n".join(linked_po)))
 
 	def get_tax_map(self):
 		tax_map = {}
@@ -1102,7 +1102,7 @@ class AccountsController(TransactionBase):
 
 	def make_discount_gl_entries(self, gl_entries):
 		enable_discount_accounting = cint(
-			frappe.db.get_single_value("Accounts Settings", "enable_discount_accounting")
+			capkpi.db.get_single_value("Accounts Settings", "enable_discount_accounting")
 		)
 
 		if self.doctype == "Purchase Invoice":
@@ -1192,10 +1192,10 @@ class AccountsController(TransactionBase):
 		item_allowance = {}
 		global_qty_allowance, global_amount_allowance = None, None
 
-		role_allowed_to_over_bill = frappe.db.get_single_value(
+		role_allowed_to_over_bill = capkpi.db.get_single_value(
 			"Accounts Settings", "role_allowed_to_over_bill"
 		)
-		user_roles = frappe.get_roles()
+		user_roles = capkpi.get_roles()
 
 		total_overbilled_amt = 0.0
 
@@ -1204,11 +1204,11 @@ class AccountsController(TransactionBase):
 				continue
 
 			ref_amt = flt(
-				frappe.db.get_value(ref_dt + " Item", item.get(item_ref_dn), based_on),
+				capkpi.db.get_value(ref_dt + " Item", item.get(item_ref_dn), based_on),
 				self.precision(based_on, item),
 			)
 			if not ref_amt:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("System will not check overbilling since amount for Item {0} in {1} is zero").format(
 						item.item_code, ref_dt
 					),
@@ -1241,14 +1241,14 @@ class AccountsController(TransactionBase):
 				if self.doctype != "Purchase Invoice":
 					self.throw_overbill_exception(item, max_allowed_amt)
 				elif not cint(
-					frappe.db.get_single_value(
+					capkpi.db.get_single_value(
 						"Buying Settings", "bill_for_rejected_quantity_in_purchase_invoice"
 					)
 				):
 					self.throw_overbill_exception(item, max_allowed_amt)
 
 		if role_allowed_to_over_bill in user_roles and total_overbilled_amt > 0.1:
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Overbilling of {} ignored because you have {} role.").format(
 					total_overbilled_amt, role_allowed_to_over_bill
 				),
@@ -1264,15 +1264,15 @@ class AccountsController(TransactionBase):
 		that are submitted OR not submitted but are under current invoice
 		"""
 
-		from frappe.query_builder import Criterion
-		from frappe.query_builder.functions import Sum
+		from capkpi.query_builder import Criterion
+		from capkpi.query_builder.functions import Sum
 
-		item_doctype = frappe.qb.DocType(item.doctype)
-		based_on_field = frappe.qb.Field(based_on)
-		join_field = frappe.qb.Field(item_ref_dn)
+		item_doctype = capkpi.qb.DocType(item.doctype)
+		based_on_field = capkpi.qb.Field(based_on)
+		join_field = capkpi.qb.Field(item_ref_dn)
 
 		result = (
-			frappe.qb.from_(item_doctype)
+			capkpi.qb.from_(item_doctype)
 			.select(Sum(based_on_field))
 			.where(join_field == item.get(item_ref_dn))
 			.where(
@@ -1299,7 +1299,7 @@ class AccountsController(TransactionBase):
 		return result[0][0] if result else 0
 
 	def throw_overbill_exception(self, item, max_allowed_amt):
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"Cannot overbill for Item {0} in row {1} more than {2}. To allow over-billing, please set allowance in Accounts Settings"
 			).format(item.item_code, item.idx, max_allowed_amt)
@@ -1314,7 +1314,7 @@ class AccountsController(TransactionBase):
 		stock_items = []
 		item_codes = list(set(item.item_code for item in self.get("items")))
 		if item_codes:
-			stock_items = frappe.db.get_values(
+			stock_items = capkpi.db.get_values(
 				"Item", {"name": ["in", item_codes], "is_stock_item": 1}, as_dict=True, cache=True
 			)
 			if stock_items:
@@ -1332,7 +1332,7 @@ class AccountsController(TransactionBase):
 			rev_dr_or_cr = "credit_in_account_currency"
 			party = self.supplier
 
-		advance = frappe.db.sql(
+		advance = capkpi.db.sql(
 			"""
 			select
 				account_currency, sum({dr_or_cr}) - sum({rev_dr_cr}) as amount
@@ -1356,7 +1356,7 @@ class AccountsController(TransactionBase):
 				advance_paid, precision=self.precision("advance_paid"), currency=advance.account_currency
 			)
 
-			frappe.db.set_value(self.doctype, self.name, "party_account_currency", advance.account_currency)
+			capkpi.db.set_value(self.doctype, self.name, "party_account_currency", advance.account_currency)
 
 			if advance.account_currency == self.currency:
 				order_total = self.get("rounded_total") or self.grand_total
@@ -1370,33 +1370,33 @@ class AccountsController(TransactionBase):
 			)
 
 			if self.currency == self.company_currency and advance_paid > order_total:
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Total advance ({0}) against Order {1} cannot be greater than the Grand Total ({2})"
 					).format(formatted_advance_paid, self.name, formatted_order_total)
 				)
 
-			frappe.db.set_value(self.doctype, self.name, "advance_paid", advance_paid)
+			capkpi.db.set_value(self.doctype, self.name, "advance_paid", advance_paid)
 
 	@property
 	def company_abbr(self):
 		if not hasattr(self, "_abbr"):
-			self._abbr = frappe.db.get_value("Company", self.company, "abbr")
+			self._abbr = capkpi.db.get_value("Company", self.company, "abbr")
 
 		return self._abbr
 
 	def raise_missing_debit_credit_account_error(self, party_type, party):
 		"""Raise an error if debit to/credit to account does not exist."""
 		db_or_cr = (
-			frappe.bold("Debit To") if self.doctype == "Sales Invoice" else frappe.bold("Credit To")
+			capkpi.bold("Debit To") if self.doctype == "Sales Invoice" else capkpi.bold("Credit To")
 		)
 		rec_or_pay = "Receivable" if self.doctype == "Sales Invoice" else "Payable"
 
-		link_to_party = frappe.utils.get_link_to_form(party_type, party)
-		link_to_company = frappe.utils.get_link_to_form("Company", self.company)
+		link_to_party = capkpi.utils.get_link_to_form(party_type, party)
+		link_to_company = capkpi.utils.get_link_to_form("Company", self.company)
 
 		message = _("{0} Account not found against Customer {1}.").format(
-			db_or_cr, frappe.bold(party) or ""
+			db_or_cr, capkpi.bold(party) or ""
 		)
 		message += "<br>" + _("Please set one of the following:") + "<br>"
 		message += (
@@ -1410,7 +1410,7 @@ class AccountsController(TransactionBase):
 			+ "</li></ul>"
 		)
 
-		frappe.throw(message, title=_("Account Missing"), exc=AccountMissingError)
+		capkpi.throw(message, title=_("Account Missing"), exc=AccountMissingError)
 
 	def validate_party(self):
 		party_type, party = self.get_party()
@@ -1450,7 +1450,7 @@ class AccountsController(TransactionBase):
 					and party_account_currency != self.company_currency
 					and self.currency != party_account_currency
 				):
-					frappe.throw(
+					capkpi.throw(
 						_("Accounting Entry for {0}: {1} can only be made in currency: {2}").format(
 							party_type, party, party_account_currency
 						),
@@ -1474,7 +1474,7 @@ class AccountsController(TransactionBase):
 			self.get("debit_to") if self.doctype == "Sales Invoice" else self.get("credit_to")
 		)
 		party_account_currency = get_account_currency(party_account)
-		allow_multi_currency_invoices_against_single_party_account = frappe.db.get_singles_value(
+		allow_multi_currency_invoices_against_single_party_account = capkpi.db.get_singles_value(
 			"Accounts Settings", "allow_multi_currency_invoices_against_single_party_account"
 		)
 
@@ -1483,9 +1483,9 @@ class AccountsController(TransactionBase):
 			and (party_account_currency != self.currency)
 			and not allow_multi_currency_invoices_against_single_party_account
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Party Account {0} currency ({1}) and document currency ({2}) should be same").format(
-					frappe.bold(party_account), party_account_currency, self.currency
+					capkpi.bold(party_account), party_account_currency, self.currency
 				)
 			)
 
@@ -1494,7 +1494,7 @@ class AccountsController(TransactionBase):
 		for adv in self.advances:
 			consider_for_total_advance = True
 			if adv.reference_name == linked_doc_name:
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""delete from `tab{0} Advance`
 					where name = %s""".format(
 						self.doctype
@@ -1506,7 +1506,7 @@ class AccountsController(TransactionBase):
 			if consider_for_total_advance:
 				total_allocated_amount += flt(adv.allocated_amount, adv.precision("allocated_amount"))
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			self.doctype, self.name, "total_advance", total_allocated_amount, update_modified=False
 		)
 
@@ -1563,7 +1563,7 @@ class AccountsController(TransactionBase):
 			grand_total = grand_total - flt(self.write_off_amount)
 			po_or_so, doctype, fieldname = self.get_order_details()
 			automatically_fetch_payment_terms = cint(
-				frappe.db.get_single_value("Accounts Settings", "automatically_fetch_payment_terms")
+				capkpi.db.get_single_value("Accounts Settings", "automatically_fetch_payment_terms")
 			)
 
 		if self.get("total_advance"):
@@ -1646,16 +1646,16 @@ class AccountsController(TransactionBase):
 		return True
 
 	def linked_order_has_payment_terms_template(self, po_or_so, doctype):
-		return frappe.get_value(doctype, po_or_so, "payment_terms_template")
+		return capkpi.get_value(doctype, po_or_so, "payment_terms_template")
 
 	def linked_order_has_payment_schedule(self, po_or_so):
-		return frappe.get_all("Payment Schedule", filters={"parent": po_or_so})
+		return capkpi.get_all("Payment Schedule", filters={"parent": po_or_so})
 
 	def fetch_payment_terms_from_order(self, po_or_so, po_or_so_doctype):
 		"""
 		Fetch Payment Terms from Purchase/Sales Order on creating a new Purchase/Sales Invoice.
 		"""
-		po_or_so = frappe.get_cached_doc(po_or_so_doctype, po_or_so)
+		po_or_so = capkpi.get_cached_doc(po_or_so_doctype, po_or_so)
 
 		self.payment_schedule = []
 		self.payment_terms_template = po_or_so.payment_terms_template
@@ -1692,7 +1692,7 @@ class AccountsController(TransactionBase):
 
 		for d in self.get("payment_schedule"):
 			if self.doctype == "Sales Order" and getdate(d.due_date) < getdate(self.transaction_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Row {0}: Due Date in the Payment Terms table cannot be before Posting Date").format(d.idx)
 				)
 			elif d.due_date in dates:
@@ -1701,7 +1701,7 @@ class AccountsController(TransactionBase):
 
 		if li:
 			duplicates = "<br>" + "<br>".join(li)
-			frappe.throw(
+			capkpi.throw(
 				_("Rows with duplicate due dates in other rows were found: {0}").format(duplicates)
 			)
 
@@ -1749,7 +1749,7 @@ class AccountsController(TransactionBase):
 				- flt(base_grand_total, self.precision("base_grand_total"))
 				> 0.1
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("Total Payment Amount in Payment Schedule must be equal to Grand / Rounded Total")
 				)
 
@@ -1757,7 +1757,7 @@ class AccountsController(TransactionBase):
 		if self.meta.get_field("disable_rounded_total"):
 			return self.disable_rounded_total
 		else:
-			return frappe.db.get_single_value("Global Defaults", "disable_rounded_total")
+			return capkpi.db.get_single_value("Global Defaults", "disable_rounded_total")
 
 	def set_inter_company_account(self):
 		"""
@@ -1767,15 +1767,15 @@ class AccountsController(TransactionBase):
 		"""
 
 		if self.is_internal_transfer() and not self.unrealized_profit_loss_account:
-			unrealized_profit_loss_account = frappe.db.get_value(
+			unrealized_profit_loss_account = capkpi.db.get_value(
 				"Company", self.company, "unrealized_profit_loss_account"
 			)
 
 			if not unrealized_profit_loss_account:
 				msg = _(
 					"Please select Unrealized Profit / Loss account or add default Unrealized Profit / Loss account account for company {0}"
-				).format(frappe.bold(self.company))
-				frappe.throw(msg)
+				).format(capkpi.bold(self.company))
+				capkpi.throw(msg)
 
 			self.unrealized_profit_loss_account = unrealized_profit_loss_account
 
@@ -1801,14 +1801,14 @@ class AccountsController(TransactionBase):
 		if not is_invoice:
 			return
 
-		if frappe.db.get_single_value("Accounts Settings", "enable_common_party_accounting"):
+		if capkpi.db.get_single_value("Accounts Settings", "enable_common_party_accounting"):
 			party_link = self.get_common_party_link()
 			if party_link and self.outstanding_amount:
 				self.create_advance_and_reconcile(party_link)
 
 	def get_common_party_link(self):
 		party_type, party = self.get_party()
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			doctype="Party Link",
 			filters={"secondary_role": party_type, "secondary_party": party},
 			fieldname=["primary_role", "primary_party"],
@@ -1822,14 +1822,14 @@ class AccountsController(TransactionBase):
 		primary_account = get_party_account(primary_party_type, primary_party, self.company)
 		secondary_account = get_party_account(secondary_party_type, secondary_party, self.company)
 
-		jv = frappe.new_doc("Journal Entry")
+		jv = capkpi.new_doc("Journal Entry")
 		jv.voucher_type = "Journal Entry"
 		jv.posting_date = self.posting_date
 		jv.company = self.company
 		jv.remark = "Adjustment for {} {}".format(self.doctype, self.name)
 
-		reconcilation_entry = frappe._dict()
-		advance_entry = frappe._dict()
+		reconcilation_entry = capkpi._dict()
+		advance_entry = capkpi._dict()
 
 		reconcilation_entry.account = secondary_account
 		reconcilation_entry.party_type = secondary_party_type
@@ -1869,22 +1869,22 @@ class AccountsController(TransactionBase):
 			throw(_("Conversion rate cannot be 0 or 1"))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_tax_rate(account_head):
-	return frappe.db.get_value("Account", account_head, ["tax_rate", "account_name"], as_dict=True)
+	return capkpi.db.get_value("Account", account_head, ["tax_rate", "account_name"], as_dict=True)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_default_taxes_and_charges(master_doctype, tax_template=None, company=None):
 	if not company:
 		return {}
 
 	if tax_template and company:
-		tax_template_company = frappe.db.get_value(master_doctype, tax_template, "company")
+		tax_template_company = capkpi.db.get_value(master_doctype, tax_template, "company")
 		if tax_template_company == company:
 			return
 
-	default_tax = frappe.db.get_value(master_doctype, {"is_default": 1, "company": company})
+	default_tax = capkpi.db.get_value(master_doctype, {"is_default": 1, "company": company})
 
 	return {
 		"taxes_and_charges": default_tax,
@@ -1892,13 +1892,13 @@ def get_default_taxes_and_charges(master_doctype, tax_template=None, company=Non
 	}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_taxes_and_charges(master_doctype, master_name):
 	if not master_name:
 		return
-	from frappe.model import default_fields
+	from capkpi.model import default_fields
 
-	tax_master = frappe.get_doc(master_doctype, master_name)
+	tax_master = capkpi.get_doc(master_doctype, master_name)
 
 	taxes_and_charges = []
 	for i, tax in enumerate(tax_master.get("taxes")):
@@ -1916,7 +1916,7 @@ def get_taxes_and_charges(master_doctype, master_name):
 def validate_conversion_rate(currency, conversion_rate, conversion_rate_label, company):
 	"""common validation for currency and price list currency"""
 
-	company_currency = frappe.get_cached_value("Company", company, "default_currency")
+	company_currency = capkpi.get_cached_value("Company", company, "default_currency")
 
 	if not conversion_rate:
 		throw(
@@ -1928,22 +1928,22 @@ def validate_conversion_rate(currency, conversion_rate, conversion_rate_label, c
 
 def validate_taxes_and_charges(tax):
 	if tax.charge_type in ["Actual", "On Net Total", "On Paid Amount"] and tax.row_id:
-		frappe.throw(
+		capkpi.throw(
 			_("Can refer row only if the charge type is 'On Previous Row Amount' or 'Previous Row Total'")
 		)
 	elif tax.charge_type in ["On Previous Row Amount", "On Previous Row Total"]:
 		if cint(tax.idx) == 1:
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Cannot select charge type as 'On Previous Row Amount' or 'On Previous Row Total' for first row"
 				)
 			)
 		elif not tax.row_id:
-			frappe.throw(
+			capkpi.throw(
 				_("Please specify a valid Row ID for row {0} in table {1}").format(tax.idx, _(tax.doctype))
 			)
 		elif tax.row_id and cint(tax.row_id) >= cint(tax.idx):
-			frappe.throw(
+			capkpi.throw(
 				_("Cannot refer row number greater than or equal to current row number for this Charge type")
 			)
 
@@ -1952,12 +1952,12 @@ def validate_taxes_and_charges(tax):
 
 
 def validate_account_head(idx, account, company, context=""):
-	account_company = frappe.get_cached_value("Account", account, "company")
+	account_company = capkpi.get_cached_value("Account", account, "company")
 
 	if account_company != company:
-		frappe.throw(
+		capkpi.throw(
 			_("Row {0}: {3} Account {1} does not belong to Company {2}").format(
-				idx, frappe.bold(account), frappe.bold(company), context
+				idx, capkpi.bold(account), capkpi.bold(company), context
 			),
 			title=_("Invalid Account"),
 		)
@@ -1967,12 +1967,12 @@ def validate_cost_center(tax, doc):
 	if not tax.cost_center:
 		return
 
-	company = frappe.get_cached_value("Cost Center", tax.cost_center, "company")
+	company = capkpi.get_cached_value("Cost Center", tax.cost_center, "company")
 
 	if company != doc.company:
-		frappe.throw(
+		capkpi.throw(
 			_("Row {0}: Cost Center {1} does not belong to Company {2}").format(
-				tax.idx, frappe.bold(tax.cost_center), frappe.bold(doc.company)
+				tax.idx, capkpi.bold(tax.cost_center), capkpi.bold(doc.company)
 			),
 			title=_("Invalid Cost Center"),
 		)
@@ -2005,14 +2005,14 @@ def validate_inclusive_tax(tax, doc):
 			# all rows about the referred tax should be inclusive
 			_on_previous_row_error("1 - %d" % (tax.row_id,))
 		elif tax.get("category") == "Valuation":
-			frappe.throw(_("Valuation type charges can not be marked as Inclusive"))
+			capkpi.throw(_("Valuation type charges can not be marked as Inclusive"))
 
 
 def set_balance_in_account_currency(
 	gl_dict, account_currency=None, conversion_rate=None, company_currency=None
 ):
 	if (not conversion_rate) and (account_currency != company_currency):
-		frappe.throw(
+		capkpi.throw(
 			_("Account: {0} with currency: {1} can not be selected").format(
 				gl_dict.account, account_currency
 			)
@@ -2066,7 +2066,7 @@ def get_advance_journal_entries(
 	reference_condition = " and (" + " or ".join(conditions) + ")" if conditions else ""
 
 	# nosemgrep
-	journal_entries = frappe.db.sql(
+	journal_entries = capkpi.db.sql(
 		"""
 		select
 			"Journal Entry" as reference_type, t1.name as reference_name,
@@ -2121,7 +2121,7 @@ def get_advance_payment_entries(
 			reference_condition = ""
 			order_list = []
 
-		payment_entries_against_order = frappe.db.sql(
+		payment_entries_against_order = capkpi.db.sql(
 			"""
 			select
 				"Payment Entry" as reference_type, t1.name as reference_name,
@@ -2142,7 +2142,7 @@ def get_advance_payment_entries(
 		)
 
 	if include_unallocated:
-		unallocated_payment_entries = frappe.db.sql(
+		unallocated_payment_entries = capkpi.db.sql(
 			"""
 				select "Payment Entry" as reference_type, name as reference_name, posting_date,
 				remarks, unallocated_amount as amount, {2} as exchange_rate, {3} as currency
@@ -2164,36 +2164,36 @@ def get_advance_payment_entries(
 def update_invoice_status():
 	"""Updates status as Overdue for applicable invoices. Runs daily."""
 	today = getdate()
-	payment_schedule = frappe.qb.DocType("Payment Schedule")
+	payment_schedule = capkpi.qb.DocType("Payment Schedule")
 	for doctype in ("Sales Invoice", "Purchase Invoice"):
-		invoice = frappe.qb.DocType(doctype)
+		invoice = capkpi.qb.DocType(doctype)
 
 		consider_base_amount = invoice.party_account_currency != invoice.currency
 		payment_amount = (
-			frappe.qb.terms.Case()
+			capkpi.qb.terms.Case()
 			.when(consider_base_amount, payment_schedule.base_payment_amount)
 			.else_(payment_schedule.payment_amount)
 		)
 
 		payable_amount = (
-			frappe.qb.from_(payment_schedule)
+			capkpi.qb.from_(payment_schedule)
 			.select(Sum(payment_amount))
 			.where((payment_schedule.parent == invoice.name) & (payment_schedule.due_date < today))
 		)
 
 		total = (
-			frappe.qb.terms.Case()
+			capkpi.qb.terms.Case()
 			.when(invoice.disable_rounded_total, invoice.grand_total)
 			.else_(invoice.rounded_total)
 		)
 
 		base_total = (
-			frappe.qb.terms.Case()
+			capkpi.qb.terms.Case()
 			.when(invoice.disable_rounded_total, invoice.base_grand_total)
 			.else_(invoice.base_rounded_total)
 		)
 
-		total_amount = frappe.qb.terms.Case().when(consider_base_amount, base_total).else_(total)
+		total_amount = capkpi.qb.terms.Case().when(consider_base_amount, base_total).else_(total)
 
 		is_overdue = total_amount - invoice.outstanding_amount < payable_amount
 
@@ -2209,22 +2209,22 @@ def update_invoice_status():
 		)
 
 		status = (
-			frappe.qb.terms.Case()
+			capkpi.qb.terms.Case()
 			.when(invoice.status.like("%Discounted"), "Overdue and Discounted")
 			.else_("Overdue")
 		)
 
-		frappe.qb.update(invoice).set("status", status).where(conditions).run()
+		capkpi.qb.update(invoice).set("status", status).where(conditions).run()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_payment_terms(
 	terms_template, posting_date=None, grand_total=None, base_grand_total=None, bill_date=None
 ):
 	if not terms_template:
 		return
 
-	terms_doc = frappe.get_doc("Payment Terms Template", terms_template)
+	terms_doc = capkpi.get_doc("Payment Terms Template", terms_template)
 
 	schedule = []
 	for d in terms_doc.get("terms"):
@@ -2236,13 +2236,13 @@ def get_payment_terms(
 	return schedule
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_payment_term_details(
 	term, posting_date=None, grand_total=None, base_grand_total=None, bill_date=None
 ):
-	term_details = frappe._dict()
+	term_details = capkpi._dict()
 	if isinstance(term, text_type):
-		term = frappe.get_doc("Payment Term", term)
+		term = capkpi.get_doc("Payment Term", term)
 	else:
 		term_details.payment_term = term.payment_term
 	term_details.description = term.description
@@ -2296,7 +2296,7 @@ def get_supplier_block_status(party_name):
 	Returns a dict containing the values of `on_hold`, `release_date` and `hold_type` of
 	a `Supplier`
 	"""
-	supplier = frappe.get_doc("Supplier", party_name)
+	supplier = capkpi.get_doc("Supplier", party_name)
 	info = {
 		"on_hold": supplier.on_hold,
 		"release_date": supplier.release_date,
@@ -2321,7 +2321,7 @@ def set_child_tax_template_and_map(item, child_item, parent_doc):
 
 
 def add_taxes_from_tax_template(child_item, parent_doc, db_insert=True):
-	add_taxes_from_item_tax_template = frappe.db.get_single_value(
+	add_taxes_from_item_tax_template = capkpi.db.get_single_value(
 		"Accounts Settings", "add_taxes_from_item_tax_template"
 	)
 
@@ -2354,9 +2354,9 @@ def set_order_defaults(
 	"""
 	Returns a Sales/Purchase Order Item child item containing the default values
 	"""
-	p_doc = frappe.get_doc(parent_doctype, parent_doctype_name)
-	child_item = frappe.new_doc(child_doctype, p_doc, child_docname)
-	item = frappe.get_doc("Item", trans_item.get("item_code"))
+	p_doc = capkpi.get_doc(parent_doctype, parent_doctype_name)
+	child_item = capkpi.new_doc(child_doctype, p_doc, child_docname)
+	item = capkpi.get_doc("Item", trans_item.get("item_code"))
 
 	for field in ("item_code", "item_name", "description", "item_group"):
 		child_item.update({field: item.get(field)})
@@ -2378,9 +2378,9 @@ def set_order_defaults(
 	if child_doctype == "Sales Order Item":
 		child_item.warehouse = get_item_warehouse(item, p_doc, overwrite_warehouse=True)
 		if not child_item.warehouse:
-			frappe.throw(
+			capkpi.throw(
 				_("Cannot find {} for item {}. Please set the same in Item Master or Stock Settings.").format(
-					frappe.bold("default warehouse"), frappe.bold(item.item_code)
+					capkpi.bold("default warehouse"), capkpi.bold(item.item_code)
 				)
 			)
 
@@ -2393,33 +2393,33 @@ def validate_child_on_delete(row, parent):
 	"""Check if partially transacted item (row) is being deleted."""
 	if parent.doctype == "Sales Order":
 		if flt(row.delivered_qty):
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: Cannot delete item {1} which has already been delivered").format(
 					row.idx, row.item_code
 				)
 			)
 		if flt(row.work_order_qty):
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: Cannot delete item {1} which has work order assigned to it.").format(
 					row.idx, row.item_code
 				)
 			)
 		if flt(row.ordered_qty):
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: Cannot delete item {1} which is assigned to customer's purchase order.").format(
 					row.idx, row.item_code
 				)
 			)
 
 	if parent.doctype == "Purchase Order" and flt(row.received_qty):
-		frappe.throw(
+		capkpi.throw(
 			_("Row #{0}: Cannot delete item {1} which has already been received").format(
 				row.idx, row.item_code
 			)
 		)
 
 	if flt(row.billed_amt):
-		frappe.throw(
+		capkpi.throw(
 			_("Row #{0}: Cannot delete item {1} which has already been billed.").format(
 				row.idx, row.item_code
 			)
@@ -2471,15 +2471,15 @@ def validate_and_delete_children(parent, data) -> bool:
 	return bool(deleted_children)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, child_docname="items"):
 	def check_doc_permissions(doc, perm_type="create"):
 		try:
 			doc.check_permission(perm_type)
-		except frappe.PermissionError:
+		except capkpi.PermissionError:
 			actions = {"create": "add", "write": "update"}
 
-			frappe.throw(
+			capkpi.throw(
 				_("You do not have permissions to {} items in a {}.").format(
 					actions[perm_type], parent_doctype
 				),
@@ -2491,9 +2491,9 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 		if not workflow:
 			return
 
-		workflow_doc = frappe.get_doc("Workflow", workflow)
+		workflow_doc = capkpi.get_doc("Workflow", workflow)
 		current_state = doc.get(workflow_doc.workflow_state_field)
-		roles = frappe.get_roles()
+		roles = capkpi.get_roles()
 
 		transitions = []
 		for transition in workflow_doc.transitions:
@@ -2503,7 +2503,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 				transitions.append(transition.as_dict())
 
 		if not transitions:
-			frappe.throw(
+			capkpi.throw(
 				_("You are not allowed to update as per the conditions set in {} Workflow.").format(
 					get_link_to_form("Workflow", workflow)
 				),
@@ -2518,20 +2518,20 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 
 	def validate_quantity(child_item, new_data):
 		if not flt(new_data.get("qty")):
-			frappe.throw(
+			capkpi.throw(
 				_("Row # {0}: Quantity for Item {1} cannot be zero").format(
-					new_data.get("idx"), frappe.bold(new_data.get("item_code"))
+					new_data.get("idx"), capkpi.bold(new_data.get("item_code"))
 				),
 				title=_("Invalid Qty"),
 			)
 
 		if parent_doctype == "Sales Order" and flt(new_data.get("qty")) < flt(child_item.delivered_qty):
-			frappe.throw(_("Cannot set quantity less than delivered quantity"))
+			capkpi.throw(_("Cannot set quantity less than delivered quantity"))
 
 		if parent_doctype == "Purchase Order" and flt(new_data.get("qty")) < flt(
 			child_item.received_qty
 		):
-			frappe.throw(_("Cannot set quantity less than received quantity"))
+			capkpi.throw(_("Cannot set quantity less than received quantity"))
 
 	def should_update_supplied_items(doc) -> bool:
 		"""Subcontracted PO can allow following changes *after submit*:
@@ -2549,7 +2549,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 			any_qty_changed or items_added_or_removed or any_conversion_factor_changed
 		)
 		if update_supplied_items and supplied_items_processed:
-			frappe.throw(_("Item qty can not be updated as raw materials are already processed."))
+			capkpi.throw(_("Item qty can not be updated as raw materials are already processed."))
 
 		return update_supplied_items
 
@@ -2560,7 +2560,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 	any_conversion_factor_changed = False
 
 	sales_doctypes = ["Sales Order", "Sales Invoice", "Delivery Note", "Quotation"]
-	parent = frappe.get_doc(parent_doctype, parent_doctype_name)
+	parent = capkpi.get_doc(parent_doctype, parent_doctype_name)
 
 	check_doc_permissions(parent, "write")
 	_removed_items = validate_and_delete_children(parent, data)
@@ -2580,7 +2580,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 			child_item = get_new_child_item(d)
 		else:
 			check_doc_permissions(parent, "write")
-			child_item = frappe.get_doc(parent_doctype + " Item", d.get("docname"))
+			child_item = capkpi.get_doc(parent_doctype + " Item", d.get("docname"))
 
 			prev_rate, new_rate = flt(child_item.get("rate")), flt(d.get("rate"))
 			prev_qty, new_qty = flt(child_item.get("qty")), flt(d.get("qty"))
@@ -2623,7 +2623,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 		if flt(child_item.billed_amt, rate_precision) > flt(
 			flt(d.get("rate"), rate_precision) * flt(d.get("qty"), qty_precision), rate_precision
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: Cannot set Rate if amount is greater than billed amount for Item {1}.").format(
 					child_item.idx, child_item.item_code
 				)
@@ -2692,7 +2692,7 @@ def update_child_qty_rate(parent_doctype, trans_items, parent_doctype_name, chil
 	if parent_doctype == "Sales Order":
 		make_packing_list(parent)
 		parent.set_gross_profit()
-	frappe.get_doc("Authorization Control").validate_approving_authority(
+	capkpi.get_doc("Authorization Control").validate_approving_authority(
 		parent.doctype, parent.company, parent.base_grand_total
 	)
 

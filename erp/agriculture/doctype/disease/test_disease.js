@@ -8,9 +8,9 @@ QUnit.test("test: Disease", function (assert) {
 	// number of asserts
 	assert.expect(1);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Disease
-		() => frappe.tests.make('Disease', [
+		() => capkpi.tests.make('Disease', [
 			// values to be set
 			{common_name: 'Aphids'},
 			{scientific_name: 'Aphidoidea'},

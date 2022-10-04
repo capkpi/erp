@@ -2,22 +2,22 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class Wishlist(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def add_to_wishlist(item_code):
 	"""Insert Item into wishlist."""
 
-	if frappe.db.exists("Wishlist Item", {"item_code": item_code, "parent": frappe.session.user}):
+	if capkpi.db.exists("Wishlist Item", {"item_code": item_code, "parent": capkpi.session.user}):
 		return
 
-	web_item_data = frappe.db.get_value(
+	web_item_data = capkpi.db.get_value(
 		"Website Item",
 		{"item_code": item_code},
 		[
@@ -43,28 +43,28 @@ def add_to_wishlist(item_code):
 		"route": web_item_data.get("route"),
 	}
 
-	if not frappe.db.exists("Wishlist", frappe.session.user):
+	if not capkpi.db.exists("Wishlist", capkpi.session.user):
 		# initialise wishlist
-		wishlist = frappe.get_doc({"doctype": "Wishlist"})
-		wishlist.user = frappe.session.user
+		wishlist = capkpi.get_doc({"doctype": "Wishlist"})
+		wishlist.user = capkpi.session.user
 		wishlist.append("items", wished_item_dict)
 		wishlist.save(ignore_permissions=True)
 	else:
-		wishlist = frappe.get_doc("Wishlist", frappe.session.user)
+		wishlist = capkpi.get_doc("Wishlist", capkpi.session.user)
 		item = wishlist.append("items", wished_item_dict)
 		item.db_insert()
 
-	if hasattr(frappe.local, "cookie_manager"):
-		frappe.local.cookie_manager.set_cookie("wish_count", str(len(wishlist.items)))
+	if hasattr(capkpi.local, "cookie_manager"):
+		capkpi.local.cookie_manager.set_cookie("wish_count", str(len(wishlist.items)))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def remove_from_wishlist(item_code):
-	if frappe.db.exists("Wishlist Item", {"item_code": item_code, "parent": frappe.session.user}):
-		frappe.db.delete("Wishlist Item", {"item_code": item_code, "parent": frappe.session.user})
-		frappe.db.commit()
+	if capkpi.db.exists("Wishlist Item", {"item_code": item_code, "parent": capkpi.session.user}):
+		capkpi.db.delete("Wishlist Item", {"item_code": item_code, "parent": capkpi.session.user})
+		capkpi.db.commit()
 
-		wishlist_items = frappe.db.get_values("Wishlist Item", filters={"parent": frappe.session.user})
+		wishlist_items = capkpi.db.get_values("Wishlist Item", filters={"parent": capkpi.session.user})
 
-		if hasattr(frappe.local, "cookie_manager"):
-			frappe.local.cookie_manager.set_cookie("wish_count", str(len(wishlist_items)))
+		if hasattr(capkpi.local, "cookie_manager"):
+			capkpi.local.cookie_manager.set_cookie("wish_count", str(len(wishlist_items)))

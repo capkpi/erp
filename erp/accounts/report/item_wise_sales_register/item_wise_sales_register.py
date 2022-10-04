@@ -2,11 +2,11 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.meta import get_field_precision
-from frappe.utils import cstr, flt
-from frappe.utils.xlsxutils import handle_html
+import capkpi
+from capkpi import _
+from capkpi.model.meta import get_field_precision
+from capkpi.utils import cstr, flt
+from capkpi.utils.xlsxutils import handle_html
 
 from erp.accounts.report.sales_register.sales_register import get_mode_of_payments
 from erp.selling.report.item_wise_sales_history.item_wise_sales_history import (
@@ -29,7 +29,7 @@ def _execute(
 		filters = {}
 	columns = get_columns(additional_table_columns, filters)
 
-	company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.get("company"), "default_currency")
 
 	item_list = get_items(filters, additional_query_columns, additional_conditions)
 	if item_list:
@@ -107,8 +107,8 @@ def _execute(
 			item_tax = itemised_tax.get(d.name, {}).get(tax, {})
 			row.update(
 				{
-					frappe.scrub(tax + " Rate"): item_tax.get("tax_rate", 0),
-					frappe.scrub(tax + " Amount"): item_tax.get("tax_amount", 0),
+					capkpi.scrub(tax + " Rate"): item_tax.get("tax_rate", 0),
+					capkpi.scrub(tax + " Amount"): item_tax.get("tax_amount", 0),
 				}
 			)
 			if item_tax.get("is_other_charges"):
@@ -379,9 +379,9 @@ def get_group_by_conditions(filters, doctype):
 	elif filters.get("group_by") == "Item":
 		return "ORDER BY `tab{0} Item`.`item_code`".format(doctype)
 	elif filters.get("group_by") == "Item Group":
-		return "ORDER BY `tab{0} Item`.{1}".format(doctype, frappe.scrub(filters.get("group_by")))
+		return "ORDER BY `tab{0} Item`.{1}".format(doctype, capkpi.scrub(filters.get("group_by")))
 	elif filters.get("group_by") in ("Customer", "Customer Group", "Territory", "Supplier"):
-		return "ORDER BY `tab{0}`.{1}".format(doctype, frappe.scrub(filters.get("group_by")))
+		return "ORDER BY `tab{0}`.{1}".format(doctype, capkpi.scrub(filters.get("group_by")))
 
 
 def get_items(filters, additional_query_columns, additional_conditions=None):
@@ -392,7 +392,7 @@ def get_items(filters, additional_query_columns, additional_conditions=None):
 	else:
 		additional_query_columns = ""
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			`tabSales Invoice Item`.name, `tabSales Invoice Item`.parent,
@@ -421,11 +421,11 @@ def get_items(filters, additional_query_columns, additional_conditions=None):
 
 
 def get_delivery_notes_against_sales_order(item_list):
-	so_dn_map = frappe._dict()
+	so_dn_map = capkpi._dict()
 	so_item_rows = list(set([d.so_detail for d in item_list]))
 
 	if so_item_rows:
-		delivery_notes = frappe.db.sql(
+		delivery_notes = capkpi.db.sql(
 			"""
 			select parent, so_detail
 			from `tabDelivery Note Item`
@@ -445,7 +445,7 @@ def get_delivery_notes_against_sales_order(item_list):
 
 def get_grand_total(filters, doctype):
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		""" SELECT
 		SUM(`tab{0}`.base_grand_total)
 		FROM `tab{0}`
@@ -477,7 +477,7 @@ def get_tax_accounts(
 
 	tax_amount_precision = (
 		get_field_precision(
-			frappe.get_meta(tax_doctype).get_field("tax_amount"), currency=company_currency
+			capkpi.get_meta(tax_doctype).get_field("tax_amount"), currency=company_currency
 		)
 		or 2
 	)
@@ -491,7 +491,7 @@ def get_tax_accounts(
 		conditions = " and category in ('Total', 'Valuation and Total') and base_tax_amount_after_discount_amount != 0"
 		add_deduct_tax = "add_deduct_tax"
 
-	tax_details = frappe.db.sql(
+	tax_details = capkpi.db.sql(
 		"""
 		select
 			name, parent, description, item_wise_tax_detail, account_head,
@@ -510,10 +510,10 @@ def get_tax_accounts(
 		tuple([doctype] + list(invoice_item_row)),
 	)
 
-	account_doctype = frappe.qb.DocType("Account")
+	account_doctype = capkpi.qb.DocType("Account")
 
 	query = (
-		frappe.qb.from_(account_doctype)
+		capkpi.qb.from_(account_doctype)
 		.select(account_doctype.name)
 		.where((account_doctype.account_type == "Tax"))
 	)
@@ -540,7 +540,7 @@ def get_tax_accounts(
 				item_wise_tax_detail = json.loads(item_wise_tax_detail)
 
 				for item_code, tax_data in item_wise_tax_detail.items():
-					itemised_tax.setdefault(item_code, frappe._dict())
+					itemised_tax.setdefault(item_code, capkpi._dict())
 
 					if isinstance(tax_data, list):
 						tax_rate, tax_amount = tax_data
@@ -567,7 +567,7 @@ def get_tax_accounts(
 								else tax_value
 							)
 
-							itemised_tax.setdefault(d.name, {})[description] = frappe._dict(
+							itemised_tax.setdefault(d.name, {})[description] = capkpi._dict(
 								{
 									"tax_rate": tax_rate,
 									"tax_amount": tax_value,
@@ -579,7 +579,7 @@ def get_tax_accounts(
 				continue
 		elif charge_type == "Actual" and tax_amount:
 			for d in invoice_item_row.get(parent, []):
-				itemised_tax.setdefault(d.name, {})[description] = frappe._dict(
+				itemised_tax.setdefault(d.name, {})[description] = capkpi._dict(
 					{
 						"tax_rate": "NA",
 						"tax_amount": flt((tax_amount * d.base_net_amount) / d.base_net_total, tax_amount_precision),
@@ -591,7 +591,7 @@ def get_tax_accounts(
 		columns.append(
 			{
 				"label": _(desc + " Rate"),
-				"fieldname": frappe.scrub(desc + " Rate"),
+				"fieldname": capkpi.scrub(desc + " Rate"),
 				"fieldtype": "Float",
 				"width": 100,
 			}
@@ -600,7 +600,7 @@ def get_tax_accounts(
 		columns.append(
 			{
 				"label": _(desc + " Amount"),
-				"fieldname": frappe.scrub(desc + " Amount"),
+				"fieldname": capkpi.scrub(desc + " Amount"),
 				"fieldtype": "Currency",
 				"options": "currency",
 				"width": 100,
@@ -703,7 +703,7 @@ def get_display_value(filters, group_by_field, item):
 		else:
 			value = item.get("item_code", "")
 	elif filters.get("group_by") in ("Customer", "Supplier"):
-		party = frappe.scrub(filters.get("group_by"))
+		party = capkpi.scrub(filters.get("group_by"))
 		if item.get(party) != item.get(party + "_name"):
 			value = (
 				item.get(party)
@@ -728,7 +728,7 @@ def get_group_by_and_display_fields(filters):
 		group_by_field = "parent"
 		subtotal_display_field = "item_code"
 	else:
-		group_by_field = frappe.scrub(filters.get("group_by"))
+		group_by_field = capkpi.scrub(filters.get("group_by"))
 		subtotal_display_field = "item_code"
 
 	return group_by_field, subtotal_display_field
@@ -743,5 +743,5 @@ def add_sub_total_row(item, total_row_map, group_by_value, tax_columns):
 	total_row["percent_gt"] += item["percent_gt"]
 
 	for tax in tax_columns:
-		total_row.setdefault(frappe.scrub(tax + " Amount"), 0.0)
-		total_row[frappe.scrub(tax + " Amount")] += flt(item[frappe.scrub(tax + " Amount")])
+		total_row.setdefault(capkpi.scrub(tax + " Amount"), 0.0)
+		total_row[capkpi.scrub(tax + " Amount")] += flt(item[capkpi.scrub(tax + " Amount")])

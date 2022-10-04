@@ -2,16 +2,16 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.meta import get_field_precision
-from frappe.utils import flt, format_datetime, get_datetime
+import capkpi
+from capkpi import _
+from capkpi.model.meta import get_field_precision
+from capkpi.utils import flt, format_datetime, get_datetime
 
 import erp
 from erp.stock.utils import get_incoming_rate
 
 
-class StockOverReturnError(frappe.ValidationError):
+class StockOverReturnError(capkpi.ValidationError):
 	pass
 
 
@@ -25,12 +25,12 @@ def validate_return(doc):
 
 
 def validate_return_against(doc):
-	if not frappe.db.exists(doc.doctype, doc.return_against):
-		frappe.throw(
+	if not capkpi.db.exists(doc.doctype, doc.return_against):
+		capkpi.throw(
 			_("Invalid {0}: {1}").format(doc.meta.get_label("return_against"), doc.return_against)
 		)
 	else:
-		ref_doc = frappe.get_doc(doc.doctype, doc.return_against)
+		ref_doc = capkpi.get_doc(doc.doctype, doc.return_against)
 
 		party_type = "customer" if doc.doctype in ("Sales Invoice", "Delivery Note") else "supplier"
 
@@ -47,13 +47,13 @@ def validate_return_against(doc):
 			)
 
 			if get_datetime(return_posting_datetime) < get_datetime(ref_posting_datetime):
-				frappe.throw(
+				capkpi.throw(
 					_("Posting timestamp must be after {0}").format(format_datetime(ref_posting_datetime))
 				)
 
 			# validate same exchange rate
 			if doc.conversion_rate != ref_doc.conversion_rate:
-				frappe.throw(
+				capkpi.throw(
 					_("Exchange Rate must be same as {0} {1} ({2})").format(
 						doc.doctype, doc.return_against, ref_doc.conversion_rate
 					)
@@ -61,7 +61,7 @@ def validate_return_against(doc):
 
 			# validate update stock
 			if doc.doctype == "Sales Invoice" and doc.update_stock and not ref_doc.update_stock:
-				frappe.throw(
+				capkpi.throw(
 					_("'Update Stock' can not be checked because items are not delivered via {0}").format(
 						doc.return_against
 					)
@@ -71,7 +71,7 @@ def validate_return_against(doc):
 def validate_returned_items(doc):
 	from erp.stock.doctype.serial_no.serial_no import get_serial_nos
 
-	valid_items = frappe._dict()
+	valid_items = capkpi._dict()
 
 	select_fields = "item_code, qty, stock_qty, rate, parenttype, conversion_factor"
 	if doc.doctype != "Purchase Invoice":
@@ -80,7 +80,7 @@ def validate_returned_items(doc):
 	if doc.doctype in ["Purchase Invoice", "Purchase Receipt"]:
 		select_fields += ",rejected_qty, received_qty"
 
-	for d in frappe.db.sql(
+	for d in capkpi.db.sql(
 		"""select {0} from `tab{1} Item` where parent = %s""".format(select_fields, doc.doctype),
 		doc.return_against,
 		as_dict=1,
@@ -88,7 +88,7 @@ def validate_returned_items(doc):
 		valid_items = get_ref_item_dict(valid_items, d)
 
 	if doc.doctype in ("Delivery Note", "Sales Invoice"):
-		for d in frappe.db.sql(
+		for d in capkpi.db.sql(
 			"""select item_code, qty, serial_no, batch_no from `tabPacked Item`
 			where parent = %s""",
 			doc.return_against,
@@ -107,24 +107,24 @@ def validate_returned_items(doc):
 	for d in doc.get("items"):
 		if d.item_code and (flt(d.qty) < 0 or flt(d.get("received_qty")) < 0):
 			if d.item_code not in valid_items:
-				frappe.throw(
+				capkpi.throw(
 					_("Row # {0}: Returned Item {1} does not exist in {2} {3}").format(
 						d.idx, d.item_code, doc.doctype, doc.return_against
 					)
 				)
 			else:
-				ref = valid_items.get(d.item_code, frappe._dict())
+				ref = valid_items.get(d.item_code, capkpi._dict())
 				validate_quantity(doc, d, ref, valid_items, already_returned_items)
 
 				if ref.rate and doc.doctype in ("Delivery Note", "Sales Invoice") and flt(d.rate) > ref.rate:
-					frappe.throw(
+					capkpi.throw(
 						_("Row # {0}: Rate cannot be greater than the rate used in {1} {2}").format(
 							d.idx, doc.doctype, doc.return_against
 						)
 					)
 
 				elif ref.batch_no and d.batch_no not in ref.batch_no:
-					frappe.throw(
+					capkpi.throw(
 						_("Row # {0}: Batch No must be same as {1} {2}").format(
 							d.idx, doc.doctype, doc.return_against
 						)
@@ -132,12 +132,12 @@ def validate_returned_items(doc):
 
 				elif ref.serial_no:
 					if not d.serial_no:
-						frappe.throw(_("Row # {0}: Serial No is mandatory").format(d.idx))
+						capkpi.throw(_("Row # {0}: Serial No is mandatory").format(d.idx))
 					else:
 						serial_nos = get_serial_nos(d.serial_no)
 						for s in serial_nos:
 							if s not in ref.serial_no:
-								frappe.throw(
+								capkpi.throw(
 									_("Row # {0}: Serial No {1} does not match with {2} {3}").format(
 										d.idx, s, doc.doctype, doc.return_against
 									)
@@ -146,9 +146,9 @@ def validate_returned_items(doc):
 				if (
 					warehouse_mandatory
 					and not d.get("warehouse")
-					and frappe.db.get_value("Item", d.item_code, "is_stock_item")
+					and capkpi.db.get_value("Item", d.item_code, "is_stock_item")
 				):
-					frappe.throw(_("Warehouse is mandatory"))
+					capkpi.throw(_("Warehouse is mandatory"))
 
 			items_returned = True
 
@@ -156,7 +156,7 @@ def validate_returned_items(doc):
 			items_returned = True
 
 	if not items_returned:
-		frappe.throw(_("Atleast one item should be entered with negative quantity in return document"))
+		capkpi.throw(_("Atleast one item should be entered with negative quantity in return document"))
 
 
 def validate_quantity(doc, args, ref, valid_items, already_returned_items):
@@ -168,7 +168,7 @@ def validate_quantity(doc, args, ref, valid_items, already_returned_items):
 
 	company_currency = erp.get_company_currency(doc.company)
 	stock_qty_precision = get_field_precision(
-		frappe.get_meta(doc.doctype + " Item").get_field("stock_qty"), company_currency
+		capkpi.get_meta(doc.doctype + " Item").get_field("stock_qty"), company_currency
 	)
 
 	for column in fields:
@@ -186,13 +186,13 @@ def validate_quantity(doc, args, ref, valid_items, already_returned_items):
 
 		if reference_qty:
 			if flt(args.get(column)) > 0:
-				frappe.throw(_("{0} must be negative in return document").format(label))
+				capkpi.throw(_("{0} must be negative in return document").format(label))
 			elif returned_qty >= reference_qty and args.get(column):
-				frappe.throw(
+				capkpi.throw(
 					_("Item {0} has already been returned").format(args.item_code), StockOverReturnError
 				)
 			elif abs(flt(current_stock_qty, stock_qty_precision)) > max_returnable_qty:
-				frappe.throw(
+				capkpi.throw(
 					_("Row # {0}: Cannot return more than {1} for Item {2}").format(
 						args.idx, max_returnable_qty, args.item_code
 					),
@@ -205,7 +205,7 @@ def get_ref_item_dict(valid_items, ref_item_row):
 
 	valid_items.setdefault(
 		ref_item_row.item_code,
-		frappe._dict(
+		capkpi._dict(
 			{
 				"qty": 0,
 				"rate": 0,
@@ -243,7 +243,7 @@ def get_already_returned_items(doc):
 		column += """, sum(abs(child.rejected_qty) * child.conversion_factor) as rejected_qty,
 			sum(abs(child.received_qty) * child.conversion_factor) as received_qty"""
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		select {0}
 		from
@@ -264,7 +264,7 @@ def get_already_returned_items(doc):
 	for d in data:
 		items.setdefault(
 			d.item_code,
-			frappe._dict(
+			capkpi._dict(
 				{
 					"qty": d.get("qty"),
 					"stock_qty": d.get("stock_qty"),
@@ -279,7 +279,7 @@ def get_already_returned_items(doc):
 
 def get_returned_qty_map_for_row(return_against, party, row_name, doctype):
 	child_doctype = doctype + " Item"
-	reference_field = "dn_detail" if doctype == "Delivery Note" else frappe.scrub(child_doctype)
+	reference_field = "dn_detail" if doctype == "Delivery Note" else capkpi.scrub(child_doctype)
 
 	if doctype in ("Purchase Receipt", "Purchase Invoice"):
 		party_type = "supplier"
@@ -301,7 +301,7 @@ def get_returned_qty_map_for_row(return_against, party, row_name, doctype):
 			fields += ["sum(abs(`tab{0}`.received_stock_qty)) as received_stock_qty".format(child_doctype)]
 
 	# Used retrun against and supplier and is_retrun because there is an index added for it
-	data = frappe.db.get_list(
+	data = capkpi.db.get_list(
 		doctype,
 		fields=fields,
 		filters=[
@@ -317,17 +317,17 @@ def get_returned_qty_map_for_row(return_against, party, row_name, doctype):
 
 
 def make_return_doc(doctype: str, source_name: str, target_doc=None):
-	from frappe.model.mapper import get_mapped_doc
+	from capkpi.model.mapper import get_mapped_doc
 
 	from erp.stock.doctype.serial_no.serial_no import get_serial_nos
 
-	company = frappe.db.get_value("Delivery Note", source_name, "company")
-	default_warehouse_for_sales_return = frappe.db.get_value(
+	company = capkpi.db.get_value("Delivery Note", source_name, "company")
+	default_warehouse_for_sales_return = capkpi.db.get_value(
 		"Company", company, "default_warehouse_for_sales_return"
 	)
 
 	def set_missing_values(source, target):
-		doc = frappe.get_doc(target)
+		doc = capkpi.get_doc(target)
 		doc.is_return = 1
 		doc.return_against = source.name
 		doc.set_warehouse = ""
@@ -336,11 +336,11 @@ def make_return_doc(doctype: str, source_name: str, target_doc=None):
 
 			# look for Print Heading "Credit Note"
 			if not doc.select_print_heading:
-				doc.select_print_heading = frappe.db.get_value("Print Heading", _("Credit Note"))
+				doc.select_print_heading = capkpi.db.get_value("Print Heading", _("Credit Note"))
 
 		elif doctype == "Purchase Invoice":
 			# look for Print Heading "Debit Note"
-			doc.select_print_heading = frappe.db.get_value("Print Heading", _("Debit Note"))
+			doc.select_print_heading = capkpi.db.get_value("Print Heading", _("Debit Note"))
 
 		for tax in doc.get("taxes"):
 			if tax.charge_type == "Actual":
@@ -511,7 +511,7 @@ def get_rate_for_return(
 	sle=None,
 ):
 	if not return_against:
-		return_against = frappe.get_cached_value(voucher_type, voucher_no, "return_against")
+		return_against = capkpi.get_cached_value(voucher_type, voucher_no, "return_against")
 
 	return_against_item_field = get_return_against_item_fields(voucher_type)
 
@@ -530,9 +530,9 @@ def get_rate_for_return(
 	else:
 		select_field = "abs(stock_value_difference / actual_qty)"
 
-	rate = flt(frappe.db.get_value("Stock Ledger Entry", filters, select_field))
+	rate = flt(capkpi.db.get_value("Stock Ledger Entry", filters, select_field))
 	if not (rate and return_against) and voucher_type in ["Sales Invoice", "Delivery Note"]:
-		rate = frappe.db.get_value(f"{voucher_type} Item", voucher_detail_no, "incoming_rate")
+		rate = capkpi.db.get_value(f"{voucher_type} Item", voucher_detail_no, "incoming_rate")
 
 		if not rate and sle:
 			rate = get_incoming_rate(
@@ -577,7 +577,7 @@ def get_filters(
 	if item_row:
 		reference_voucher_detail_no = item_row.get(return_against_item_field)
 	else:
-		reference_voucher_detail_no = frappe.db.get_value(
+		reference_voucher_detail_no = capkpi.db.get_value(
 			voucher_type + " Item", voucher_detail_no, return_against_item_field
 		)
 
@@ -590,7 +590,7 @@ def get_filters(
 def get_returned_serial_nos(child_doc, parent_doc):
 	from erp.stock.doctype.serial_no.serial_no import get_serial_nos
 
-	return_ref_field = frappe.scrub(child_doc.doctype)
+	return_ref_field = capkpi.scrub(child_doc.doctype)
 	if child_doc.doctype == "Delivery Note Item":
 		return_ref_field = "dn_detail"
 
@@ -605,7 +605,7 @@ def get_returned_serial_nos(child_doc, parent_doc):
 		[parent_doc.doctype, "docstatus", "=", 1],
 	]
 
-	for row in frappe.get_all(parent_doc.doctype, fields=fields, filters=filters):
+	for row in capkpi.get_all(parent_doc.doctype, fields=fields, filters=filters):
 		serial_nos.extend(get_serial_nos(row.serial_no))
 
 	return serial_nos

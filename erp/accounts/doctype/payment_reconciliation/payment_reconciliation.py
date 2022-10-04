@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.model.document import Document
-from frappe.utils import flt, getdate, nowdate, today
+import capkpi
+from capkpi import _, msgprint
+from capkpi.model.document import Document
+from capkpi.utils import flt, getdate, nowdate, today
 
 import erp
 from erp.accounts.utils import (
@@ -17,7 +17,7 @@ from erp.controllers.accounts_controller import get_advance_payment_entries
 
 
 class PaymentReconciliation(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_unreconciled_entries(self):
 		self.get_nonreconciled_payment_entries()
 		self.get_invoice_entries()
@@ -71,7 +71,7 @@ class PaymentReconciliation(Document):
 			"t2.against_account like %(bank_cash_account)s" if self.bank_cash_account else "1=1"
 		)
 
-		journal_entries = frappe.db.sql(
+		journal_entries = capkpi.db.sql(
 			"""
 			select
 				"Journal Entry" as reference_type, t1.name as reference_name,
@@ -127,7 +127,7 @@ class PaymentReconciliation(Document):
 
 		voucher_type = "Sales Invoice" if self.party_type == "Customer" else "Purchase Invoice"
 
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			""" SELECT doc.name as reference_name, %(voucher_type)s as reference_type,
 				(sum(gl.{dr_or_cr}) - sum(gl.{reconciled_dr_or_cr})) as amount, doc.posting_date,
 				account_currency as currency
@@ -148,7 +148,7 @@ class PaymentReconciliation(Document):
 				doc=voucher_type,
 				dr_or_cr=dr_or_cr,
 				reconciled_dr_or_cr=reconciled_dr_or_cr,
-				party_type_field=frappe.scrub(self.party_type),
+				party_type_field=capkpi.scrub(self.party_type),
 				condition=condition or "",
 			),
 			{
@@ -206,12 +206,12 @@ class PaymentReconciliation(Document):
 
 		row = self.get_payment_details(allocated_entry, dr_or_cr)
 
-		doc = frappe.get_doc(allocated_entry.reference_type, allocated_entry.reference_name)
+		doc = capkpi.get_doc(allocated_entry.reference_type, allocated_entry.reference_name)
 		update_reference_in_payment_entry(row, doc, do_not_save=True)
 
 		return doc.difference_amount
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def allocate_entries(self, args):
 		self.validate_entries()
 		entries = []
@@ -246,7 +246,7 @@ class PaymentReconciliation(Document):
 				row.update(entry)
 
 	def get_allocated_entry(self, pay, inv, allocated_amount):
-		return frappe._dict(
+		return capkpi._dict(
 			{
 				"reference_type": pay.get("reference_type"),
 				"reference_name": pay.get("reference_name"),
@@ -260,7 +260,7 @@ class PaymentReconciliation(Document):
 			}
 		)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def reconcile(self):
 		self.validate_allocation()
 		dr_or_cr = (
@@ -291,7 +291,7 @@ class PaymentReconciliation(Document):
 		self.get_unreconciled_entries()
 
 	def get_payment_details(self, row, dr_or_cr):
-		return frappe._dict(
+		return capkpi._dict(
 			{
 				"voucher_type": row.get("reference_type"),
 				"voucher_no": row.get("reference_name"),
@@ -314,17 +314,17 @@ class PaymentReconciliation(Document):
 	def check_mandatory_to_fetch(self):
 		for fieldname in ["company", "party_type", "party", "receivable_payable_account"]:
 			if not self.get(fieldname):
-				frappe.throw(_("Please select {0} first").format(self.meta.get_label(fieldname)))
+				capkpi.throw(_("Please select {0} first").format(self.meta.get_label(fieldname)))
 
 	def validate_entries(self):
 		if not self.get("invoices"):
-			frappe.throw(_("No records found in the Invoices table"))
+			capkpi.throw(_("No records found in the Invoices table"))
 
 		if not self.get("payments"):
-			frappe.throw(_("No records found in the Payments table"))
+			capkpi.throw(_("No records found in the Payments table"))
 
 	def validate_allocation(self):
-		unreconciled_invoices = frappe._dict()
+		unreconciled_invoices = capkpi._dict()
 
 		for inv in self.get("invoices"):
 			unreconciled_invoices.setdefault(inv.invoice_type, {}).setdefault(
@@ -337,7 +337,7 @@ class PaymentReconciliation(Document):
 				invoices_to_reconcile.append(row.invoice_number)
 
 				if flt(row.amount) - flt(row.allocated_amount) < 0:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row {0}: Allocated amount {1} must be less than or equal to remaining payment amount {2}"
 						).format(row.idx, row.allocated_amount, row.amount)
@@ -345,14 +345,14 @@ class PaymentReconciliation(Document):
 
 				invoice_outstanding = unreconciled_invoices.get(row.invoice_type, {}).get(row.invoice_number)
 				if flt(row.allocated_amount) - invoice_outstanding > 0.009:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row {0}: Allocated amount {1} must be less than or equal to invoice outstanding amount {2}"
 						).format(row.idx, row.allocated_amount, invoice_outstanding)
 					)
 
 		if not invoices_to_reconcile:
-			frappe.throw(_("No records found in Allocation table"))
+			capkpi.throw(_("No records found in Allocation table"))
 
 	def get_conditions(self, get_invoices=False, get_payments=False, get_return_invoices=False):
 		condition = " and company = '{0}' ".format(self.company)
@@ -362,12 +362,12 @@ class PaymentReconciliation(Document):
 
 		if get_invoices:
 			condition += (
-				" and posting_date >= {0}".format(frappe.db.escape(self.from_invoice_date))
+				" and posting_date >= {0}".format(capkpi.db.escape(self.from_invoice_date))
 				if self.from_invoice_date
 				else ""
 			)
 			condition += (
-				" and posting_date <= {0}".format(frappe.db.escape(self.to_invoice_date))
+				" and posting_date <= {0}".format(capkpi.db.escape(self.to_invoice_date))
 				if self.to_invoice_date
 				else ""
 			)
@@ -389,12 +389,12 @@ class PaymentReconciliation(Document):
 		elif get_return_invoices:
 			condition = " and doc.company = '{0}' ".format(self.company)
 			condition += (
-				" and doc.posting_date >= {0}".format(frappe.db.escape(self.from_payment_date))
+				" and doc.posting_date >= {0}".format(capkpi.db.escape(self.from_payment_date))
 				if self.from_payment_date
 				else ""
 			)
 			condition += (
-				" and doc.posting_date <= {0}".format(frappe.db.escape(self.to_payment_date))
+				" and doc.posting_date <= {0}".format(capkpi.db.escape(self.to_payment_date))
 				if self.to_payment_date
 				else ""
 			)
@@ -415,12 +415,12 @@ class PaymentReconciliation(Document):
 
 		else:
 			condition += (
-				" and posting_date >= {0}".format(frappe.db.escape(self.from_payment_date))
+				" and posting_date >= {0}".format(capkpi.db.escape(self.from_payment_date))
 				if self.from_payment_date
 				else ""
 			)
 			condition += (
-				" and posting_date <= {0}".format(frappe.db.escape(self.to_payment_date))
+				" and posting_date <= {0}".format(capkpi.db.escape(self.to_payment_date))
 				if self.to_payment_date
 				else ""
 			)
@@ -453,7 +453,7 @@ def reconcile_dr_cr_note(dr_cr_notes, company):
 
 		company_currency = erp.get_company_currency(company)
 
-		jv = frappe.get_doc(
+		jv = capkpi.get_doc(
 			{
 				"doctype": "Journal Entry",
 				"voucher_type": voucher_type,

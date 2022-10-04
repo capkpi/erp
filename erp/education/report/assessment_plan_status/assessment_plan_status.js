@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Assessment Plan Status"] = {
+capkpi.query_reports["Assessment Plan Status"] = {
 	"filters": [
 		{
 			"fieldname":"assessment_group",

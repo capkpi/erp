@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt, getdate, nowdate
+import capkpi
+from capkpi import _
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import flt, getdate, nowdate
 
 from erp.buying.utils import validate_for_items
 from erp.controllers.buying_controller import BuyingController
@@ -30,11 +30,11 @@ class SupplierQuotation(BuyingController):
 		self.validate_valid_till()
 
 	def on_submit(self):
-		frappe.db.set(self, "status", "Submitted")
+		capkpi.db.set(self, "status", "Submitted")
 		self.update_rfq_supplier_status(1)
 
 	def on_cancel(self):
-		frappe.db.set(self, "status", "Cancelled")
+		capkpi.db.set(self, "status", "Cancelled")
 		self.update_rfq_supplier_status(0)
 
 	def on_trash(self):
@@ -57,7 +57,7 @@ class SupplierQuotation(BuyingController):
 
 	def validate_valid_till(self):
 		if self.valid_till and getdate(self.valid_till) < getdate(self.transaction_date):
-			frappe.throw(_("Valid till Date cannot be before Transaction Date"))
+			capkpi.throw(_("Valid till Date cannot be before Transaction Date"))
 
 	def update_rfq_supplier_status(self, include_me):
 		rfq_list = set([])
@@ -65,8 +65,8 @@ class SupplierQuotation(BuyingController):
 			if item.request_for_quotation:
 				rfq_list.add(item.request_for_quotation)
 		for rfq in rfq_list:
-			doc = frappe.get_doc("Request for Quotation", rfq)
-			doc_sup = frappe.get_all(
+			doc = capkpi.get_doc("Request for Quotation", rfq)
+			doc_sup = capkpi.get_all(
 				"Request for Quotation Supplier",
 				filters={"parent": doc.name, "supplier": self.supplier},
 				fields=["name", "quote_status"],
@@ -74,7 +74,7 @@ class SupplierQuotation(BuyingController):
 
 			doc_sup = doc_sup[0] if doc_sup else None
 			if not doc_sup:
-				frappe.throw(
+				capkpi.throw(
 					_("Supplier {0} not found in {1}").format(
 						self.supplier,
 						"<a href='desk/app/Form/Request for Quotation/{0}'> Request for Quotation {0} </a>".format(
@@ -85,7 +85,7 @@ class SupplierQuotation(BuyingController):
 
 			quote_status = _("Received")
 			for item in doc.items:
-				sqi_count = frappe.db.sql(
+				sqi_count = capkpi.db.sql(
 					"""
 					SELECT
 						COUNT(sqi.name) as count
@@ -108,7 +108,7 @@ class SupplierQuotation(BuyingController):
 				if (sqi_count.count + self_count) == 0:
 					quote_status = _("Pending")
 
-				frappe.db.set_value(
+				capkpi.db.set_value(
 					"Request for Quotation Supplier", doc_sup.name, "quote_status", quote_status
 				)
 
@@ -129,7 +129,7 @@ def get_list_context(context=None):
 	return list_context
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_purchase_order(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.run_method("set_missing_values")
@@ -172,7 +172,7 @@ def make_purchase_order(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_quotation(source_name, target_doc=None):
 	doclist = get_mapped_doc(
 		"Supplier Quotation",
@@ -186,7 +186,7 @@ def make_quotation(source_name, target_doc=None):
 			},
 			"Supplier Quotation Item": {
 				"doctype": "Quotation Item",
-				"condition": lambda doc: frappe.db.get_value("Item", doc.item_code, "is_sales_item") == 1,
+				"condition": lambda doc: capkpi.db.get_value("Item", doc.item_code, "is_sales_item") == 1,
 				"add_if_empty": True,
 			},
 		},
@@ -197,7 +197,7 @@ def make_quotation(source_name, target_doc=None):
 
 
 def set_expired_status():
-	frappe.db.sql(
+	capkpi.db.sql(
 		"""
 		UPDATE
 			`tabSupplier Quotation` SET `status` = 'Expired'

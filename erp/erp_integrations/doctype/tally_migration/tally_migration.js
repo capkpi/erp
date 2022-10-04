@@ -1,14 +1,14 @@
 // Copyright (c) 2019, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.tally_migration");
+capkpi.provide("erp.tally_migration");
 
-frappe.ui.form.on("Tally Migration", {
+capkpi.ui.form.on("Tally Migration", {
 	onload: function (frm) {
 		let reload_status = true;
-		frappe.realtime.on("tally_migration_progress_update", function (data) {
+		capkpi.realtime.on("tally_migration_progress_update", function (data) {
 			if (reload_status) {
-				frappe.model.with_doc(frm.doc.doctype, frm.doc.name, () => {
+				capkpi.model.with_doc(frm.doc.doctype, frm.doc.name, () => {
 					frm.refresh_header();
 				});
 				reload_status = false;
@@ -20,7 +20,7 @@ frappe.ui.form.on("Tally Migration", {
 					frm.dashboard.hide_progress(title);
 					frm.reload_doc();
 					if (error_occurred) {
-						frappe.msgprint({
+						capkpi.msgprint({
 							message: __("An error has occurred during {0}. Check {1} for more details",
 								[
 									repl("<a href='/app/tally-migration/%(tally_document)s' class='variant-click'>%(tally_document)s</a>", {
@@ -74,9 +74,9 @@ frappe.ui.form.on("Tally Migration", {
 	},
 
 	erp_company: function (frm) {
-		frappe.db.exists("Company", frm.doc.erp_company).then(exists => {
+		capkpi.db.exists("Company", frm.doc.erp_company).then(exists => {
 			if (exists) {
-				frappe.msgprint(
+				capkpi.msgprint(
 					__("Company {0} already exists. Continuing will overwrite the Company and Chart of Accounts", [frm.doc.erp_company]),
 				);
 			}
@@ -219,7 +219,7 @@ erp.tally_migration.unresolve = (document) => {
 	let fixed_log = erp.tally_migration.fixed_errors_log;
 
 	let modified_fixed_log = fixed_log.filter(row => {
-		if (!frappe.utils.deep_equal(erp.tally_migration.cleanDoc(row.doc), document)) {
+		if (!capkpi.utils.deep_equal(erp.tally_migration.cleanDoc(row.doc), document)) {
 			return row
 		}
 	});
@@ -240,7 +240,7 @@ erp.tally_migration.resolve = (document) => {
 	let fixed_log = erp.tally_migration.fixed_errors_log;
 
 	let modified_failed_log = failed_log.filter(row => {
-		if (!frappe.utils.deep_equal(erp.tally_migration.cleanDoc(row.doc), document)) {
+		if (!capkpi.utils.deep_equal(erp.tally_migration.cleanDoc(row.doc), document)) {
 			return row
 		}
 	});
@@ -256,7 +256,7 @@ erp.tally_migration.resolve = (document) => {
 erp.tally_migration.create_new_doc = (document) => {
 	/* Mark as resolved and create new document */
 	erp.tally_migration.resolve(document);
-	return frappe.call({
+	return capkpi.call({
 		type: "POST",
 		method: 'erp.erp_integrations.doctype.tally_migration.tally_migration.new_doc',
 		args: {
@@ -265,9 +265,9 @@ erp.tally_migration.create_new_doc = (document) => {
 		freeze: true,
 		callback: function(r) {
 			if(!r.exc) {
-				frappe.model.sync(r.message);
-				frappe.get_doc(r.message.doctype, r.message.name).__run_link_triggers = true;
-				frappe.set_route("Form", r.message.doctype, r.message.name);
+				capkpi.model.sync(r.message);
+				capkpi.get_doc(r.message.doctype, r.message.name).__run_link_triggers = true;
+				capkpi.set_route("Form", r.message.doctype, r.message.name);
 			}
 		}
 	});
@@ -277,7 +277,7 @@ erp.tally_migration.get_html_rows = (logs, field) => {
 	let index = 0;
 	let rows = logs
 		.map(({ doc, exc }) => {
-			let id = frappe.dom.get_unique_id();
+			let id = capkpi.dom.get_unique_id();
 			let traceback = exc;
 
 			let error_message = erp.tally_migration.getError(traceback);

@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class AssessmentPlan(Document):
@@ -37,14 +37,14 @@ class AssessmentPlan(Document):
 		for d in self.assessment_criteria:
 			max_score += d.maximum_score
 		if self.maximum_assessment_score != max_score:
-			frappe.throw(
+			capkpi.throw(
 				_("Sum of Scores of Assessment Criteria needs to be {0}.").format(
 					self.maximum_assessment_score
 				)
 			)
 
 	def validate_assessment_criteria(self):
-		assessment_criteria_list = frappe.db.sql_list(
+		assessment_criteria_list = capkpi.db.sql_list(
 			""" select apc.assessment_criteria
 			from `tabAssessment Plan` ap , `tabAssessment Plan Criteria` apc
 			where ap.name = apc.parent and ap.course=%s and ap.student_group=%s and ap.assessment_group=%s
@@ -53,8 +53,8 @@ class AssessmentPlan(Document):
 		)
 		for d in self.assessment_criteria:
 			if d.assessment_criteria in assessment_criteria_list:
-				frappe.throw(
+				capkpi.throw(
 					_("You have already assessed for the assessment criteria {}.").format(
-						frappe.bold(d.assessment_criteria)
+						capkpi.bold(d.assessment_criteria)
 					)
 				)

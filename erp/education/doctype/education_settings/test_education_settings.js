@@ -10,11 +10,11 @@ QUnit.test("test: Education Settings", function (assert) {
 
 	assert.expect(3);
 
-	frappe.run_serially([
-		() => frappe.set_route("List", "Education Settings"),
-		() => frappe.timeout(0.4),
+	capkpi.run_serially([
+		() => capkpi.set_route("List", "Education Settings"),
+		() => capkpi.timeout(0.4),
 		() => {
-			return frappe.tests.set_form_values(cur_frm, [
+			return capkpi.tests.set_form_values(cur_frm, [
 				{current_academic_year: '2016-17'},
 				{current_academic_term: '2016-17 (Semester 1)'},
 				{attendance_freeze_date: '2016-07-20'}

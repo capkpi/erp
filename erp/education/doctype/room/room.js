@@ -1,2 +1,2 @@
-frappe.ui.form.on("Room", {
+capkpi.ui.form.on("Room", {
 });

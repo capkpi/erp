@@ -4,9 +4,9 @@
 
 import random
 
-import frappe
-from frappe.utils import flt
-from frappe.utils.make_random import add_random_children, get_random
+import capkpi
+from capkpi.utils import flt
+from capkpi.utils.make_random import add_random_children, get_random
 
 import erp
 from erp.accounts.doctype.payment_request.payment_request import (
@@ -18,7 +18,7 @@ from erp.setup.utils import get_exchange_rate
 
 
 def work(domain="Manufacturing"):
-	frappe.set_user(frappe.db.get_global("demo_sales_user_2"))
+	capkpi.set_user(capkpi.db.get_global("demo_sales_user_2"))
 
 	for i in range(random.randint(1, 7)):
 		if random.random() < 0.5:
@@ -29,11 +29,11 @@ def work(domain="Manufacturing"):
 			make_quotation(domain)
 
 	try:
-		lost_reason = frappe.get_doc(
+		lost_reason = capkpi.get_doc(
 			{"doctype": "Opportunity Lost Reason", "lost_reason": "Did not ask"}
 		)
 		lost_reason.save(ignore_permissions=True)
-	except frappe.exceptions.DuplicateEntryError:
+	except capkpi.exceptions.DuplicateEntryError:
 		pass
 
 	# lost quotations / inquiries
@@ -57,7 +57,7 @@ def work(domain="Manufacturing"):
 		sales_order_name = get_random("Sales Order", filters={"docstatus": 1})
 		try:
 			if sales_order_name:
-				so = frappe.get_doc("Sales Order", sales_order_name)
+				so = capkpi.get_doc("Sales Order", sales_order_name)
 				if flt(so.per_billed) != 100:
 					payment_request = make_payment_request(
 						dt="Sales Order",
@@ -68,22 +68,22 @@ def work(domain="Manufacturing"):
 						use_dummy_message=True,
 					)
 
-					payment_entry = frappe.get_doc(make_payment_entry(payment_request.name))
-					payment_entry.posting_date = frappe.flags.current_date
+					payment_entry = capkpi.get_doc(make_payment_entry(payment_request.name))
+					payment_entry.posting_date = capkpi.flags.current_date
 					payment_entry.submit()
 		except Exception:
 			pass
 
 
 def make_opportunity(domain):
-	b = frappe.get_doc(
+	b = capkpi.get_doc(
 		{
 			"doctype": "Opportunity",
 			"opportunity_from": "Customer",
-			"party_name": frappe.get_value("Customer", get_random("Customer"), "name"),
+			"party_name": capkpi.get_value("Customer", get_random("Customer"), "name"),
 			"opportunity_type": "Sales",
 			"with_items": 1,
-			"transaction_date": frappe.flags.current_date,
+			"transaction_date": capkpi.flags.current_date,
 		}
 	)
 
@@ -99,7 +99,7 @@ def make_opportunity(domain):
 	)
 
 	b.insert()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def make_quotation(domain):
@@ -109,18 +109,18 @@ def make_quotation(domain):
 	if opportunity:
 		from erp.crm.doctype.opportunity.opportunity import make_quotation
 
-		qtn = frappe.get_doc(make_quotation(opportunity))
+		qtn = capkpi.get_doc(make_quotation(opportunity))
 		qtn.insert()
-		frappe.db.commit()
+		capkpi.db.commit()
 		qtn.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 	else:
 		# make new directly
 
 		# get customer, currency and exchange_rate
 		customer = get_random("Customer")
 
-		company_currency = frappe.get_cached_value(
+		company_currency = capkpi.get_cached_value(
 			"Company", erp.get_default_company(), "default_currency"
 		)
 		party_account_currency = get_party_account_currency(
@@ -131,16 +131,16 @@ def make_quotation(domain):
 		else:
 			exchange_rate = get_exchange_rate(party_account_currency, company_currency, args="for_selling")
 
-		qtn = frappe.get_doc(
+		qtn = capkpi.get_doc(
 			{
-				"creation": frappe.flags.current_date,
+				"creation": capkpi.flags.current_date,
 				"doctype": "Quotation",
 				"quotation_to": "Customer",
 				"party_name": customer,
 				"currency": party_account_currency or company_currency,
 				"conversion_rate": exchange_rate,
 				"order_type": "Sales",
-				"transaction_date": frappe.flags.current_date,
+				"transaction_date": capkpi.flags.current_date,
 			}
 		)
 
@@ -156,9 +156,9 @@ def make_quotation(domain):
 		)
 
 		qtn.insert()
-		frappe.db.commit()
+		capkpi.db.commit()
 		qtn.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def make_sales_order():
@@ -166,10 +166,10 @@ def make_sales_order():
 	if q:
 		from erp.selling.doctype.quotation.quotation import make_sales_order as mso
 
-		so = frappe.get_doc(mso(q))
-		so.transaction_date = frappe.flags.current_date
-		so.delivery_date = frappe.utils.add_days(frappe.flags.current_date, 10)
+		so = capkpi.get_doc(mso(q))
+		so.transaction_date = capkpi.flags.current_date
+		so.delivery_date = capkpi.utils.add_days(capkpi.flags.current_date, 10)
 		so.insert()
-		frappe.db.commit()
+		capkpi.db.commit()
 		so.submit()
-		frappe.db.commit()
+		capkpi.db.commit()

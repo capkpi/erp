@@ -1,4 +1,4 @@
-import frappe
+import capkpi
 
 
 def update_lead_phone_numbers(contact, method):
@@ -22,6 +22,6 @@ def update_lead_phone_numbers(contact, method):
 				if primary_mobile_nos:
 					mobile_no = primary_mobile_nos[0]
 
-			lead = frappe.get_doc("Lead", contact_lead)
+			lead = capkpi.get_doc("Lead", contact_lead)
 			lead.db_set("phone", phone)
 			lead.db_set("mobile_no", mobile_no)

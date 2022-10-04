@@ -2,23 +2,23 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 from erp.education.doctype.student_group.student_group import get_students
 
 
 class StudentGroupCreationTool(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_courses(self):
 		group_list = []
 
-		batches = frappe.db.sql("""select name as batch from `tabStudent Batch Name`""", as_dict=1)
+		batches = capkpi.db.sql("""select name as batch from `tabStudent Batch Name`""", as_dict=1)
 		for batch in batches:
 			group_list.append({"group_based_on": "Batch", "batch": batch.batch})
 
-		courses = frappe.db.sql(
+		courses = capkpi.db.sql(
 			"""select course, course_name from `tabProgram Course` where parent=%s""",
 			(self.program),
 			as_dict=1,
@@ -61,27 +61,27 @@ class StudentGroupCreationTool(Document):
 
 		return group_list
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def create_student_groups(self):
 		if not self.courses:
-			frappe.throw(_("""No Student Groups created."""))
+			capkpi.throw(_("""No Student Groups created."""))
 
 		l = len(self.courses)
 		for d in self.courses:
 			if not d.student_group_name:
-				frappe.throw(_("""Student Group Name is mandatory in row {0}""".format(d.idx)))
+				capkpi.throw(_("""Student Group Name is mandatory in row {0}""".format(d.idx)))
 
 			if d.group_based_on == "Course" and not d.course:
-				frappe.throw(_("""Course is mandatory in row {0}""".format(d.idx)))
+				capkpi.throw(_("""Course is mandatory in row {0}""".format(d.idx)))
 
 			if d.group_based_on == "Batch" and not d.batch:
-				frappe.throw(_("""Batch is mandatory in row {0}""".format(d.idx)))
+				capkpi.throw(_("""Batch is mandatory in row {0}""".format(d.idx)))
 
-			frappe.publish_realtime(
-				"student_group_creation_progress", {"progress": [d.idx, l]}, user=frappe.session.user
+			capkpi.publish_realtime(
+				"student_group_creation_progress", {"progress": [d.idx, l]}, user=capkpi.session.user
 			)
 
-			student_group = frappe.new_doc("Student Group")
+			student_group = capkpi.new_doc("Student Group")
 			student_group.student_group_name = d.student_group_name
 			student_group.group_based_on = d.group_based_on
 			student_group.program = self.program
@@ -98,4 +98,4 @@ class StudentGroupCreationTool(Document):
 				student_group.append("students", student)
 			student_group.save()
 
-		frappe.msgprint(_("{0} Student Groups created.").format(l))
+		capkpi.msgprint(_("{0} Student Groups created.").format(l))

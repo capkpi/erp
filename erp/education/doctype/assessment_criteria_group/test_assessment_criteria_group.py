@@ -3,7 +3,7 @@
 
 import unittest
 
-# test_records = frappe.get_test_records('Assessment Criteria Group')
+# test_records = capkpi.get_test_records('Assessment Criteria Group')
 
 
 class TestAssessmentCriteriaGroup(unittest.TestCase):

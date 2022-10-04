@@ -2,13 +2,13 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-import frappe.defaults
-from frappe import _, throw
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.contacts.doctype.contact.contact import get_contact_name
-from frappe.utils import cint, cstr, flt, get_fullname
-from frappe.utils.nestedset import get_root_of
+import capkpi
+import capkpi.defaults
+from capkpi import _, throw
+from capkpi.contacts.doctype.address.address import get_address_display
+from capkpi.contacts.doctype.contact.contact import get_contact_name
+from capkpi.utils import cint, cstr, flt, get_fullname
+from capkpi.utils.nestedset import get_root_of
 
 from erp.accounts.utils import get_account_name
 from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import (
@@ -17,21 +17,21 @@ from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import (
 from erp.utilities.product import get_web_item_qty_in_stock
 
 
-class WebsitePriceListMissingError(frappe.ValidationError):
+class WebsitePriceListMissingError(capkpi.ValidationError):
 	pass
 
 
 def set_cart_count(quotation=None):
-	if cint(frappe.db.get_singles_value("E Commerce Settings", "enabled")):
+	if cint(capkpi.db.get_singles_value("E Commerce Settings", "enabled")):
 		if not quotation:
 			quotation = _get_cart_quotation()
 		cart_count = cstr(cint(quotation.get("total_qty")))
 
-		if hasattr(frappe.local, "cookie_manager"):
-			frappe.local.cookie_manager.set_cookie("cart_count", cart_count)
+		if hasattr(capkpi.local, "cookie_manager"):
+			capkpi.local.cookie_manager.set_cookie("cart_count", cart_count)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_cart_quotation(doc=None):
 	party = get_party()
 
@@ -50,11 +50,11 @@ def get_cart_quotation(doc=None):
 		"shipping_addresses": get_shipping_addresses(party),
 		"billing_addresses": get_billing_addresses(party),
 		"shipping_rules": get_applicable_shipping_rules(party),
-		"cart_settings": frappe.get_cached_doc("E Commerce Settings"),
+		"cart_settings": capkpi.get_cached_doc("E Commerce Settings"),
 	}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_shipping_addresses(party=None):
 	if not party:
 		party = get_party()
@@ -66,7 +66,7 @@ def get_shipping_addresses(party=None):
 	]
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_billing_addresses(party=None):
 	if not party:
 		party = get_party()
@@ -78,10 +78,10 @@ def get_billing_addresses(party=None):
 	]
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def place_order():
 	quotation = _get_cart_quotation()
-	cart_settings = frappe.db.get_value(
+	cart_settings = capkpi.db.get_value(
 		"E Commerce Settings", None, ["company", "allow_items_not_in_stock"], as_dict=1
 	)
 	quotation.company = cart_settings.company
@@ -91,22 +91,22 @@ def place_order():
 
 	if quotation.quotation_to == "Lead" and quotation.party_name:
 		# company used to create customer accounts
-		frappe.defaults.set_user_default("company", quotation.company)
+		capkpi.defaults.set_user_default("company", quotation.company)
 
 	if not (quotation.shipping_address_name or quotation.customer_address):
-		frappe.throw(_("Set Shipping Address or Billing Address"))
+		capkpi.throw(_("Set Shipping Address or Billing Address"))
 
 	from erp.selling.doctype.quotation.quotation import _make_sales_order
 
-	sales_order = frappe.get_doc(_make_sales_order(quotation.name, ignore_permissions=True))
+	sales_order = capkpi.get_doc(_make_sales_order(quotation.name, ignore_permissions=True))
 	sales_order.payment_schedule = []
 
 	if not cint(cart_settings.allow_items_not_in_stock):
 		for item in sales_order.get("items"):
-			item.warehouse = frappe.db.get_value(
+			item.warehouse = capkpi.db.get_value(
 				"Website Item", {"item_code": item.item_code}, "website_warehouse"
 			)
-			is_stock_item = frappe.db.get_value("Item", item.item_code, "is_stock_item")
+			is_stock_item = capkpi.db.get_value("Item", item.item_code, "is_stock_item")
 
 			if is_stock_item:
 				item_stock = get_web_item_qty_in_stock(item.item_code, "website_warehouse")
@@ -119,13 +119,13 @@ def place_order():
 	sales_order.insert()
 	sales_order.submit()
 
-	if hasattr(frappe.local, "cookie_manager"):
-		frappe.local.cookie_manager.delete_cookie("cart_count")
+	if hasattr(capkpi.local, "cookie_manager"):
+		capkpi.local.cookie_manager.delete_cookie("cart_count")
 
 	return sales_order.name
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def request_for_quotation():
 	quotation = _get_cart_quotation()
 	quotation.flags.ignore_permissions = True
@@ -137,7 +137,7 @@ def request_for_quotation():
 	return quotation.name
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_cart(item_code, qty, additional_notes=None, with_items=False):
 	quotation = _get_cart_quotation()
 
@@ -181,9 +181,9 @@ def update_cart(item_code, qty, additional_notes=None, with_items=False):
 	if cint(with_items):
 		context = get_cart_quotation(quotation)
 		return {
-			"items": frappe.render_template("templates/includes/cart/cart_items.html", context),
-			"total": frappe.render_template("templates/includes/cart/cart_items_total.html", context),
-			"taxes_and_totals": frappe.render_template(
+			"items": capkpi.render_template("templates/includes/cart/cart_items.html", context),
+			"total": capkpi.render_template("templates/includes/cart/cart_items_total.html", context),
+			"taxes_and_totals": capkpi.render_template(
 				"templates/includes/cart/cart_payment_summary.html", context
 			),
 		}
@@ -191,35 +191,35 @@ def update_cart(item_code, qty, additional_notes=None, with_items=False):
 		return {"name": quotation.name}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_shopping_cart_menu(context=None):
 	if not context:
 		context = get_cart_quotation()
 
-	return frappe.render_template("templates/includes/cart/cart_dropdown.html", context)
+	return capkpi.render_template("templates/includes/cart/cart_dropdown.html", context)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def add_new_address(doc):
-	doc = frappe.parse_json(doc)
+	doc = capkpi.parse_json(doc)
 	doc.update({"doctype": "Address"})
-	address = frappe.get_doc(doc)
+	address = capkpi.get_doc(doc)
 	address.save(ignore_permissions=True)
 
 	return address
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def create_lead_for_item_inquiry(lead, subject, message):
-	lead = frappe.parse_json(lead)
-	lead_doc = frappe.new_doc("Lead")
+	lead = capkpi.parse_json(lead)
+	lead_doc = capkpi.new_doc("Lead")
 	for fieldname in ("lead_name", "company_name", "email_id", "phone"):
 		lead_doc.set(fieldname, lead.get(fieldname))
 
 	lead_doc.set("lead_owner", "")
 
-	if not frappe.db.exists("Lead Source", "Product Inquiry"):
-		frappe.get_doc({"doctype": "Lead Source", "source_name": "Product Inquiry"}).insert(
+	if not capkpi.db.exists("Lead Source", "Product Inquiry"):
+		capkpi.get_doc({"doctype": "Lead Source", "source_name": "Product Inquiry"}).insert(
 			ignore_permissions=True
 		)
 
@@ -227,9 +227,9 @@ def create_lead_for_item_inquiry(lead, subject, message):
 
 	try:
 		lead_doc.save(ignore_permissions=True)
-	except frappe.exceptions.DuplicateEntryError:
-		frappe.clear_messages()
-		lead_doc = frappe.get_doc("Lead", {"email_id": lead["email_id"]})
+	except capkpi.exceptions.DuplicateEntryError:
+		capkpi.clear_messages()
+		lead_doc = capkpi.get_doc("Lead", {"email_id": lead["email_id"]})
 
 	lead_doc.add_comment(
 		"Comment",
@@ -246,15 +246,15 @@ def create_lead_for_item_inquiry(lead, subject, message):
 	return lead_doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_terms_and_conditions(terms_name):
-	return frappe.db.get_value("Terms and Conditions", terms_name, "terms")
+	return capkpi.db.get_value("Terms and Conditions", terms_name, "terms")
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_cart_address(address_type, address_name):
 	quotation = _get_cart_quotation()
-	address_doc = frappe.get_doc("Address", address_name).as_dict()
+	address_doc = capkpi.get_doc("Address", address_name).as_dict()
 	address_display = get_address_display(address_doc)
 
 	if address_type.lower() == "billing":
@@ -278,20 +278,20 @@ def update_cart_address(address_type, address_name):
 	context["address"] = address_doc
 
 	return {
-		"taxes": frappe.render_template("templates/includes/order/order_taxes.html", context),
-		"address": frappe.render_template("templates/includes/cart/address_card.html", context),
+		"taxes": capkpi.render_template("templates/includes/order/order_taxes.html", context),
+		"address": capkpi.render_template("templates/includes/cart/address_card.html", context),
 	}
 
 
 def guess_territory():
 	territory = None
-	geoip_country = frappe.session.get("session_country")
+	geoip_country = capkpi.session.get("session_country")
 	if geoip_country:
-		territory = frappe.db.get_value("Territory", geoip_country)
+		territory = capkpi.db.get_value("Territory", geoip_country)
 
 	return (
 		territory
-		or frappe.db.get_value("E Commerce Settings", None, "territory")
+		or capkpi.db.get_value("E Commerce Settings", None, "territory")
 		or get_root_of("Territory")
 	)
 
@@ -302,8 +302,8 @@ def decorate_quotation_doc(doc):
 		fields = ["web_item_name", "thumbnail", "website_image", "description", "route"]
 
 		# Variant Item
-		if not frappe.db.exists("Website Item", {"item_code": item_code}):
-			variant_data = frappe.db.get_values(
+		if not capkpi.db.exists("Website Item", {"item_code": item_code}):
+			variant_data = capkpi.db.get_values(
 				"Item",
 				filters={"item_code": item_code},
 				fieldname=["variant_of", "item_name", "image"],
@@ -317,7 +317,7 @@ def decorate_quotation_doc(doc):
 				d.thumbnail = variant_data.image
 				fields = fields[2:]
 
-		d.update(frappe.db.get_value("Website Item", {"item_code": item_code}, fields, as_dict=True))
+		d.update(capkpi.db.get_value("Website Item", {"item_code": item_code}, fields, as_dict=True))
 
 	return doc
 
@@ -327,12 +327,12 @@ def _get_cart_quotation(party=None):
 	if not party:
 		party = get_party()
 
-	quotation = frappe.get_all(
+	quotation = capkpi.get_all(
 		"Quotation",
 		fields=["name"],
 		filters={
 			"party_name": party.name,
-			"contact_email": frappe.session.user,
+			"contact_email": capkpi.session.user,
 			"order_type": "Shopping Cart",
 			"docstatus": 0,
 		},
@@ -341,10 +341,10 @@ def _get_cart_quotation(party=None):
 	)
 
 	if quotation:
-		qdoc = frappe.get_doc("Quotation", quotation[0].name)
+		qdoc = capkpi.get_doc("Quotation", quotation[0].name)
 	else:
-		company = frappe.db.get_value("E Commerce Settings", None, ["company"])
-		qdoc = frappe.get_doc(
+		company = capkpi.db.get_value("E Commerce Settings", None, ["company"])
+		qdoc = capkpi.get_doc(
 			{
 				"doctype": "Quotation",
 				"naming_series": get_shopping_cart_settings().quotation_series or "QTN-CART-",
@@ -358,8 +358,8 @@ def _get_cart_quotation(party=None):
 			}
 		)
 
-		qdoc.contact_person = frappe.db.get_value("Contact", {"email_id": frappe.session.user})
-		qdoc.contact_email = frappe.session.user
+		qdoc.contact_person = capkpi.db.get_value("Contact", {"email_id": capkpi.session.user})
+		qdoc.contact_email = capkpi.session.user
 
 		qdoc.flags.ignore_permissions = True
 		qdoc.run_method("set_missing_values")
@@ -374,8 +374,8 @@ def update_party(fullname, company_name=None, mobile_no=None, phone=None):
 	party.customer_name = company_name or fullname
 	party.customer_type = "Company" if company_name else "Individual"
 
-	contact_name = frappe.db.get_value("Contact", {"email_id": frappe.session.user})
-	contact = frappe.get_doc("Contact", contact_name)
+	contact_name = capkpi.db.get_value("Contact", {"email_id": capkpi.session.user})
+	contact = capkpi.get_doc("Contact", contact_name)
 	contact.first_name = fullname
 	contact.last_name = None
 	contact.customer_name = party.customer_name
@@ -384,7 +384,7 @@ def update_party(fullname, company_name=None, mobile_no=None, phone=None):
 	contact.flags.ignore_permissions = True
 	contact.save()
 
-	party_doc = frappe.get_doc(party.as_dict())
+	party_doc = capkpi.get_doc(party.as_dict())
 	party_doc.flags.ignore_permissions = True
 	party_doc.save()
 
@@ -402,7 +402,7 @@ def apply_cart_settings(party=None, quotation=None):
 	if not quotation:
 		quotation = _get_cart_quotation(party)
 
-	cart_settings = frappe.get_doc("E Commerce Settings")
+	cart_settings = capkpi.get_doc("E Commerce Settings")
 
 	set_price_list_and_rate(quotation, cart_settings)
 
@@ -428,9 +428,9 @@ def set_price_list_and_rate(quotation, cart_settings):
 	# refetch values
 	quotation.run_method("set_price_list_and_item_details")
 
-	if hasattr(frappe.local, "cookie_manager"):
+	if hasattr(capkpi.local, "cookie_manager"):
 		# set it in cookies for using in product page
-		frappe.local.cookie_manager.set_cookie("selling_price_list", quotation.selling_price_list)
+		capkpi.local.cookie_manager.set_cookie("selling_price_list", quotation.selling_price_list)
 
 
 def _set_price_list(cart_settings, quotation=None):
@@ -441,8 +441,8 @@ def _set_price_list(cart_settings, quotation=None):
 	selling_price_list = None
 
 	# check if default customer price list exists
-	if party_name and frappe.db.exists("Customer", party_name):
-		selling_price_list = get_default_price_list(frappe.get_doc("Customer", party_name))
+	if party_name and capkpi.db.exists("Customer", party_name):
+		selling_price_list = get_default_price_list(capkpi.get_doc("Customer", party_name))
 
 	# check default price list in shopping cart
 	if not selling_price_list:
@@ -458,7 +458,7 @@ def set_taxes(quotation, cart_settings):
 	"""set taxes based on billing territory"""
 	from erp.accounts.party import set_taxes
 
-	customer_group = frappe.db.get_value("Customer", quotation.party_name, "customer_group")
+	customer_group = capkpi.db.get_value("Customer", quotation.party_name, "customer_group")
 
 	quotation.taxes_and_charges = set_taxes(
 		quotation.party_name,
@@ -482,18 +482,18 @@ def set_taxes(quotation, cart_settings):
 
 def get_party(user=None):
 	if not user:
-		user = frappe.session.user
+		user = capkpi.session.user
 
 	contact_name = get_contact_name(user)
 	party = None
 
 	if contact_name:
-		contact = frappe.get_doc("Contact", contact_name)
+		contact = capkpi.get_doc("Contact", contact_name)
 		if contact.links:
 			party_doctype = contact.links[0].link_doctype
 			party = contact.links[0].link_name
 
-	cart_settings = frappe.get_doc("E Commerce Settings")
+	cart_settings = capkpi.get_doc("E Commerce Settings")
 
 	debtors_account = ""
 
@@ -501,13 +501,13 @@ def get_party(user=None):
 		debtors_account = get_debtors_account(cart_settings)
 
 	if party:
-		return frappe.get_doc(party_doctype, party)
+		return capkpi.get_doc(party_doctype, party)
 
 	else:
 		if not cart_settings.enabled:
-			frappe.local.flags.redirect_location = "/contact"
-			raise frappe.Redirect
-		customer = frappe.new_doc("Customer")
+			capkpi.local.flags.redirect_location = "/contact"
+			raise capkpi.Redirect
+		customer = capkpi.new_doc("Customer")
 		fullname = get_fullname(user)
 		customer.update(
 			{
@@ -524,7 +524,7 @@ def get_party(user=None):
 		customer.flags.ignore_mandatory = True
 		customer.insert(ignore_permissions=True)
 
-		contact = frappe.new_doc("Contact")
+		contact = capkpi.new_doc("Contact")
 		contact.update({"first_name": fullname, "email_ids": [{"email_id": user, "is_primary": 1}]})
 		contact.append("links", dict(link_doctype="Customer", link_name=customer.name))
 		contact.flags.ignore_mandatory = True
@@ -535,9 +535,9 @@ def get_party(user=None):
 
 def get_debtors_account(cart_settings):
 	if not cart_settings.payment_gateway_account:
-		frappe.throw(_("Payment Gateway Account not set"), _("Mandatory"))
+		capkpi.throw(_("Payment Gateway Account not set"), _("Mandatory"))
 
-	payment_gateway_account_currency = frappe.get_doc(
+	payment_gateway_account_currency = capkpi.get_doc(
 		"Payment Gateway Account", cart_settings.payment_gateway_account
 	).currency
 
@@ -552,7 +552,7 @@ def get_debtors_account(cart_settings):
 	)
 
 	if not debtors_account_name:
-		debtors_account = frappe.get_doc(
+		debtors_account = capkpi.get_doc(
 			{
 				"doctype": "Account",
 				"account_type": "Receivable",
@@ -581,7 +581,7 @@ def get_address_docs(
 	if not party:
 		return []
 
-	address_names = frappe.db.get_all(
+	address_names = capkpi.db.get_all(
 		"Dynamic Link",
 		fields=("parent"),
 		filters=dict(parenttype="Address", link_doctype=party.doctype, link_name=party.name),
@@ -590,14 +590,14 @@ def get_address_docs(
 	out = []
 
 	for a in address_names:
-		address = frappe.get_doc("Address", a.parent)
+		address = capkpi.get_doc("Address", a.parent)
 		address.display = get_address_display(address.as_dict())
 		out.append(address)
 
 	return out
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def apply_shipping_rule(shipping_rule):
 	quotation = _get_cart_quotation()
 
@@ -630,7 +630,7 @@ def get_applicable_shipping_rules(party=None, quotation=None):
 	shipping_rules = get_shipping_rules(quotation)
 
 	if shipping_rules:
-		rule_label_map = frappe.db.get_values("Shipping Rule", shipping_rules, "label")
+		rule_label_map = capkpi.db.get_values("Shipping Rule", shipping_rules, "label")
 		# we need this in sorted order as per the position of the rule in the settings page
 		return [[rule, rule] for rule in shipping_rules]
 
@@ -641,9 +641,9 @@ def get_shipping_rules(quotation=None, cart_settings=None):
 
 	shipping_rules = []
 	if quotation.shipping_address_name:
-		country = frappe.db.get_value("Address", quotation.shipping_address_name, "country")
+		country = capkpi.db.get_value("Address", quotation.shipping_address_name, "country")
 		if country:
-			shipping_rules = frappe.db.sql_list(
+			shipping_rules = capkpi.db.sql_list(
 				"""select distinct sr.name
 				from `tabShipping Rule Country` src, `tabShipping Rule` sr
 				where src.country = %s and
@@ -659,9 +659,9 @@ def get_address_territory(address_name):
 	territory = None
 
 	if address_name:
-		address_fields = frappe.db.get_value("Address", address_name, ["city", "state", "country"])
+		address_fields = capkpi.db.get_value("Address", address_name, ["city", "state", "country"])
 		for value in address_fields:
-			territory = frappe.db.get_value("Territory", value)
+			territory = capkpi.db.get_value("Territory", value)
 			if territory:
 				break
 
@@ -672,16 +672,16 @@ def show_terms(doc):
 	return doc.tc_name
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def apply_coupon_code(applied_code, applied_referral_sales_partner):
 	quotation = True
 
 	if not applied_code:
-		frappe.throw(_("Please enter a coupon code"))
+		capkpi.throw(_("Please enter a coupon code"))
 
-	coupon_list = frappe.get_all("Coupon Code", filters={"coupon_code": applied_code})
+	coupon_list = capkpi.get_all("Coupon Code", filters={"coupon_code": applied_code})
 	if not coupon_list:
-		frappe.throw(_("Please enter a valid coupon code"))
+		capkpi.throw(_("Please enter a valid coupon code"))
 
 	coupon_name = coupon_list[0].name
 
@@ -694,7 +694,7 @@ def apply_coupon_code(applied_code, applied_referral_sales_partner):
 	quotation.save()
 
 	if applied_referral_sales_partner:
-		sales_partner_list = frappe.get_all(
+		sales_partner_list = capkpi.get_all(
 			"Sales Partner", filters={"referral_code": applied_referral_sales_partner}
 		)
 		if sales_partner_list:

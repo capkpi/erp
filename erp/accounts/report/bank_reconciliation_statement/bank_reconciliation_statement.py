@@ -2,11 +2,11 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Sum
-from frappe.utils import flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.query_builder.custom import ConstantColumn
+from capkpi.query_builder.functions import Sum
+from capkpi.utils import flt, getdate
 from pypika import CustomFunction
 
 from erp.accounts.utils import get_balance_on
@@ -21,7 +21,7 @@ def execute(filters=None):
 	if not filters.get("account"):
 		return columns, []
 
-	account_currency = frappe.db.get_value("Account", filters.account, "account_currency")
+	account_currency = capkpi.db.get_value("Account", filters.account, "account_currency")
 
 	data = get_entries(filters)
 
@@ -130,7 +130,7 @@ def get_entries(filters):
 
 
 def get_journal_entries(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select "Journal Entry" as payment_document, jv.posting_date,
 			jv.name as payment_entry, jvd.debit_in_account_currency as debit,
@@ -148,7 +148,7 @@ def get_journal_entries(filters):
 
 
 def get_payment_entries(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			"Payment Entry" as payment_document, name as payment_entry,
@@ -169,7 +169,7 @@ def get_payment_entries(filters):
 
 
 def get_pos_entries(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 			select
 				"Sales Invoice Payment" as payment_document, sip.name as payment_entry, sip.amount as debit,
@@ -191,7 +191,7 @@ def get_pos_entries(filters):
 def get_loan_entries(filters):
 	loan_docs = []
 	for doctype in ["Loan Disbursement", "Loan Repayment"]:
-		loan_doc = frappe.qb.DocType(doctype)
+		loan_doc = capkpi.qb.DocType(doctype)
 		ifnull = CustomFunction("IFNULL", ["value", "default"])
 
 		if doctype == "Loan Disbursement":
@@ -206,7 +206,7 @@ def get_loan_entries(filters):
 			salary_condition = loan_doc.repay_from_salary == 0
 
 		query = (
-			frappe.qb.from_(loan_doc)
+			capkpi.qb.from_(loan_doc)
 			.select(
 				ConstantColumn(doctype).as_("payment_document"),
 				(loan_doc.name).as_("payment_entry"),
@@ -229,7 +229,7 @@ def get_loan_entries(filters):
 
 
 def get_amounts_not_reflected_in_system(filters):
-	je_amount = frappe.db.sql(
+	je_amount = capkpi.db.sql(
 		"""
 		select sum(jvd.debit_in_account_currency - jvd.credit_in_account_currency)
 		from `tabJournal Entry Account` jvd, `tabJournal Entry` jv
@@ -241,7 +241,7 @@ def get_amounts_not_reflected_in_system(filters):
 
 	je_amount = flt(je_amount[0][0]) if je_amount else 0.0
 
-	pe_amount = frappe.db.sql(
+	pe_amount = capkpi.db.sql(
 		"""
 		select sum(if(paid_from=%(account)s, paid_amount, received_amount))
 		from `tabPayment Entry`
@@ -260,7 +260,7 @@ def get_amounts_not_reflected_in_system(filters):
 def get_loan_amount(filters):
 	total_amount = 0
 	for doctype in ["Loan Disbursement", "Loan Repayment"]:
-		loan_doc = frappe.qb.DocType(doctype)
+		loan_doc = capkpi.qb.DocType(doctype)
 		ifnull = CustomFunction("IFNULL", ["value", "default"])
 
 		if doctype == "Loan Disbursement":
@@ -274,7 +274,7 @@ def get_loan_amount(filters):
 			account = loan_doc.payment_account
 			salary_condition = loan_doc.repay_from_salary == 0
 		amount = (
-			frappe.qb.from_(loan_doc)
+			capkpi.qb.from_(loan_doc)
 			.select(amount_field)
 			.where(loan_doc.docstatus == 1)
 			.where(salary_condition)

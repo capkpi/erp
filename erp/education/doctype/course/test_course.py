@@ -3,11 +3,11 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.education.doctype.topic.test_topic import make_topic, make_topic_and_linked_content
 
-# test_records = frappe.get_test_records('Course')
+# test_records = capkpi.get_test_records('Course')
 
 
 class TestCourse(unittest.TestCase):
@@ -17,27 +17,27 @@ class TestCourse(unittest.TestCase):
 		make_course_and_linked_topic("_Test Course 1", ["_Test Topic 1", "_Test Topic 2"])
 
 	def test_get_topics(self):
-		course = frappe.get_doc("Course", "_Test Course 1")
+		course = capkpi.get_doc("Course", "_Test Course 1")
 		topics = course.get_topics()
 		self.assertEqual(topics[0].name, "_Test Topic 1")
 		self.assertEqual(topics[1].name, "_Test Topic 2")
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 
 def make_course(name):
 	try:
-		course = frappe.get_doc("Course", name)
-	except frappe.DoesNotExistError:
-		course = frappe.get_doc({"doctype": "Course", "course_name": name, "course_code": name}).insert()
+		course = capkpi.get_doc("Course", name)
+	except capkpi.DoesNotExistError:
+		course = capkpi.get_doc({"doctype": "Course", "course_name": name, "course_code": name}).insert()
 	return course.name
 
 
 def make_course_and_linked_topic(course_name, topic_name_list):
 	try:
-		course = frappe.get_doc("Course", course_name)
-	except frappe.DoesNotExistError:
+		course = capkpi.get_doc("Course", course_name)
+	except capkpi.DoesNotExistError:
 		make_course(course_name)
-		course = frappe.get_doc("Course", course_name)
+		course = capkpi.get_doc("Course", course_name)
 	topic_list = [make_topic(topic_name) for topic_name in topic_name_list]
 	for topic in topic_list:
 		course.append("topics", {"topic": topic})

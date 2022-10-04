@@ -1,19 +1,19 @@
 import json
 import random
 
-import frappe
-from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import cstr, flt, now_datetime, random_string
-from frappe.utils.make_random import add_random_children, get_random
-from frappe.utils.nestedset import get_root_of
+import capkpi
+from capkpi import _
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_fields
+from capkpi.utils import cstr, flt, now_datetime, random_string
+from capkpi.utils.make_random import add_random_children, get_random
+from capkpi.utils.nestedset import get_root_of
 
 import erp
 from erp.demo.domains import data
 
 
 def setup(domain):
-	frappe.flags.in_demo = 1
+	capkpi.flags.in_demo = 1
 	complete_setup(domain)
 	setup_demo_page()
 	setup_fiscal_year()
@@ -24,7 +24,7 @@ def setup(domain):
 	setup_role_permissions()
 	setup_custom_field_for_domain()
 
-	employees = frappe.get_all("Employee", fields=["name", "date_of_joining"])
+	employees = capkpi.get_all("Employee", fields=["name", "date_of_joining"])
 
 	# monthly salary
 	setup_salary_structure(employees[:5], 0)
@@ -45,15 +45,15 @@ def setup(domain):
 	setup_budget()
 	setup_pos_profile()
 
-	frappe.db.commit()
-	frappe.clear_cache()
+	capkpi.db.commit()
+	capkpi.clear_cache()
 
 
 def complete_setup(domain="Manufacturing"):
 	print("Complete Setup...")
-	from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+	from capkpi.desk.page.setup_wizard.setup_wizard import setup_complete
 
-	if not frappe.get_all("Company", limit=1):
+	if not capkpi.get_all("Company", limit=1):
 		setup_complete(
 			{
 				"full_name": "Test User",
@@ -77,16 +77,16 @@ def complete_setup(domain="Manufacturing"):
 		company = erp.get_default_company()
 
 		if company:
-			company_doc = frappe.get_doc("Company", company)
+			company_doc = capkpi.get_doc("Company", company)
 			company_doc.db_set(
 				"default_payroll_payable_account",
-				frappe.db.get_value("Account", dict(account_name="Payroll Payable")),
+				capkpi.db.get_value("Account", dict(account_name="Payroll Payable")),
 			)
 
 
 def setup_demo_page():
 	# home page should always be "start"
-	website_settings = frappe.get_doc("Website Settings", "Website Settings")
+	website_settings = capkpi.get_doc("Website Settings", "Website Settings")
 	website_settings.home_page = "demo"
 	website_settings.save()
 
@@ -95,7 +95,7 @@ def setup_fiscal_year():
 	fiscal_year = None
 	for year in range(2010, now_datetime().year + 1, 1):
 		try:
-			fiscal_year = frappe.get_doc(
+			fiscal_year = capkpi.get_doc(
 				{
 					"doctype": "Fiscal Year",
 					"year": cstr(year),
@@ -103,7 +103,7 @@ def setup_fiscal_year():
 					"year_end_date": "{0}-12-31".format(year),
 				}
 			).insert()
-		except frappe.DuplicateEntryError:
+		except capkpi.DuplicateEntryError:
 			pass
 
 	# set the last fiscal year (current year) as default
@@ -114,7 +114,7 @@ def setup_fiscal_year():
 def setup_holiday_list():
 	"""Setup Holiday List for the current year"""
 	year = now_datetime().year
-	holiday_list = frappe.get_doc(
+	holiday_list = capkpi.get_doc(
 		{
 			"doctype": "Holiday List",
 			"holiday_list_name": str(year),
@@ -129,15 +129,15 @@ def setup_holiday_list():
 	holiday_list.get_weekly_off_dates()
 	holiday_list.save()
 
-	frappe.set_value(
+	capkpi.set_value(
 		"Company", erp.get_default_company(), "default_holiday_list", holiday_list.name
 	)
 
 
 def setup_user():
-	frappe.db.sql('delete from tabUser where name not in ("Guest", "Administrator")')
-	for u in json.loads(open(frappe.get_app_path("erp", "demo", "data", "user.json")).read()):
-		user = frappe.new_doc("User")
+	capkpi.db.sql('delete from tabUser where name not in ("Guest", "Administrator")')
+	for u in json.loads(open(capkpi.get_app_path("erp", "demo", "data", "user.json")).read()):
+		user = capkpi.new_doc("User")
 		user.update(u)
 		user.flags.no_welcome_mail = True
 		user.new_password = "Demo1234567!!!"
@@ -145,29 +145,29 @@ def setup_user():
 
 
 def setup_employee():
-	frappe.db.set_value("HR Settings", None, "emp_created_by", "Naming Series")
-	frappe.db.commit()
+	capkpi.db.set_value("HR Settings", None, "emp_created_by", "Naming Series")
+	capkpi.db.commit()
 
-	for d in frappe.get_all("Salary Component"):
-		salary_component = frappe.get_doc("Salary Component", d.name)
+	for d in capkpi.get_all("Salary Component"):
+		salary_component = capkpi.get_doc("Salary Component", d.name)
 		salary_component.append(
 			"accounts",
 			dict(
 				company=erp.get_default_company(),
-				account=frappe.get_value("Account", dict(account_name=("like", "Salary%"))),
+				account=capkpi.get_value("Account", dict(account_name=("like", "Salary%"))),
 			),
 		)
 		salary_component.save()
 
 	import_json("Employee")
-	holiday_list = frappe.db.get_value(
+	holiday_list = capkpi.db.get_value(
 		"Holiday List", {"holiday_list_name": str(now_datetime().year)}, "name"
 	)
-	frappe.db.sql("""update tabEmployee set holiday_list={0}""".format(holiday_list))
+	capkpi.db.sql("""update tabEmployee set holiday_list={0}""".format(holiday_list))
 
 
 def setup_salary_structure(employees, salary_slip_based_on_timesheet=0):
-	ss = frappe.new_doc("Salary Structure")
+	ss = capkpi.new_doc("Salary Structure")
 	ss.name = "Sample Salary Structure - " + random_string(5)
 	ss.salary_slip_based_on_timesheet = salary_slip_based_on_timesheet
 
@@ -177,7 +177,7 @@ def setup_salary_structure(employees, salary_slip_based_on_timesheet=0):
 	else:
 		ss.payroll_frequency = "Monthly"
 
-	ss.payment_account = frappe.get_value(
+	ss.payment_account = capkpi.get_value(
 		"Account",
 		{"account_type": "Cash", "company": erp.get_default_company(), "is_group": 0},
 		"name",
@@ -207,7 +207,7 @@ def setup_salary_structure(employees, salary_slip_based_on_timesheet=0):
 	ss.submit()
 
 	for e in employees:
-		sa = frappe.new_doc("Salary Structure Assignment")
+		sa = capkpi.new_doc("Salary Structure Assignment")
 		sa.employee = e.name
 		sa.salary_structure = ss.name
 		sa.from_date = "2015-01-01"
@@ -219,7 +219,7 @@ def setup_salary_structure(employees, salary_slip_based_on_timesheet=0):
 
 
 def setup_user_roles(domain):
-	user = frappe.get_doc("User", "demo@capkpi.com")
+	user = capkpi.get_doc("User", "demo@capkpi.com")
 	user.add_roles(
 		"HR User",
 		"HR Manager",
@@ -245,79 +245,79 @@ def setup_user_roles(domain):
 	if domain == "Education":
 		user.add_roles("Academics User")
 
-	if not frappe.db.get_global("demo_hr_user"):
-		user = frappe.get_doc("User", "CaitlinSnow@example.com")
+	if not capkpi.db.get_global("demo_hr_user"):
+		user = capkpi.get_doc("User", "CaitlinSnow@example.com")
 		user.add_roles("HR User", "HR Manager", "Accounts User")
-		frappe.db.set_global("demo_hr_user", user.name)
+		capkpi.db.set_global("demo_hr_user", user.name)
 		update_employee_department(user.name, "Human Resources")
-		for d in frappe.get_all("User Permission", filters={"user": "CaitlinSnow@example.com"}):
-			frappe.delete_doc("User Permission", d.name)
+		for d in capkpi.get_all("User Permission", filters={"user": "CaitlinSnow@example.com"}):
+			capkpi.delete_doc("User Permission", d.name)
 
-	if not frappe.db.get_global("demo_sales_user_1"):
-		user = frappe.get_doc("User", "VandalSavage@example.com")
+	if not capkpi.db.get_global("demo_sales_user_1"):
+		user = capkpi.get_doc("User", "VandalSavage@example.com")
 		user.add_roles("Sales User")
 		update_employee_department(user.name, "Sales")
-		frappe.db.set_global("demo_sales_user_1", user.name)
+		capkpi.db.set_global("demo_sales_user_1", user.name)
 
-	if not frappe.db.get_global("demo_sales_user_2"):
-		user = frappe.get_doc("User", "GraceChoi@example.com")
+	if not capkpi.db.get_global("demo_sales_user_2"):
+		user = capkpi.get_doc("User", "GraceChoi@example.com")
 		user.add_roles("Sales User", "Sales Manager", "Accounts User")
 		update_employee_department(user.name, "Sales")
-		frappe.db.set_global("demo_sales_user_2", user.name)
+		capkpi.db.set_global("demo_sales_user_2", user.name)
 
-	if not frappe.db.get_global("demo_purchase_user"):
-		user = frappe.get_doc("User", "MaxwellLord@example.com")
+	if not capkpi.db.get_global("demo_purchase_user"):
+		user = capkpi.get_doc("User", "MaxwellLord@example.com")
 		user.add_roles("Purchase User", "Purchase Manager", "Accounts User", "Stock User")
 		update_employee_department(user.name, "Purchase")
-		frappe.db.set_global("demo_purchase_user", user.name)
+		capkpi.db.set_global("demo_purchase_user", user.name)
 
-	if not frappe.db.get_global("demo_manufacturing_user"):
-		user = frappe.get_doc("User", "NeptuniaAquaria@example.com")
+	if not capkpi.db.get_global("demo_manufacturing_user"):
+		user = capkpi.get_doc("User", "NeptuniaAquaria@example.com")
 		user.add_roles(
 			"Manufacturing User", "Stock Manager", "Stock User", "Purchase User", "Accounts User"
 		)
 		update_employee_department(user.name, "Production")
-		frappe.db.set_global("demo_manufacturing_user", user.name)
+		capkpi.db.set_global("demo_manufacturing_user", user.name)
 
-	if not frappe.db.get_global("demo_stock_user"):
-		user = frappe.get_doc("User", "HollyGranger@example.com")
+	if not capkpi.db.get_global("demo_stock_user"):
+		user = capkpi.get_doc("User", "HollyGranger@example.com")
 		user.add_roles("Manufacturing User", "Stock User", "Purchase User", "Accounts User")
 		update_employee_department(user.name, "Production")
-		frappe.db.set_global("demo_stock_user", user.name)
+		capkpi.db.set_global("demo_stock_user", user.name)
 
-	if not frappe.db.get_global("demo_accounts_user"):
-		user = frappe.get_doc("User", "BarryAllen@example.com")
+	if not capkpi.db.get_global("demo_accounts_user"):
+		user = capkpi.get_doc("User", "BarryAllen@example.com")
 		user.add_roles("Accounts User", "Accounts Manager", "Sales User", "Purchase User")
 		update_employee_department(user.name, "Accounts")
-		frappe.db.set_global("demo_accounts_user", user.name)
+		capkpi.db.set_global("demo_accounts_user", user.name)
 
-	if not frappe.db.get_global("demo_projects_user"):
-		user = frappe.get_doc("User", "PeterParker@example.com")
+	if not capkpi.db.get_global("demo_projects_user"):
+		user = capkpi.get_doc("User", "PeterParker@example.com")
 		user.add_roles("HR User", "Projects User")
 		update_employee_department(user.name, "Management")
-		frappe.db.set_global("demo_projects_user", user.name)
+		capkpi.db.set_global("demo_projects_user", user.name)
 
 	if domain == "Education":
-		if not frappe.db.get_global("demo_education_user"):
-			user = frappe.get_doc("User", "ArthurCurry@example.com")
+		if not capkpi.db.get_global("demo_education_user"):
+			user = capkpi.get_doc("User", "ArthurCurry@example.com")
 			user.add_roles("Academics User")
 			update_employee_department(user.name, "Management")
-			frappe.db.set_global("demo_education_user", user.name)
+			capkpi.db.set_global("demo_education_user", user.name)
 
 	# Add Expense Approver
-	user = frappe.get_doc("User", "ClarkKent@example.com")
+	user = capkpi.get_doc("User", "ClarkKent@example.com")
 	user.add_roles("Expense Approver")
 
 
 def setup_leave_allocation():
 	year = now_datetime().year
-	for employee in frappe.get_all("Employee", fields=["name"]):
-		leave_types = frappe.get_all("Leave Type", fields=["name", "max_continuous_days_allowed"])
+	for employee in capkpi.get_all("Employee", fields=["name"]):
+		leave_types = capkpi.get_all("Leave Type", fields=["name", "max_continuous_days_allowed"])
 		for leave_type in leave_types:
 			if not leave_type.max_continuous_days_allowed:
 				leave_type.max_continuous_days_allowed = 10
 
-		leave_allocation = frappe.get_doc(
+		leave_allocation = capkpi.get_doc(
 			{
 				"doctype": "Leave Allocation",
 				"employee": employee.name,
@@ -329,7 +329,7 @@ def setup_leave_allocation():
 		)
 		leave_allocation.insert()
 		leave_allocation.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def setup_customer():
@@ -356,7 +356,7 @@ def setup_customer():
 		"Hind Enterprises",
 	]
 	for c in customers:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"customer_name": c,
@@ -382,7 +382,7 @@ def setup_supplier():
 		"Modern Electricals",
 	]
 	for s in suppliers:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_name": s,
@@ -392,13 +392,13 @@ def setup_supplier():
 
 
 def setup_warehouse():
-	w = frappe.new_doc("Warehouse")
+	w = capkpi.new_doc("Warehouse")
 	w.warehouse_name = "Supplier"
 	w.insert()
 
 
 def setup_currency_exchange():
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"doctype": "Currency Exchange",
 			"from_currency": "EUR",
@@ -407,7 +407,7 @@ def setup_currency_exchange():
 		}
 	).insert()
 
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"doctype": "Currency Exchange",
 			"from_currency": "CNY",
@@ -418,11 +418,11 @@ def setup_currency_exchange():
 
 
 def setup_mode_of_payment():
-	company_abbr = frappe.get_cached_value("Company", erp.get_default_company(), "abbr")
+	company_abbr = capkpi.get_cached_value("Company", erp.get_default_company(), "abbr")
 	account_dict = {"Cash": "Cash - " + company_abbr, "Bank": "National Bank - " + company_abbr}
-	for payment_mode in frappe.get_all("Mode of Payment", fields=["name", "type"]):
+	for payment_mode in capkpi.get_all("Mode of Payment", fields=["name", "type"]):
 		if payment_mode.type:
-			mop = frappe.get_doc("Mode of Payment", payment_mode.name)
+			mop = capkpi.get_doc("Mode of Payment", payment_mode.name)
 			mop.append(
 				"accounts",
 				{
@@ -434,19 +434,19 @@ def setup_mode_of_payment():
 
 
 def setup_account():
-	frappe.flags.in_import = True
-	data = json.loads(open(frappe.get_app_path("erp", "demo", "data", "account.json")).read())
+	capkpi.flags.in_import = True
+	data = json.loads(open(capkpi.get_app_path("erp", "demo", "data", "account.json")).read())
 	for d in data:
-		doc = frappe.new_doc("Account")
+		doc = capkpi.new_doc("Account")
 		doc.update(d)
-		doc.parent_account = frappe.db.get_value("Account", {"account_name": doc.parent_account})
+		doc.parent_account = capkpi.db.get_value("Account", {"account_name": doc.parent_account})
 		doc.insert()
 
-	frappe.flags.in_import = False
+	capkpi.flags.in_import = False
 
 
 def setup_account_to_expense_type():
-	company_abbr = frappe.get_cached_value("Company", erp.get_default_company(), "abbr")
+	company_abbr = capkpi.get_cached_value("Company", erp.get_default_company(), "abbr")
 	expense_types = [
 		{"name": _("Calls"), "account": "Sales Expenses - " + company_abbr},
 		{"name": _("Food"), "account": "Entertainment Expenses - " + company_abbr},
@@ -456,7 +456,7 @@ def setup_account_to_expense_type():
 	]
 
 	for expense_type in expense_types:
-		doc = frappe.get_doc("Expense Claim Type", expense_type["name"])
+		doc = capkpi.get_doc("Expense Claim Type", expense_type["name"])
 		doc.append(
 			"accounts",
 			{"company": erp.get_default_company(), "default_account": expense_type["account"]},
@@ -465,14 +465,14 @@ def setup_account_to_expense_type():
 
 
 def setup_budget():
-	fiscal_years = frappe.get_all("Fiscal Year", order_by="year_start_date")[-2:]
+	fiscal_years = capkpi.get_all("Fiscal Year", order_by="year_start_date")[-2:]
 
 	for fy in fiscal_years:
-		budget = frappe.new_doc("Budget")
+		budget = capkpi.new_doc("Budget")
 		budget.cost_center = get_random("Cost Center")
 		budget.fiscal_year = fy.name
 		budget.action_if_annual_budget_exceeded = "Warn"
-		expense_ledger_count = frappe.db.count("Account", {"is_group": "0", "root_type": "Expense"})
+		expense_ledger_count = capkpi.db.count("Account", {"is_group": "0", "root_type": "Expense"})
 
 		add_random_children(
 			budget,
@@ -490,9 +490,9 @@ def setup_budget():
 
 
 def setup_pos_profile():
-	company_abbr = frappe.get_cached_value("Company", erp.get_default_company(), "abbr")
-	pos = frappe.new_doc("POS Profile")
-	pos.user = frappe.db.get_global("demo_accounts_user")
+	company_abbr = capkpi.get_cached_value("Company", erp.get_default_company(), "abbr")
+	pos = capkpi.new_doc("POS Profile")
+	pos.user = capkpi.db.get_global("demo_accounts_user")
 	pos.name = "Demo POS Profile"
 	pos.naming_series = "SINV-"
 	pos.update_stock = 0
@@ -504,7 +504,7 @@ def setup_pos_profile():
 	pos.append(
 		"payments",
 		{
-			"mode_of_payment": frappe.db.get_value("Mode of Payment", {"type": "Cash"}, "name"),
+			"mode_of_payment": capkpi.db.get_value("Mode of Payment", {"type": "Cash"}, "name"),
 			"amount": 0.0,
 			"default": 1,
 		},
@@ -517,8 +517,8 @@ def setup_role_permissions():
 	role_permissions = {"Batch": ["Accounts User", "Item Manager"]}
 	for doctype, roles in role_permissions.items():
 		for role in roles:
-			if not frappe.db.get_value("Custom DocPerm", {"parent": doctype, "role": role}):
-				frappe.get_doc(
+			if not capkpi.db.get_value("Custom DocPerm", {"parent": doctype, "role": role}):
+				capkpi.get_doc(
 					{
 						"doctype": "Custom DocPerm",
 						"role": role,
@@ -532,26 +532,26 @@ def setup_role_permissions():
 
 
 def import_json(doctype, submit=False, values=None):
-	frappe.flags.in_import = True
+	capkpi.flags.in_import = True
 	data = json.loads(
-		open(frappe.get_app_path("erp", "demo", "data", frappe.scrub(doctype) + ".json")).read()
+		open(capkpi.get_app_path("erp", "demo", "data", capkpi.scrub(doctype) + ".json")).read()
 	)
 	for d in data:
-		doc = frappe.new_doc(doctype)
+		doc = capkpi.new_doc(doctype)
 		doc.update(d)
 		doc.insert()
 		if submit:
 			doc.submit()
 
-	frappe.db.commit()
+	capkpi.db.commit()
 
-	frappe.flags.in_import = False
+	capkpi.flags.in_import = False
 
 
 def update_employee_department(user_id, department):
-	employee = frappe.db.get_value("Employee", {"user_id": user_id}, "name")
-	department = frappe.db.get_value("Department", {"department_name": department}, "name")
-	frappe.db.set_value("Employee", employee, "department", department)
+	employee = capkpi.db.get_value("Employee", {"user_id": user_id}, "name")
+	department = capkpi.db.get_value("Department", {"department_name": department}, "name")
+	capkpi.db.set_value("Employee", employee, "department", department)
 
 
 def setup_custom_field_for_domain():

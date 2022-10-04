@@ -1,7 +1,7 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Course wise Assessment Report"] = {
+capkpi.query_reports["Course wise Assessment Report"] = {
 	"filters": [
 		{
 			"fieldname":"academic_year",

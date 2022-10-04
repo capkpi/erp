@@ -1,8 +1,8 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-frappe.provide("erp.accounts.bank_reconciliation");
+capkpi.provide("erp.accounts.bank_reconciliation");
 
-frappe.ui.form.on("Bank Reconciliation Tool", {
+capkpi.ui.form.on("Bank Reconciliation Tool", {
 	setup: function (frm) {
 		frm.set_query("bank_account", function () {
 			return {
@@ -19,13 +19,13 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 	},
 
 	refresh: function (frm) {
-		frappe.require("assets/js/bank-reconciliation-tool.min.js", () =>
+		capkpi.require("assets/js/bank-reconciliation-tool.min.js", () =>
 			frm.trigger("make_reconciliation_tool")
 		);
 		frm.upload_statement_button = frm.page.set_secondary_action(
 			__("Upload Bank Statement"),
 			() =>
-				frappe.call({
+				capkpi.call({
 					method:
 						"erp.accounts.doctype.bank_statement_import.bank_statement_import.upload_bank_statement",
 					args: {
@@ -36,8 +36,8 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 					},
 					callback: function (r) {
 						if (!r.exc) {
-							var doc = frappe.model.sync(r.message);
-							frappe.set_route(
+							var doc = capkpi.model.sync(r.message);
+							capkpi.set_route(
 								"Form",
 								doc[0].doctype,
 								doc[0].name
@@ -53,12 +53,12 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 	},
 
 	bank_account: function (frm) {
-		frappe.db.get_value(
+		capkpi.db.get_value(
 			"Bank Account",
 			frm.doc.bank_account,
 			"account",
 			(r) => {
-				frappe.db.get_value(
+				capkpi.db.get_value(
 					"Account",
 					r.account,
 					"account_currency",
@@ -87,7 +87,7 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 				) {
 					frm.trigger("render_chart");
 					frm.trigger("render");
-					frappe.utils.scroll_to(
+					capkpi.utils.scroll_to(
 						frm.get_field("reconciliation_tool_cards").$wrapper,
 						true,
 						30
@@ -99,7 +99,7 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 
 	get_account_opening_balance(frm) {
 		if (frm.doc.bank_account && frm.doc.bank_statement_from_date) {
-			frappe.call({
+			capkpi.call({
 				method:
 					"erp.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
@@ -115,7 +115,7 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 
 	get_cleared_balance(frm) {
 		if (frm.doc.bank_account && frm.doc.bank_statement_to_date) {
-			return frappe.call({
+			return capkpi.call({
 				method:
 					"erp.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.get_account_balance",
 				args: {
@@ -129,7 +129,7 @@ frappe.ui.form.on("Bank Reconciliation Tool", {
 		}
 	},
 
-	render_chart: frappe.utils.debounce((frm) => {
+	render_chart: capkpi.utils.debounce((frm) => {
 		frm.cards_manager = new erp.accounts.bank_reconciliation.NumberCardManager(
 			{
 				$reconciliation_tool_cards: frm.get_field(

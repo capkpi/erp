@@ -1,7 +1,7 @@
 import unittest
 
-import frappe
-from frappe.test_runner import make_test_objects
+import capkpi
+from capkpi.test_runner import make_test_objects
 
 from erp.accounts.party import get_party_shipping_address
 from erp.accounts.utils import (

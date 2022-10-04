@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Room', function(assert){
 	assert.expect(3);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Room', [
+			return capkpi.tests.make('Room', [
 				{room_name: 'Room 1'},
 				{room_number: '1'},
 				{seating_capacity: '60'},

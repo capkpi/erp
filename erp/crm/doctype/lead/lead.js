@@ -1,10 +1,10 @@
 // Copyright (c) 2019, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp");
+capkpi.provide("erp");
 cur_frm.email_field = "email_id";
 
-erp.LeadController = frappe.ui.form.Controller.extend({
+erp.LeadController = capkpi.ui.form.Controller.extend({
 	setup: function () {
 		this.frm.make_methods = {
 			'Customer': this.make_customer,
@@ -21,18 +21,18 @@ erp.LeadController = frappe.ui.form.Controller.extend({
 		});
 
 		this.frm.set_query("lead_owner", function (doc, cdt, cdn) {
-			return { query: "frappe.core.doctype.user.user.user_query" }
+			return { query: "capkpi.core.doctype.user.user.user_query" }
 		});
 
 		this.frm.set_query("contact_by", function (doc, cdt, cdn) {
-			return { query: "frappe.core.doctype.user.user.user_query" }
+			return { query: "capkpi.core.doctype.user.user.user_query" }
 		});
 	},
 
 	refresh: function () {
 		let doc = this.frm.doc;
 		erp.toggle_naming_series();
-		frappe.dynamic_link = { doc: doc, fieldname: 'name', doctype: 'Lead' }
+		capkpi.dynamic_link = { doc: doc, fieldname: 'name', doctype: 'Lead' }
 
 		if (!this.frm.is_new() && doc.__onload && !doc.__onload.is_customer) {
 			this.frm.add_custom_button(__("Customer"), this.make_customer, __("Create"));
@@ -41,28 +41,28 @@ erp.LeadController = frappe.ui.form.Controller.extend({
 		}
 
 		if (!this.frm.is_new()) {
-			frappe.contacts.render_address_and_contact(this.frm);
+			capkpi.contacts.render_address_and_contact(this.frm);
 		} else {
-			frappe.contacts.clear_address_and_contact(this.frm);
+			capkpi.contacts.clear_address_and_contact(this.frm);
 		}
 	},
 
 	make_customer: function () {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.lead.lead.make_customer",
 			frm: cur_frm
 		})
 	},
 
 	make_opportunity: function () {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.lead.lead.make_opportunity",
 			frm: cur_frm
 		})
 	},
 
 	make_quotation: function () {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.lead.lead.make_quotation",
 			frm: cur_frm
 		})
@@ -83,7 +83,7 @@ erp.LeadController = frappe.ui.form.Controller.extend({
 		if (this.frm.doc.contact_date) {
 			let d = moment(this.frm.doc.contact_date);
 			d.add(1, "day");
-			this.frm.set_value("ends_on", d.format(frappe.defaultDatetimeFormat));
+			this.frm.set_value("ends_on", d.format(capkpi.defaultDatetimeFormat));
 		}
 	}
 });

@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.shipping_rule.shipping_rule import (
 	FromGreaterThanToError,
@@ -11,18 +11,18 @@ from erp.accounts.doctype.shipping_rule.shipping_rule import (
 	OverlappingConditionError,
 )
 
-test_records = frappe.get_test_records("Shipping Rule")
+test_records = capkpi.get_test_records("Shipping Rule")
 
 
 class TestShippingRule(unittest.TestCase):
 	def test_from_greater_than_to(self):
-		shipping_rule = frappe.copy_doc(test_records[0])
+		shipping_rule = capkpi.copy_doc(test_records[0])
 		shipping_rule.name = test_records[0].get("name")
 		shipping_rule.get("conditions")[0].from_value = 101
 		self.assertRaises(FromGreaterThanToError, shipping_rule.insert)
 
 	def test_many_zero_to_values(self):
-		shipping_rule = frappe.copy_doc(test_records[0])
+		shipping_rule = capkpi.copy_doc(test_records[0])
 		shipping_rule.name = test_records[0].get("name")
 		shipping_rule.get("conditions")[0].to_value = 0
 		self.assertRaises(ManyBlankToValuesError, shipping_rule.insert)
@@ -35,7 +35,7 @@ class TestShippingRule(unittest.TestCase):
 			((50, 150), (25, 175)),
 			((50, 150), (50, 150)),
 		]:
-			shipping_rule = frappe.copy_doc(test_records[0])
+			shipping_rule = capkpi.copy_doc(test_records[0])
 			shipping_rule.name = test_records[0].get("name")
 			shipping_rule.get("conditions")[0].from_value = range_a[0]
 			shipping_rule.get("conditions")[0].to_value = range_a[1]
@@ -46,10 +46,10 @@ class TestShippingRule(unittest.TestCase):
 
 def create_shipping_rule(shipping_rule_type, shipping_rule_name):
 
-	if frappe.db.exists("Shipping Rule", shipping_rule_name):
-		return frappe.get_doc("Shipping Rule", shipping_rule_name)
+	if capkpi.db.exists("Shipping Rule", shipping_rule_name):
+		return capkpi.get_doc("Shipping Rule", shipping_rule_name)
 
-	sr = frappe.new_doc("Shipping Rule")
+	sr = capkpi.new_doc("Shipping Rule")
 	sr.account = "_Test Account Shipping Charges - _TC"
 	sr.calculate_based_on = "Net Total"
 	sr.company = "_Test Company"

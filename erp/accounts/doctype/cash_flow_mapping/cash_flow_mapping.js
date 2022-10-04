@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Cash Flow Mapping', {
+capkpi.ui.form.on('Cash Flow Mapping', {
 	refresh: function(frm) {
 		frm.events.disable_unchecked_fields(frm);
 	},

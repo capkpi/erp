@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 
-from frappe import _
+from capkpi import _
 
 from erp.accounts.report.non_billed_report import get_ordered_to_be_billed_data
 

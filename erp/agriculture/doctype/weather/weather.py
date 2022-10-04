@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class Weather(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def load_contents(self):
-		docs = frappe.get_all("Agriculture Analysis Criteria", filters={"linked_doctype": "Weather"})
+		docs = capkpi.get_all("Agriculture Analysis Criteria", filters={"linked_doctype": "Weather"})
 		for doc in docs:
 			self.append("weather_parameter", {"title": str(doc.name)})

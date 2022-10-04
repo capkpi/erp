@@ -5,9 +5,9 @@
 import json
 import random
 
-import frappe
-from frappe.desk import query_report
-from frappe.utils.make_random import get_random, how_many
+import capkpi
+from capkpi.desk import query_report
+from capkpi.utils.make_random import get_random, how_many
 
 import erp
 from erp.accounts.party import get_party_account_currency
@@ -20,7 +20,7 @@ from erp.stock.doctype.material_request.material_request import make_request_for
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_purchase_user"))
+	capkpi.set_user(capkpi.db.get_global("demo_purchase_user"))
 
 	if random.random() < 0.6:
 		report = "Items To Be Requested"
@@ -30,27 +30,27 @@ def work():
 			mr = make_material_request(item_code, qty)
 
 	if random.random() < 0.6:
-		for mr in frappe.get_all(
+		for mr in capkpi.get_all(
 			"Material Request",
 			filters={"material_request_type": "Purchase", "status": "Open"},
 			limit=random.randint(1, 6),
 		):
-			if not frappe.get_all("Request for Quotation", filters={"material_request": mr.name}, limit=1):
+			if not capkpi.get_all("Request for Quotation", filters={"material_request": mr.name}, limit=1):
 				rfq = make_request_for_quotation(mr.name)
-				rfq.transaction_date = frappe.flags.current_date
+				rfq.transaction_date = capkpi.flags.current_date
 				add_suppliers(rfq)
 				rfq.save()
 				rfq.submit()
 
 	# Make suppier quotation from RFQ against each supplier.
 	if random.random() < 0.6:
-		for rfq in frappe.get_all(
+		for rfq in capkpi.get_all(
 			"Request for Quotation", filters={"status": "Open"}, limit=random.randint(1, 6)
 		):
-			if not frappe.get_all(
+			if not capkpi.get_all(
 				"Supplier Quotation", filters={"request_for_quotation": rfq.name}, limit=1
 			):
-				rfq = frappe.get_doc("Request for Quotation", rfq.name)
+				rfq = capkpi.get_doc("Request for Quotation", rfq.name)
 
 				for supplier in rfq.suppliers:
 					supplier_quotation = make_supplier_quotation_from_rfq(
@@ -62,7 +62,7 @@ def work():
 	# get supplier details
 	supplier = get_random("Supplier")
 
-	company_currency = frappe.get_cached_value(
+	company_currency = capkpi.get_cached_value(
 		"Company", erp.get_default_company(), "default_currency"
 	)
 	party_account_currency = get_party_account_currency(
@@ -80,14 +80,14 @@ def work():
 		report = "Material Requests for which Supplier Quotations are not created"
 		for row in query_report.run(report)["result"][: random.randint(1, 3)]:
 			if row[0] != "Total":
-				sq = frappe.get_doc(make_supplier_quotation(row[0]))
-				sq.transaction_date = frappe.flags.current_date
+				sq = capkpi.get_doc(make_supplier_quotation(row[0]))
+				sq.transaction_date = capkpi.flags.current_date
 				sq.supplier = supplier
 				sq.currency = party_account_currency or company_currency
 				sq.conversion_rate = exchange_rate
 				sq.insert()
 				sq.submit()
-				frappe.db.commit()
+				capkpi.db.commit()
 
 	# make purchase orders
 	if random.random() < 0.5:
@@ -97,40 +97,40 @@ def work():
 		for row in query_report.run(report)["result"][: how_many("Purchase Order")]:
 			if row[0] != "Total":
 				try:
-					po = frappe.get_doc(make_purchase_order(row[0]))
+					po = capkpi.get_doc(make_purchase_order(row[0]))
 					po.supplier = supplier
 					po.currency = party_account_currency or company_currency
 					po.conversion_rate = exchange_rate
-					po.transaction_date = frappe.flags.current_date
+					po.transaction_date = capkpi.flags.current_date
 					po.insert()
 					po.submit()
 				except Exception:
 					pass
 				else:
-					frappe.db.commit()
+					capkpi.db.commit()
 
 	if random.random() < 0.5:
 		make_subcontract()
 
 
 def make_material_request(item_code, qty):
-	mr = frappe.new_doc("Material Request")
+	mr = capkpi.new_doc("Material Request")
 
-	variant_of = frappe.db.get_value("Item", item_code, "variant_of") or item_code
+	variant_of = capkpi.db.get_value("Item", item_code, "variant_of") or item_code
 
-	if frappe.db.get_value("BOM", {"item": variant_of, "is_default": 1, "is_active": 1}):
+	if capkpi.db.get_value("BOM", {"item": variant_of, "is_default": 1, "is_active": 1}):
 		mr.material_request_type = "Manufacture"
 	else:
 		mr.material_request_type = "Purchase"
 
-	mr.transaction_date = frappe.flags.current_date
-	mr.schedule_date = frappe.utils.add_days(mr.transaction_date, 7)
+	mr.transaction_date = capkpi.flags.current_date
+	mr.schedule_date = capkpi.utils.add_days(mr.transaction_date, 7)
 
 	mr.append(
 		"items",
 		{
 			"doctype": "Material Request Item",
-			"schedule_date": frappe.utils.add_days(mr.transaction_date, 7),
+			"schedule_date": capkpi.utils.add_days(mr.transaction_date, 7),
 			"item_code": item_code,
 			"qty": qty,
 		},
@@ -153,11 +153,11 @@ def make_subcontract():
 	item_code = get_random("Item", {"is_sub_contracted_item": 1})
 	if item_code:
 		# make sub-contract PO
-		po = frappe.new_doc("Purchase Order")
+		po = capkpi.new_doc("Purchase Order")
 		po.is_subcontracted = "Yes"
 		po.supplier = get_random("Supplier")
-		po.transaction_date = frappe.flags.current_date  # added
-		po.schedule_date = frappe.utils.add_days(frappe.flags.current_date, 7)
+		po.transaction_date = capkpi.flags.current_date  # added
+		po.schedule_date = capkpi.utils.add_days(capkpi.flags.current_date, 7)
 
 		item_code = get_random("Item", {"is_sub_contracted_item": 1})
 
@@ -165,7 +165,7 @@ def make_subcontract():
 			"items",
 			{
 				"item_code": item_code,
-				"schedule_date": frappe.utils.add_days(frappe.flags.current_date, 7),
+				"schedule_date": capkpi.utils.add_days(capkpi.flags.current_date, 7),
 				"qty": random.randint(10, 30),
 			},
 		)
@@ -182,7 +182,7 @@ def make_subcontract():
 
 		# transfer material for sub-contract
 		rm_items = get_rm_item(po.items[0], po.supplied_items[0])
-		stock_entry = frappe.get_doc(make_rm_stock_entry(po.name, json.dumps([rm_items])))
+		stock_entry = capkpi.get_doc(make_rm_stock_entry(po.name, json.dumps([rm_items])))
 		stock_entry.from_warehouse = "Stores - WPL"
 		stock_entry.to_warehouse = "Supplier - WPL"
 		stock_entry.insert()

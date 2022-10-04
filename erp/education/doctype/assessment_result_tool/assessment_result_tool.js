@@ -2,16 +2,16 @@
 // For license information, please see license.txt
 
 
-frappe.ui.form.on('Assessment Result Tool', {
+capkpi.ui.form.on('Assessment Result Tool', {
 	setup: function(frm) {
 		frm.add_fetch("assessment_plan", "student_group", "student_group");
 	},
 
 	refresh: function(frm) {
-		if (frappe.route_options) {
-			frm.set_value("student_group", frappe.route_options.student_group);
-			frm.set_value("assessment_plan", frappe.route_options.assessment_plan);
-			frappe.route_options = null;
+		if (capkpi.route_options) {
+			frm.set_value("student_group", capkpi.route_options.student_group);
+			frm.set_value("assessment_plan", capkpi.route_options.assessment_plan);
+			capkpi.route_options = null;
 		} else {
 			frm.trigger("assessment_plan");
 		}
@@ -24,7 +24,7 @@ frappe.ui.form.on('Assessment Result Tool', {
 		if(frm.doc.assessment_plan) {
 			if (!frm.doc.student_group)
 				return
-			frappe.call({
+			capkpi.call({
 				method: "erp.education.api.get_assessment_students",
 				args: {
 					"assessment_plan": frm.doc.assessment_plan,
@@ -50,7 +50,7 @@ frappe.ui.form.on('Assessment Result Tool', {
 	render_table: function(frm) {
 		$(frm.fields_dict.result_html.wrapper).empty();
 		let assessment_plan = frm.doc.assessment_plan;
-		frappe.call({
+		capkpi.call({
 			method: "erp.education.api.get_assessment_details",
 			args: {
 				assessment_plan: assessment_plan
@@ -66,7 +66,7 @@ frappe.ui.form.on('Assessment Result Tool', {
 		criteria_list.forEach(function(c) {
 			max_total_score += c.maximum_score
 		});
-		var result_table = $(frappe.render_template('assessment_result_tool', {
+		var result_table = $(capkpi.render_template('assessment_result_tool', {
 			frm: frm,
 			students: frm.doc.students,
 			criteria: criteria_list,
@@ -107,7 +107,7 @@ frappe.ui.form.on('Assessment Result Tool', {
 					.each(function(el, input){
 					student_scores["comment"] = $(input).val();
 				});
-				frappe.call({
+				capkpi.call({
 					method: "erp.education.api.mark_assessment_result",
 					args: {
 						"assessment_plan": frm.doc.assessment_plan,
@@ -138,7 +138,7 @@ frappe.ui.form.on('Assessment Result Tool', {
 	submit_result: function(frm) {
 		if (frm.doc.show_submit) {
 			frm.page.set_primary_action(__("Submit"), function() {
-				frappe.call({
+				capkpi.call({
 					method: "erp.education.api.submit_assessment_results",
 					args: {
 						"assessment_plan": frm.doc.assessment_plan,
@@ -146,9 +146,9 @@ frappe.ui.form.on('Assessment Result Tool', {
 					},
 					callback: function(r) {
 						if (r.message) {
-							frappe.msgprint(__("{0} Result submittted", [r.message]));
+							capkpi.msgprint(__("{0} Result submittted", [r.message]));
 						} else {
-							frappe.msgprint(__("No Result to submit"));
+							capkpi.msgprint(__("No Result to submit"));
 						}
 						frm.events.assessment_plan(frm);
 					}

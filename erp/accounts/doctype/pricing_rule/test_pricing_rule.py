@@ -4,8 +4,8 @@
 
 import unittest
 
-import frappe
-from frappe import MandatoryError
+import capkpi
+from capkpi import MandatoryError
 
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erp.healthcare.doctype.lab_test_template.lab_test_template import make_item_price
@@ -23,7 +23,7 @@ class TestPricingRule(unittest.TestCase):
 		delete_existing_pricing_rules()
 
 	def test_pricing_rule_for_discount(self):
-		from frappe import MandatoryError
+		from capkpi import MandatoryError
 
 		from erp.stock.get_item_details import get_item_details
 
@@ -39,9 +39,9 @@ class TestPricingRule(unittest.TestCase):
 			"discount_percentage": 10,
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "_Test Item",
 				"company": "_Test Company",
@@ -59,7 +59,7 @@ class TestPricingRule(unittest.TestCase):
 		details = get_item_details(args)
 		self.assertEqual(details.get("discount_percentage"), 10)
 
-		prule = frappe.get_doc(test_record.copy())
+		prule = capkpi.get_doc(test_record.copy())
 		prule.priority = 1
 		prule.applicable_for = "Customer"
 		prule.title = "_Test Pricing Rule for Customer"
@@ -71,7 +71,7 @@ class TestPricingRule(unittest.TestCase):
 		details = get_item_details(args)
 		self.assertEqual(details.get("discount_percentage"), 20)
 
-		prule = frappe.get_doc(test_record.copy())
+		prule = capkpi.get_doc(test_record.copy())
 		prule.apply_on = "Item Group"
 		prule.items = []
 		prule.append("item_groups", {"item_group": "All Item Groups"})
@@ -83,7 +83,7 @@ class TestPricingRule(unittest.TestCase):
 		details = get_item_details(args)
 		self.assertEqual(details.get("discount_percentage"), 10)
 
-		prule = frappe.get_doc(test_record.copy())
+		prule = capkpi.get_doc(test_record.copy())
 		prule.applicable_for = "Campaign"
 		prule.campaign = "_Test Campaign"
 		prule.title = "_Test Pricing Rule for Campaign"
@@ -95,7 +95,7 @@ class TestPricingRule(unittest.TestCase):
 		details = get_item_details(args)
 		self.assertEqual(details.get("discount_percentage"), 5)
 
-		frappe.db.sql("update `tabPricing Rule` set priority=NULL where campaign='_Test Campaign'")
+		capkpi.db.sql("update `tabPricing Rule` set priority=NULL where campaign='_Test Campaign'")
 		from erp.accounts.doctype.pricing_rule.utils import MultiplePricingRuleConflict
 
 		self.assertRaises(MultiplePricingRuleConflict, get_item_details, args)
@@ -105,7 +105,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(details.get("discount_percentage"), 15)
 
 	def test_pricing_rule_for_margin(self):
-		from frappe import MandatoryError
+		from capkpi import MandatoryError
 
 		from erp.stock.get_item_details import get_item_details
 
@@ -126,9 +126,9 @@ class TestPricingRule(unittest.TestCase):
 			"margin_rate_or_amount": 10,
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
-		item_price = frappe.get_doc(
+		item_price = capkpi.get_doc(
 			{
 				"doctype": "Item Price",
 				"price_list": "_Test Price List 2",
@@ -139,7 +139,7 @@ class TestPricingRule(unittest.TestCase):
 
 		item_price.insert(ignore_permissions=True)
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "_Test FG Item 2",
 				"company": "_Test Company",
@@ -184,9 +184,9 @@ class TestPricingRule(unittest.TestCase):
 			"customer_group": "All Customer Groups",
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "Mixed Cond Item 1",
 				"item_group": "Products",
@@ -207,12 +207,12 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(details.get("discount_percentage"), 10)
 
 	def test_pricing_rule_for_variants(self):
-		from frappe import MandatoryError
+		from capkpi import MandatoryError
 
 		from erp.stock.get_item_details import get_item_details
 
-		if not frappe.db.exists("Item", "Test Variant PRT"):
-			frappe.get_doc(
+		if not capkpi.db.exists("Item", "Test Variant PRT"):
+			capkpi.get_doc(
 				{
 					"doctype": "Item",
 					"item_code": "Test Variant PRT",
@@ -227,7 +227,7 @@ class TestPricingRule(unittest.TestCase):
 				}
 			).insert()
 
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Pricing Rule",
 				"title": "_Test Pricing Rule 1",
@@ -246,7 +246,7 @@ class TestPricingRule(unittest.TestCase):
 			}
 		).insert()
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "Test Variant PRT",
 				"company": "_Test Company",
@@ -266,7 +266,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(details.get("discount_percentage"), 7.5)
 
 		# add a new pricing rule for that item code, it should take priority
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Pricing Rule",
 				"title": "_Test Pricing Rule 2",
@@ -308,10 +308,10 @@ class TestPricingRule(unittest.TestCase):
 			"discount_percentage": 17.5,
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
-		if not frappe.db.get_value("UOM Conversion Detail", {"parent": "_Test Item", "uom": "box"}):
-			item = frappe.get_doc("Item", "_Test Item")
+		if not capkpi.db.get_value("UOM Conversion Detail", {"parent": "_Test Item", "uom": "box"}):
+			item = capkpi.get_doc("Item", "_Test Item")
 			item.append("uoms", {"uom": "Box", "conversion_factor": 5})
 			item.save(ignore_permissions=True)
 
@@ -319,7 +319,7 @@ class TestPricingRule(unittest.TestCase):
 		so = make_sales_order(item_code="_Test Item", qty=1, uom="Box", do_not_submit=True)
 		so.items[0].price_list_rate = 100
 		so.submit()
-		so = frappe.get_doc("Sales Order", so.name)
+		so = capkpi.get_doc("Sales Order", so.name)
 		self.assertEqual(so.items[0].discount_percentage, 17.5)
 		self.assertEqual(so.items[0].rate, 82.5)
 
@@ -327,12 +327,12 @@ class TestPricingRule(unittest.TestCase):
 		so = make_sales_order(item_code="_Test Item", qty=2, uom="Box", do_not_submit=True)
 		so.items[0].price_list_rate = 100
 		so.submit()
-		so = frappe.get_doc("Sales Order", so.name)
+		so = capkpi.get_doc("Sales Order", so.name)
 		self.assertEqual(so.items[0].discount_percentage, 0)
 		self.assertEqual(so.items[0].rate, 100)
 
 	def test_pricing_rule_with_margin_and_discount(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		make_pricing_rule(
 			selling=1, margin_type="Percentage", margin_rate_or_amount=10, discount_percentage=10
 		)
@@ -349,7 +349,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(item.rate, 990)
 
 	def test_pricing_rule_with_margin_and_discount_amount(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		make_pricing_rule(
 			selling=1,
 			margin_type="Percentage",
@@ -369,7 +369,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(item.rate, 990)
 
 	def test_pricing_rule_for_product_discount_on_same_item(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		test_record = {
 			"doctype": "Pricing Rule",
 			"title": "_Test Pricing Rule",
@@ -391,7 +391,7 @@ class TestPricingRule(unittest.TestCase):
 			"free_qty": 1,
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
 		# With pricing rule
 		so = make_sales_order(item_code="_Test Item", qty=1)
@@ -400,7 +400,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(so.items[1].item_code, "_Test Item")
 
 	def test_pricing_rule_for_product_discount_on_different_item(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		test_record = {
 			"doctype": "Pricing Rule",
 			"title": "_Test Pricing Rule",
@@ -423,7 +423,7 @@ class TestPricingRule(unittest.TestCase):
 			"free_qty": 1,
 			"company": "_Test Company",
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
 		# With pricing rule
 		so = make_sales_order(item_code="_Test Item", qty=1)
@@ -432,7 +432,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(so.items[1].item_code, "_Test Item 2")
 
 	def test_cumulative_pricing_rule(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Cumulative Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Cumulative Pricing Rule")
 		test_record = {
 			"doctype": "Pricing Rule",
 			"title": "_Test Cumulative Pricing Rule",
@@ -454,12 +454,12 @@ class TestPricingRule(unittest.TestCase):
 			"discount_percentage": 17.5,
 			"price_or_product_discount": "Price",
 			"company": "_Test Company",
-			"valid_from": frappe.utils.nowdate(),
-			"valid_upto": frappe.utils.nowdate(),
+			"valid_from": capkpi.utils.nowdate(),
+			"valid_upto": capkpi.utils.nowdate(),
 		}
-		frappe.get_doc(test_record.copy()).insert()
+		capkpi.get_doc(test_record.copy()).insert()
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "_Test Item",
 				"company": "_Test Company",
@@ -472,7 +472,7 @@ class TestPricingRule(unittest.TestCase):
 				"order_type": "Sales",
 				"customer": "_Test Customer",
 				"name": None,
-				"transaction_date": frappe.utils.nowdate(),
+				"transaction_date": capkpi.utils.nowdate(),
 			}
 		)
 		details = get_item_details(args)
@@ -480,7 +480,7 @@ class TestPricingRule(unittest.TestCase):
 		self.assertTrue(details)
 
 	def test_pricing_rule_for_condition(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 
 		make_pricing_rule(
 			selling=1,
@@ -529,11 +529,11 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(si.items[0].discount_percentage, 30)
 		si.delete()
 
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 1")
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 2")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 1")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 2")
 
 	def test_multiple_pricing_rules_with_apply_discount_on_discounted_rate(self):
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 
 		make_pricing_rule(
 			discount_percentage=20,
@@ -555,8 +555,8 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(si.items[0].discount_percentage, 28)
 		si.delete()
 
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 1")
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 2")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 1")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule 2")
 
 	def test_item_price_with_pricing_rule(self):
 		item = make_item("Water Flask")
@@ -579,7 +579,7 @@ class TestPricingRule(unittest.TestCase):
 			"margin_rate_or_amount": 2,
 			"company": "_Test Company",
 		}
-		rule = frappe.get_doc(pricing_rule_record)
+		rule = capkpi.get_doc(pricing_rule_record)
 		rule.insert()
 
 		si = create_sales_invoice(do_not_save=True, item_code="Water Flask")
@@ -594,7 +594,7 @@ class TestPricingRule(unittest.TestCase):
 
 		si.delete()
 		rule.delete()
-		frappe.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
+		capkpi.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
 		item.delete()
 
 	def test_pricing_rule_for_different_currency(self):
@@ -619,19 +619,19 @@ class TestPricingRule(unittest.TestCase):
 			"company": "_Test Company",
 		}
 
-		rule = frappe.get_doc(pricing_rule_record)
+		rule = capkpi.get_doc(pricing_rule_record)
 		rule.rate_or_discount = "Rate"
 		rule.rate = 100.0
 		rule.insert()
 
-		rule1 = frappe.get_doc(pricing_rule_record)
+		rule1 = capkpi.get_doc(pricing_rule_record)
 		rule1.currency = "USD"
 		rule1.rate_or_discount = "Rate"
 		rule1.rate = 2.0
 		rule1.priority = 1
 		rule1.insert()
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "Test Sanitizer Item",
 				"company": "_Test Company",
@@ -644,14 +644,14 @@ class TestPricingRule(unittest.TestCase):
 				"order_type": "Sales",
 				"customer": "_Test Customer",
 				"name": None,
-				"transaction_date": frappe.utils.nowdate(),
+				"transaction_date": capkpi.utils.nowdate(),
 			}
 		)
 
 		details = get_item_details(args)
 		self.assertEqual(details.price_list_rate, 2.0)
 
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"item_code": "Test Sanitizer Item",
 				"company": "_Test Company",
@@ -664,7 +664,7 @@ class TestPricingRule(unittest.TestCase):
 				"order_type": "Sales",
 				"customer": "_Test Customer",
 				"name": None,
-				"transaction_date": frappe.utils.nowdate(),
+				"transaction_date": capkpi.utils.nowdate(),
 			}
 		)
 
@@ -673,7 +673,7 @@ class TestPricingRule(unittest.TestCase):
 
 	def test_pricing_rule_for_transaction(self):
 		make_item("Water Flask 1")
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule")
 		make_pricing_rule(
 			selling=1,
 			min_qty=5,
@@ -723,8 +723,8 @@ class TestPricingRule(unittest.TestCase):
 		self.assertEqual(item.discount_percentage, 30)
 		si.delete()
 
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule with Min Qty - 1")
-		frappe.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule with Min Qty - 2")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule with Min Qty - 1")
+		capkpi.delete_doc_if_exists("Pricing Rule", "_Test Pricing Rule with Min Qty - 2")
 
 	def test_remove_pricing_rule(self):
 		item = make_item("Water Flask")
@@ -746,7 +746,7 @@ class TestPricingRule(unittest.TestCase):
 			"discount_percentage": 20,
 			"company": "_Test Company",
 		}
-		rule = frappe.get_doc(pricing_rule_record)
+		rule = capkpi.get_doc(pricing_rule_record)
 		rule.insert()
 
 		si = create_sales_invoice(do_not_save=True, item_code="Water Flask")
@@ -765,7 +765,7 @@ class TestPricingRule(unittest.TestCase):
 
 		si.delete()
 		rule.delete()
-		frappe.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
+		capkpi.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
 		item.delete()
 
 
@@ -773,9 +773,9 @@ test_dependencies = ["Campaign"]
 
 
 def make_pricing_rule(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Pricing Rule",
 			"title": args.title or "_Test Pricing Rule",
@@ -828,8 +828,8 @@ def make_pricing_rule(**args):
 
 
 def setup_pricing_rule_data():
-	if not frappe.db.exists("Campaign", "_Test Campaign"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Campaign", "_Test Campaign"):
+		capkpi.get_doc(
 			{"doctype": "Campaign", "campaign_name": "_Test Campaign", "name": "_Test Campaign"}
 		).insert()
 
@@ -842,4 +842,4 @@ def delete_existing_pricing_rules():
 		"Pricing Rule Brand",
 	]:
 
-		frappe.db.sql("delete from `tab{0}`".format(doctype))
+		capkpi.db.sql("delete from `tab{0}`".format(doctype))

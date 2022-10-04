@@ -3,9 +3,9 @@ QUnit.module('Shipping Rule');
 QUnit.test("test Shipping Rule", function(assert) {
 	assert.expect(1);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make("Shipping Rule", [
+			return capkpi.tests.make("Shipping Rule", [
 				{label: "Two Day Shipping"},
 				{shipping_rule_type: "Buying"},
 				{fixed_shipping_amount: 0},
@@ -26,8 +26,8 @@ QUnit.test("test Shipping Rule", function(assert) {
 						{country:'India'}
 					]
 				]},
-				{account:'Accounts Payable - '+frappe.get_abbr(frappe.defaults.get_default("Company"))},
-				{cost_center:'Main - '+frappe.get_abbr(frappe.defaults.get_default("Company"))}
+				{account:'Accounts Payable - '+capkpi.get_abbr(capkpi.defaults.get_default("Company"))},
+				{cost_center:'Main - '+capkpi.get_abbr(capkpi.defaults.get_default("Company"))}
 			]);
 		},
 		() => {assert.ok(cur_frm.doc.name=='Two Day Shipping');},

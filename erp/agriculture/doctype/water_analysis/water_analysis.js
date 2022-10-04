@@ -1,7 +1,7 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Water Analysis', {
+capkpi.ui.form.on('Water Analysis', {
 	onload: (frm) => {
 		if (frm.doc.water_analysis_criteria == undefined) frm.call('load_contents');
 	},

@@ -1,13 +1,13 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Accounts Settings', {
+capkpi.ui.form.on('Accounts Settings', {
 	refresh: function(frm) {
 
 	}
 });
 
-frappe.tour['Accounts Settings'] = [
+capkpi.tour['Accounts Settings'] = [
 	{
 		fieldname: "acc_frozen_upto",
 		title: "Accounts Frozen Upto",

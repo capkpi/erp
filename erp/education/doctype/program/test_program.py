@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.education.doctype.course.test_course import make_course, make_course_and_linked_topic
 from erp.education.doctype.topic.test_topic import make_topic_and_linked_content
@@ -40,20 +40,20 @@ class TestProgram(unittest.TestCase):
 		make_program_and_linked_courses("_Test Program 1", ["_Test Course 1", "_Test Course 2"])
 
 	def test_get_course_list(self):
-		program = frappe.get_doc("Program", "_Test Program 1")
+		program = capkpi.get_doc("Program", "_Test Program 1")
 		course = program.get_course_list()
 		self.assertEqual(course[0].name, "_Test Course 1")
 		self.assertEqual(course[1].name, "_Test Course 2")
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def tearDown(self):
 		for dt in ["Program", "Course", "Topic", "Article"]:
-			for entry in frappe.get_all(dt):
-				frappe.delete_doc(dt, entry.program)
+			for entry in capkpi.get_all(dt):
+				capkpi.delete_doc(dt, entry.program)
 
 
 def make_program(name):
-	program = frappe.get_doc(
+	program = capkpi.get_doc(
 		{
 			"doctype": "Program",
 			"program_name": name,
@@ -68,10 +68,10 @@ def make_program(name):
 
 def make_program_and_linked_courses(program_name, course_name_list):
 	try:
-		program = frappe.get_doc("Program", program_name)
-	except frappe.DoesNotExistError:
+		program = capkpi.get_doc("Program", program_name)
+	except capkpi.DoesNotExistError:
 		make_program(program_name)
-		program = frappe.get_doc("Program", program_name)
+		program = capkpi.get_doc("Program", program_name)
 	course_list = [make_course(course_name) for course_name in course_name_list]
 	for course in course_list:
 		program.append("courses", {"course": course, "required": 1})

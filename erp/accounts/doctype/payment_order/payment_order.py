@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import nowdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import nowdate
 
 from erp.accounts.party import get_party_account
 
@@ -24,19 +24,19 @@ class PaymentOrder(Document):
 
 		if self.payment_order_type == "Payment Request":
 			ref_field = "status"
-			ref_doc_field = frappe.scrub(self.payment_order_type)
+			ref_doc_field = capkpi.scrub(self.payment_order_type)
 		else:
 			ref_field = "payment_order_status"
 			ref_doc_field = "reference_name"
 
 		for d in self.references:
-			frappe.db.set_value(self.payment_order_type, d.get(ref_doc_field), ref_field, status)
+			capkpi.db.set_value(self.payment_order_type, d.get(ref_doc_field), ref_field, status)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_mop_query(doctype, txt, searchfield, start, page_len, filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		""" select mode_of_payment from `tabPayment Order Reference`
 		where parent = %(parent)s and mode_of_payment like %(txt)s
 		limit %(start)s, %(page_len)s""",
@@ -44,10 +44,10 @@ def get_mop_query(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_supplier_query(doctype, txt, searchfield, start, page_len, filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		""" select supplier from `tabPayment Order Reference`
 		where parent = %(parent)s and supplier like %(txt)s and
 		(payment_reference is null or payment_reference='')
@@ -56,18 +56,18 @@ def get_supplier_query(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_payment_records(name, supplier, mode_of_payment=None):
-	doc = frappe.get_doc("Payment Order", name)
+	doc = capkpi.get_doc("Payment Order", name)
 	make_journal_entry(doc, supplier, mode_of_payment)
 
 
 def make_journal_entry(doc, supplier, mode_of_payment=None):
-	je = frappe.new_doc("Journal Entry")
+	je = capkpi.new_doc("Journal Entry")
 	je.payment_order = doc.name
 	je.posting_date = nowdate()
-	mode_of_payment_type = frappe._dict(
-		frappe.get_all("Mode of Payment", fields=["name", "type"], as_list=1)
+	mode_of_payment_type = capkpi._dict(
+		capkpi.get_all("Mode of Payment", fields=["name", "type"], as_list=1)
 	)
 
 	je.voucher_type = "Bank Entry"
@@ -96,4 +96,4 @@ def make_journal_entry(doc, supplier, mode_of_payment=None):
 
 	je.flags.ignore_mandatory = True
 	je.save()
-	frappe.msgprint(_("{0} {1} created").format(je.doctype, je.name))
+	capkpi.msgprint(_("{0} {1} created").format(je.doctype, je.name))

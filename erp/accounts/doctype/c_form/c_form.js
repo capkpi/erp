@@ -4,7 +4,7 @@
 //c-form js file
 // -----------------------------
 
-frappe.ui.form.on('C-Form', {
+capkpi.ui.form.on('C-Form', {
 	setup(frm) {
 		frm.fields_dict.invoices.grid.get_field("invoice_no").get_query = function(doc) {
 			return {
@@ -28,15 +28,15 @@ frappe.ui.form.on('C-Form', {
 	}
 });
 
-frappe.ui.form.on('C-Form Invoice Detail', {
+capkpi.ui.form.on('C-Form Invoice Detail', {
 	invoice_no(frm, cdt, cdn) {
-		let d = frappe.get_doc(cdt, cdn);
+		let d = capkpi.get_doc(cdt, cdn);
 
 		if (d.invoice_no) {
 			frm.call('get_invoice_details', {
 				invoice_no: d.invoice_no
 			}).then(r => {
-				frappe.model.set_value(cdt, cdn, r.message);
+				capkpi.model.set_value(cdt, cdn, r.message);
 			});
 		}
 	}

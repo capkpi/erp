@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import getdate
+import capkpi
+from capkpi.utils import getdate
 
 from erp.accounts.doctype.bank_transaction.test_bank_transaction import create_bank_account
 from erp.accounts.doctype.payment_entry.payment_entry import (
@@ -19,8 +19,8 @@ class TestPaymentOrder(unittest.TestCase):
 		create_bank_account()
 
 	def tearDown(self):
-		for bt in frappe.get_all("Payment Order"):
-			doc = frappe.get_doc("Payment Order", bt.name)
+		for bt in capkpi.get_all("Payment Order"):
+			doc = capkpi.get_doc("Payment Order", bt.name)
 			doc.cancel()
 			doc.delete()
 
@@ -44,7 +44,7 @@ class TestPaymentOrder(unittest.TestCase):
 
 
 def create_payment_order_against_payment_entry(ref_doc, order_type):
-	payment_order = frappe.get_doc(
+	payment_order = capkpi.get_doc(
 		dict(
 			doctype="Payment Order",
 			company="_Test Company",

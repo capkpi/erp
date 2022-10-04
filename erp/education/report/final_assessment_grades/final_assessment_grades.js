@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Final Assessment Grades"] = {
+capkpi.query_reports["Final Assessment Grades"] = {
 	"filters": [
 		{
 			"fieldname":"academic_year",
@@ -21,7 +21,7 @@ frappe.query_reports["Final Assessment Grades"] = {
 				return{
 					filters: {
 						"group_based_on": "Batch",
-						"academic_year": frappe.query_report.get_filter_value('academic_year')
+						"academic_year": capkpi.query_report.get_filter_value('academic_year')
 					}
 				};
 			}

@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
 	if filters.from_date >= filters.to_date:
-		frappe.msgprint(_("To Date must be greater than From Date"))
+		capkpi.msgprint(_("To Date must be greater than From Date"))
 
 	columns = get_columns()
 	data = get_data(filters)
@@ -52,7 +52,7 @@ def get_data(filters):
 	for row in po_rm_item_details:
 		transferred_qty = row.get("transferred_qty") or 0
 		if transferred_qty < row.get("reqd_qty", 0):
-			pending_qty = frappe.utils.flt(row.get("reqd_qty", 0) - transferred_qty)
+			pending_qty = capkpi.utils.flt(row.get("reqd_qty", 0) - transferred_qty)
 			row.p_qty = pending_qty if pending_qty > 0 else 0
 			data.append(row)
 
@@ -60,7 +60,7 @@ def get_data(filters):
 
 
 def get_po_items_to_supply(filters):
-	return frappe.db.get_all(
+	return capkpi.db.get_all(
 		"Purchase Order",
 		fields=[
 			"name as purchase_order",

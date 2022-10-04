@@ -4,9 +4,9 @@
 
 from collections import OrderedDict
 
-import frappe
-from frappe import _, scrub
-from frappe.utils import cint, cstr, flt, getdate, nowdate
+import capkpi
+from capkpi import _, scrub
+from capkpi.utils import cint, cstr, flt, getdate, nowdate
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
@@ -40,7 +40,7 @@ def execute(filters=None):
 
 class ReceivablePayableReport(object):
 	def __init__(self, filters=None):
-		self.filters = frappe._dict(filters or {})
+		self.filters = capkpi._dict(filters or {})
 		self.filters.report_date = getdate(self.filters.report_date or nowdate())
 		self.age_as_on = (
 			getdate(nowdate())
@@ -51,7 +51,7 @@ class ReceivablePayableReport(object):
 	def run(self, args):
 		self.filters.update(args)
 		self.set_defaults()
-		self.party_naming_by = frappe.db.get_value(
+		self.party_naming_by = capkpi.db.get_value(
 			args.get("naming_by")[0], None, args.get("naming_by")[1]
 		)
 		self.get_columns()
@@ -61,8 +61,8 @@ class ReceivablePayableReport(object):
 
 	def set_defaults(self):
 		if not self.filters.get("company"):
-			self.filters.company = frappe.db.get_single_value("Global Defaults", "default_company")
-		self.company_currency = frappe.get_cached_value(
+			self.filters.company = capkpi.db.get_single_value("Global Defaults", "default_company")
+		self.company_currency = capkpi.get_cached_value(
 			"Company", self.filters.get("company"), "default_currency"
 		)
 		self.currency_precision = get_currency_precision() or 2
@@ -107,7 +107,7 @@ class ReceivablePayableReport(object):
 			# get the balance object for voucher_type
 			key = (gle.voucher_type, gle.voucher_no, gle.party)
 			if not key in self.voucher_balance:
-				self.voucher_balance[key] = frappe._dict(
+				self.voucher_balance[key] = capkpi._dict(
 					voucher_type=gle.voucher_type,
 					voucher_no=gle.voucher_no,
 					party=gle.party,
@@ -320,10 +320,10 @@ class ReceivablePayableReport(object):
 
 	def build_delivery_note_map(self):
 		if self.invoices and self.filters.show_delivery_notes:
-			self.delivery_notes = frappe._dict()
+			self.delivery_notes = capkpi._dict()
 
 			# delivery note link inside sales invoice
-			si_against_dn = frappe.db.sql(
+			si_against_dn = capkpi.db.sql(
 				"""
 				select parent, delivery_note
 				from `tabSales Invoice Item`
@@ -338,7 +338,7 @@ class ReceivablePayableReport(object):
 				if d.delivery_note:
 					self.delivery_notes.setdefault(d.parent, set()).add(d.delivery_note)
 
-			dn_against_si = frappe.db.sql(
+			dn_against_si = capkpi.db.sql(
 				"""
 				select distinct parent, against_sales_invoice
 				from `tabDelivery Note Item`
@@ -353,9 +353,9 @@ class ReceivablePayableReport(object):
 				self.delivery_notes.setdefault(d.against_sales_invoice, set()).add(d.parent)
 
 	def get_invoice_details(self):
-		self.invoice_details = frappe._dict()
+		self.invoice_details = capkpi._dict()
 		if self.party_type == "Customer":
-			si_list = frappe.db.sql(
+			si_list = capkpi.db.sql(
 				"""
 				select name, due_date, po_no
 				from `tabSales Invoice`
@@ -369,7 +369,7 @@ class ReceivablePayableReport(object):
 
 			# Get Sales Team
 			if self.filters.show_sales_person:
-				sales_team = frappe.db.sql(
+				sales_team = capkpi.db.sql(
 					"""
 					select parent, sales_person
 					from `tabSales Team`
@@ -383,7 +383,7 @@ class ReceivablePayableReport(object):
 					)
 
 		if self.party_type == "Supplier":
-			for pi in frappe.db.sql(
+			for pi in capkpi.db.sql(
 				"""
 				select name, due_date, bill_no, bill_date
 				from `tabPurchase Invoice`
@@ -395,7 +395,7 @@ class ReceivablePayableReport(object):
 				self.invoice_details.setdefault(pi.name, pi)
 
 		# Invoices booked via Journal Entries
-		journal_entries = frappe.db.sql(
+		journal_entries = capkpi.db.sql(
 			"""
 			select name, due_date, bill_no, bill_date
 			from `tabJournal Entry`
@@ -434,7 +434,7 @@ class ReceivablePayableReport(object):
 
 	def get_payment_terms(self, row):
 		# build payment_terms for row
-		payment_terms_details = frappe.db.sql(
+		payment_terms_details = capkpi.db.sql(
 			"""
 			select
 				si.name, si.party_account_currency, si.currency, si.conversion_rate,
@@ -451,7 +451,7 @@ class ReceivablePayableReport(object):
 			as_dict=1,
 		)
 
-		original_row = frappe._dict(row)
+		original_row = capkpi._dict(row)
 		row.payment_terms = []
 
 		# If no or single payment terms, no need to split the row
@@ -459,7 +459,7 @@ class ReceivablePayableReport(object):
 			return
 
 		for d in payment_terms_details:
-			term = frappe._dict(original_row)
+			term = capkpi._dict(original_row)
 			self.append_payment_term(row, d, term)
 
 	def append_payment_term(self, row, d, term):
@@ -503,7 +503,7 @@ class ReceivablePayableReport(object):
 		for key in ("paid", "credit_note"):
 			if row[key] > 0:
 				if not additional_row:
-					additional_row = frappe._dict(row)
+					additional_row = capkpi._dict(row)
 				additional_row.invoiced = 0.0
 				additional_row[key] = row[key]
 
@@ -515,7 +515,7 @@ class ReceivablePayableReport(object):
 
 	def get_future_payments(self):
 		if self.filters.show_future_payments:
-			self.future_payments = frappe._dict()
+			self.future_payments = capkpi._dict()
 			future_payments = list(self.get_future_payments_from_payment_entry())
 			future_payments += list(self.get_future_payments_from_journal_entry())
 			if future_payments:
@@ -524,7 +524,7 @@ class ReceivablePayableReport(object):
 						self.future_payments.setdefault((d.invoice_no, d.party), []).append(d)
 
 	def get_future_payments_from_payment_entry(self):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""
 			select
 				ref.reference_name as invoice_no,
@@ -556,7 +556,7 @@ class ReceivablePayableReport(object):
 		else:
 			amount_field = "jea.debit - " if self.party_type == "Supplier" else "jea.credit"
 
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""
 			select
 				jea.reference_name as invoice_no,
@@ -616,8 +616,8 @@ class ReceivablePayableReport(object):
 		party_field = scrub(self.filters.party_type)
 		if self.filters.get(party_field):
 			filters.update({party_field: self.filters.get(party_field)})
-		self.return_entries = frappe._dict(
-			frappe.get_all(doctype, filters, ["name", "return_against"], as_list=1)
+		self.return_entries = capkpi._dict(
+			capkpi.get_all(doctype, filters, ["name", "return_against"], as_list=1)
 		)
 
 	def set_ageing(self, row):
@@ -692,7 +692,7 @@ class ReceivablePayableReport(object):
 
 		remarks = ", remarks" if self.filters.get("show_remarks") else ""
 
-		self.gl_entries = frappe.db.sql(
+		self.gl_entries = capkpi.db.sql(
 			"""
 			select
 				name, posting_date, account, party_type, party, voucher_type, voucher_no, cost_center,
@@ -713,9 +713,9 @@ class ReceivablePayableReport(object):
 
 	def get_sales_invoices_or_customers_based_on_sales_person(self):
 		if self.filters.get("sales_person"):
-			lft, rgt = frappe.db.get_value("Sales Person", self.filters.get("sales_person"), ["lft", "rgt"])
+			lft, rgt = capkpi.db.get_value("Sales Person", self.filters.get("sales_person"), ["lft", "rgt"])
 
-			records = frappe.db.sql(
+			records = capkpi.db.sql(
 				"""
 				select distinct parent, parenttype
 				from `tabSales Team` steam
@@ -726,7 +726,7 @@ class ReceivablePayableReport(object):
 				as_dict=1,
 			)
 
-			self.sales_person_records = frappe._dict()
+			self.sales_person_records = capkpi._dict()
 			for d in records:
 				self.sales_person_records.setdefault(d.parenttype, set()).add(d.parent)
 
@@ -750,10 +750,10 @@ class ReceivablePayableReport(object):
 		return " and ".join(conditions), values
 
 	def get_cost_center_conditions(self, conditions):
-		lft, rgt = frappe.db.get_value("Cost Center", self.filters.cost_center, ["lft", "rgt"])
+		lft, rgt = capkpi.db.get_value("Cost Center", self.filters.cost_center, ["lft", "rgt"])
 		cost_center_list = [
 			center.name
-			for center in frappe.get_list("Cost Center", filters={"lft": (">=", lft), "rgt": ("<=", rgt)})
+			for center in capkpi.get_list("Cost Center", filters={"lft": (">=", lft), "rgt": ("<=", rgt)})
 		]
 
 		cost_center_string = '", "'.join(cost_center_list)
@@ -786,7 +786,7 @@ class ReceivablePayableReport(object):
 			account_type = "Receivable" if self.party_type == "Customer" else "Payable"
 			accounts = [
 				d.name
-				for d in frappe.get_all(
+				for d in capkpi.get_all(
 					"Account", filters={"account_type": account_type, "company": self.filters.company}
 				)
 			]
@@ -822,7 +822,7 @@ class ReceivablePayableReport(object):
 			values.append(self.filters.get("payment_terms_template"))
 
 	def get_hierarchical_filters(self, doctype, key):
-		lft, rgt = frappe.db.get_value(doctype, self.filters.get(key), ["lft", "rgt"])
+		lft, rgt = capkpi.db.get_value(doctype, self.filters.get(key), ["lft", "rgt"])
 
 		return """party in (select name from tabCustomer
 			where exists(select name from `tab{doctype}` where lft >= {lft} and rgt <= {rgt}
@@ -836,7 +836,7 @@ class ReceivablePayableReport(object):
 		if accounting_dimensions:
 			for dimension in accounting_dimensions:
 				if self.filters.get(dimension.fieldname):
-					if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+					if capkpi.get_cached_value("DocType", dimension.document_type, "is_tree"):
 						self.filters[dimension.fieldname] = get_dimension_with_children(
 							dimension.document_type, self.filters.get(dimension.fieldname)
 						)
@@ -869,14 +869,14 @@ class ReceivablePayableReport(object):
 	def get_party_details(self, party):
 		if not party in self.party_details:
 			if self.party_type == "Customer":
-				self.party_details[party] = frappe.db.get_value(
+				self.party_details[party] = capkpi.db.get_value(
 					"Customer",
 					party,
 					["customer_name", "territory", "customer_group", "customer_primary_contact"],
 					as_dict=True,
 				)
 			else:
-				self.party_details[party] = frappe.db.get_value(
+				self.party_details[party] = capkpi.db.get_value(
 					"Supplier", party, ["supplier_name", "supplier_group"], as_dict=True
 				)
 
@@ -1023,10 +1023,10 @@ class ReceivablePayableReport(object):
 	def get_chart_data(self):
 		rows = []
 		for row in self.data:
-			row = frappe._dict(row)
+			row = capkpi._dict(row)
 			if not cint(row.bold):
 				values = [row.range1, row.range2, row.range3, row.range4, row.range5]
-				precision = cint(frappe.db.get_default("float_precision")) or 2
+				precision = cint(capkpi.db.get_default("float_precision")) or 2
 				rows.append({"values": [flt(val, precision) for val in values]})
 
 		self.chart = {

@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cint
+import capkpi
+from capkpi import _
+from capkpi.utils import cint
 
 
 def execute(filters=None):
@@ -97,7 +97,7 @@ def get_sales_details(filters):
 
 	date_field = "s.transaction_date" if filters["based_on"] == "Sales Order" else "s.posting_date"
 
-	sales_data = frappe.db.sql(
+	sales_data = capkpi.db.sql(
 		"""
 		select s.territory, s.customer, si.item_group, si.item_code, si.qty, {date_field} as last_order_date,
 		DATEDIFF(CURDATE(), {date_field}) as days_since_last_order
@@ -121,7 +121,7 @@ def get_territories(filters):
 	if filters.get("territory"):
 		filter_dict.update({"name": filters["territory"]})
 
-	territories = frappe.get_all("Territory", fields=["name"], filters=filter_dict)
+	territories = capkpi.get_all("Territory", fields=["name"], filters=filter_dict)
 
 	return territories
 
@@ -135,7 +135,7 @@ def get_items(filters):
 	if filters.get("item"):
 		filters_dict.update({"name": filters["item"]})
 
-	items = frappe.get_all(
+	items = capkpi.get_all(
 		"Item",
 		fields=["name", "item_group", "item_name", "item_code"],
 		filters=filters_dict,

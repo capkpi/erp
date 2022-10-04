@@ -4,8 +4,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import today
+import capkpi
+from capkpi.utils import today
 
 from erp.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erp.accounts.report.sales_payment_summary.sales_payment_summary import (
@@ -20,15 +20,15 @@ class TestSalesPaymentSummary(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):
 		create_records()
-		pes = frappe.get_all("Payment Entry")
-		jes = frappe.get_all("Journal Entry")
-		sis = frappe.get_all("Sales Invoice")
+		pes = capkpi.get_all("Payment Entry")
+		jes = capkpi.get_all("Journal Entry")
+		sis = capkpi.get_all("Sales Invoice")
 		for pe in pes:
-			frappe.db.set_value("Payment Entry", pe.name, "docstatus", 2)
+			capkpi.db.set_value("Payment Entry", pe.name, "docstatus", 2)
 		for je in jes:
-			frappe.db.set_value("Journal Entry", je.name, "docstatus", 2)
+			capkpi.db.set_value("Journal Entry", je.name, "docstatus", 2)
 		for si in sis:
-			frappe.db.set_value("Sales Invoice", si.name, "docstatus", 2)
+			capkpi.db.set_value("Sales Invoice", si.name, "docstatus", 2)
 
 	def test_get_mode_of_payments(self):
 		filters = get_filters()
@@ -57,13 +57,13 @@ class TestSalesPaymentSummary(unittest.TestCase):
 		self.assertTrue("Cash" in list(mop.values())[0])
 
 		# Cancel all Cash payment entry and check if this mode of payment is still fetched.
-		payment_entries = frappe.get_all(
+		payment_entries = capkpi.get_all(
 			"Payment Entry",
 			filters={"mode_of_payment": "Cash", "docstatus": 1},
 			fields=["name", "docstatus"],
 		)
 		for payment_entry in payment_entries:
-			pe = frappe.get_doc("Payment Entry", payment_entry.name)
+			pe = capkpi.get_doc("Payment Entry", payment_entry.name)
 			pe.cancel()
 
 		mop = get_mode_of_payments(filters)
@@ -100,13 +100,13 @@ class TestSalesPaymentSummary(unittest.TestCase):
 				cc_init_amount = mopd_value[1]
 
 		# Cancel one Credit Card Payment Entry and check that it is not fetched in mode of payment details.
-		payment_entries = frappe.get_all(
+		payment_entries = capkpi.get_all(
 			"Payment Entry",
 			filters={"mode_of_payment": "Credit Card", "docstatus": 1},
 			fields=["name", "docstatus"],
 		)
 		for payment_entry in payment_entries[:1]:
-			pe = frappe.get_doc("Payment Entry", payment_entry.name)
+			pe = capkpi.get_doc("Payment Entry", payment_entry.name)
 			pe.cancel()
 
 		mopd = get_mode_of_payment_details(filters)
@@ -124,10 +124,10 @@ def get_filters():
 
 def create_sales_invoice_record(qty=1):
 	# return sales invoice doc object
-	return frappe.get_doc(
+	return capkpi.get_doc(
 		{
 			"doctype": "Sales Invoice",
-			"customer": frappe.get_doc("Customer", {"customer_name": "Prestiga-Biz"}).name,
+			"customer": capkpi.get_doc("Customer", {"customer_name": "Prestiga-Biz"}).name,
 			"company": "_Test Company",
 			"due_date": today(),
 			"posting_date": today(),
@@ -138,7 +138,7 @@ def create_sales_invoice_record(qty=1):
 			"items": [
 				{
 					"doctype": "Sales Invoice Item",
-					"item_code": frappe.get_doc("Item", {"item_name": "Consulting"}).name,
+					"item_code": capkpi.get_doc("Item", {"item_name": "Consulting"}).name,
 					"qty": qty,
 					"rate": 10000,
 					"income_account": "Sales - _TC",
@@ -151,11 +151,11 @@ def create_sales_invoice_record(qty=1):
 
 
 def create_records():
-	if frappe.db.exists("Customer", "Prestiga-Biz"):
+	if capkpi.db.exists("Customer", "Prestiga-Biz"):
 		return
 
 	# customer
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"customer_group": "_Test Customer Group",
 			"customer_name": "Prestiga-Biz",
@@ -166,7 +166,7 @@ def create_records():
 	).insert()
 
 	# item
-	item = frappe.get_doc(
+	item = capkpi.get_doc(
 		{
 			"doctype": "Item",
 			"item_code": "Consulting",
@@ -178,7 +178,7 @@ def create_records():
 	).insert()
 
 	# item price
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"doctype": "Item Price",
 			"price_list": "Standard Selling",

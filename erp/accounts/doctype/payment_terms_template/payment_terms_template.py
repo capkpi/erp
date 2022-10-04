@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import flt
 
 
 class PaymentTermsTemplate(Document):
@@ -19,7 +19,7 @@ class PaymentTermsTemplate(Document):
 			total_portion += flt(term.get("invoice_portion", 0))
 
 		if flt(total_portion, 2) != 100.00:
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Combined invoice portion must equal 100%"), raise_exception=1, indicator="red"
 			)
 
@@ -28,7 +28,7 @@ class PaymentTermsTemplate(Document):
 		for term in self.terms:
 			term_info = (term.payment_term, term.credit_days, term.credit_months, term.due_date_based_on)
 			if term_info in terms:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("The Payment Term at row {0} is possibly a duplicate.").format(term.idx),
 					raise_exception=1,
 					indicator="red",

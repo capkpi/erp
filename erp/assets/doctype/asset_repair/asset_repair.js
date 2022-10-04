@@ -1,7 +1,7 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Asset Repair', {
+capkpi.ui.form.on('Asset Repair', {
 	setup: function(frm) {
 		frm.fields_dict.cost_center.get_query = function(doc) {
 			return {
@@ -33,17 +33,17 @@ frappe.ui.form.on('Asset Repair', {
 	refresh: function(frm) {
 		if (frm.doc.docstatus) {
 			frm.add_custom_button("View General Ledger", function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					"voucher_no": frm.doc.name
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			});
 		}
 	},
 
 	repair_status: (frm) => {
 		if (frm.doc.completion_date && frm.doc.repair_status == "Completed") {
-			frappe.call ({
+			capkpi.call ({
 				method: "erp.assets.doctype.asset_repair.asset_repair.get_downtime",
 				args: {
 					"failure_date":frm.doc.failure_date,
@@ -58,7 +58,7 @@ frappe.ui.form.on('Asset Repair', {
 		}
 
 		if (frm.doc.repair_status == "Completed") {
-			frm.set_value('completion_date', frappe.datetime.now_datetime());
+			frm.set_value('completion_date', capkpi.datetime.now_datetime());
 		}
 	},
 
@@ -67,7 +67,7 @@ frappe.ui.form.on('Asset Repair', {
 	}
 });
 
-frappe.ui.form.on('Asset Repair Consumed Item', {
+capkpi.ui.form.on('Asset Repair Consumed Item', {
 	item_code: function(frm, cdt, cdn) {
 		var item = locals[cdt][cdn];
 
@@ -79,19 +79,19 @@ frappe.ui.form.on('Asset Repair Consumed Item', {
 			'company': frm.doc.company
 		};
 
-		frappe.call({
+		capkpi.call({
 			method: 'erp.stock.utils.get_incoming_rate',
 			args: {
 				args: item_args
 			},
 			callback: function(r) {
-				frappe.model.set_value(cdt, cdn, 'valuation_rate', r.message);
+				capkpi.model.set_value(cdt, cdn, 'valuation_rate', r.message);
 			}
 		});
 	},
 
 	consumed_quantity: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
-		frappe.model.set_value(cdt, cdn, 'total_value', row.consumed_quantity * row.valuation_rate);
+		capkpi.model.set_value(cdt, cdn, 'total_value', row.consumed_quantity * row.valuation_rate);
 	},
 });

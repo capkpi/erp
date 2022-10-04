@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.controllers.item_variant import create_variant
 from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import (
@@ -38,7 +38,7 @@ class TestWebsiteItem(unittest.TestCase):
 
 	@classmethod
 	def tearDownClass(cls):
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def setUp(self):
 		if self._testMethodName in WEBITEM_DESK_TESTS:
@@ -80,7 +80,7 @@ class TestWebsiteItem(unittest.TestCase):
 
 		on_doctype_update()
 
-		indices = frappe.db.sql("show index from `tabWebsite Item`", as_dict=1)
+		indices = capkpi.db.sql("show index from `tabWebsite Item`", as_dict=1)
 		expected_columns = {"route", "item_group", "brand"}
 		for index in indices:
 			expected_columns.discard(index.get("Column_name"))
@@ -135,15 +135,15 @@ class TestWebsiteItem(unittest.TestCase):
 		variant.save()
 
 		# check if template is not published
-		self.assertIsNone(frappe.db.exists("Website Item", {"item_code": variant.variant_of}))
+		self.assertIsNone(capkpi.db.exists("Website Item", {"item_code": variant.variant_of}))
 
 		variant_web_item = make_website_item(variant, save=False)
 		variant_web_item.save()
 
 		# check if template is published
 		try:
-			template_web_item = frappe.get_doc("Website Item", {"item_code": variant.variant_of})
-		except frappe.DoesNotExistError:
+			template_web_item = capkpi.get_doc("Website Item", {"item_code": variant.variant_of})
+		except capkpi.DoesNotExistError:
 			self.fail(f"Template of {variant.item_code}, {variant.variant_of} not published")
 
 		# teardown
@@ -162,7 +162,7 @@ class TestWebsiteItem(unittest.TestCase):
 		second_web_item.save()
 
 		with self.assertRaises(DataValidationError):
-			frappe.rename_doc("Item", "Test First Item", "Test Second Item", merge=True)
+			capkpi.rename_doc("Item", "Test First Item", "Test Second Item", merge=True)
 
 		# tear down
 		second_web_item.delete()
@@ -184,14 +184,14 @@ class TestWebsiteItem(unittest.TestCase):
 			},
 		)
 
-		if not frappe.db.exists("Website Item", {"item_code": item_code}):
+		if not capkpi.db.exists("Website Item", {"item_code": item_code}):
 			web_item = make_website_item(item, save=False)
 			web_item.save()
 		else:
-			web_item = frappe.get_cached_doc("Website Item", {"item_code": item_code})
+			web_item = capkpi.get_cached_doc("Website Item", {"item_code": item_code})
 
-		frappe.db.set_value("Item Group", "_Test Item Group B - 1", "show_in_website", 1)
-		frappe.db.set_value("Item Group", "_Test Item Group B", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 1", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B", "show_in_website", 1)
 
 		breadcrumbs = get_parent_item_groups(item.item_group)
 
@@ -214,10 +214,10 @@ class TestWebsiteItem(unittest.TestCase):
 		# price and pricing rule added via setUp
 
 		# login as customer with pricing rule
-		frappe.set_user("test_contact_customer@example.com")
+		capkpi.set_user("test_contact_customer@example.com")
 
 		# check if price and slashed price is fetched correctly
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 		self.assertTrue(bool(data.product_info["price"]))
 
@@ -229,17 +229,17 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertEqual(price_object.get("formatted_discount_percent"), "25%")
 
 		# switch to admin and disable show price
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		setup_e_commerce_settings({"show_price": 0})
 
 		# price should not be fetched for logged in user.
-		frappe.set_user("test_contact_customer@example.com")
-		frappe.local.shopping_cart_settings = None
+		capkpi.set_user("test_contact_customer@example.com")
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 		self.assertFalse(bool(data.product_info["price"]))
 
 		# tear down
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 
 	def test_website_item_price_for_guest_user(self):
 		"Check if price details are fetched correctly for guest user."
@@ -251,10 +251,10 @@ class TestWebsiteItem(unittest.TestCase):
 		# price and pricing rule added via setUp
 
 		# switch to guest user
-		frappe.set_user("Guest")
+		capkpi.set_user("Guest")
 
 		# price should be fetched
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 		self.assertTrue(bool(data.product_info["price"]))
 
@@ -263,17 +263,17 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertEqual(price_object.get("price_list_rate"), 900)
 
 		# hide price for guest user
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		setup_e_commerce_settings({"hide_price_for_guest": 1})
-		frappe.set_user("Guest")
+		capkpi.set_user("Guest")
 
 		# price should not be fetched
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 		self.assertFalse(bool(data.product_info["price"]))
 
 		# tear down
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 
 	def test_website_item_stock_when_out_of_stock(self):
 		"""
@@ -287,7 +287,7 @@ class TestWebsiteItem(unittest.TestCase):
 		create_regular_web_item()
 		setup_e_commerce_settings({"show_stock_availability": 1})
 
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 
 		# check if stock details are fetched and item not in stock without warehouse set
@@ -295,7 +295,7 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertFalse(bool(data.product_info["stock_qty"]))
 
 		# set warehouse
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Website Item", {"item_code": item_code}, "website_warehouse", "_Test Warehouse - _TC"
 		)
 
@@ -306,7 +306,7 @@ class TestWebsiteItem(unittest.TestCase):
 
 		# disable show stock availability
 		setup_e_commerce_settings({"show_stock_availability": 0})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 
 		# check if stock detail attributes are not fetched if stock availability is hidden
@@ -315,7 +315,7 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertIsNone(data.product_info.get("show_stock_qty"))
 
 		# tear down
-		frappe.get_cached_doc("Website Item", {"item_code": "Test Mobile Phone"}).delete()
+		capkpi.get_cached_doc("Website Item", {"item_code": "Test Mobile Phone"}).delete()
 
 	def test_website_item_stock_when_in_stock(self):
 		"""
@@ -330,10 +330,10 @@ class TestWebsiteItem(unittest.TestCase):
 		item_code = "Test Mobile Phone"
 		create_regular_web_item()
 		setup_e_commerce_settings({"show_stock_availability": 1})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 		# set warehouse
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Website Item", {"item_code": item_code}, "website_warehouse", "_Test Warehouse - _TC"
 		)
 
@@ -348,7 +348,7 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertEqual(data.product_info["stock_qty"][0][0], 2)
 
 		# unset warehouse
-		frappe.db.set_value("Website Item", {"item_code": item_code}, "website_warehouse", "")
+		capkpi.db.set_value("Website Item", {"item_code": item_code}, "website_warehouse", "")
 
 		# check if stock details are fetched and item not in stock without warehouse set
 		# (even though it has stock in some warehouse)
@@ -358,7 +358,7 @@ class TestWebsiteItem(unittest.TestCase):
 
 		# disable show stock availability
 		setup_e_commerce_settings({"show_stock_availability": 0})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		data = get_product_info_for_website(item_code, skip_quotation_creation=True)
 
 		# check if stock detail attributes are not fetched if stock availability is hidden
@@ -368,7 +368,7 @@ class TestWebsiteItem(unittest.TestCase):
 
 		# tear down
 		stock_entry.cancel()
-		frappe.get_cached_doc("Website Item", {"item_code": "Test Mobile Phone"}).delete()
+		capkpi.get_cached_doc("Website Item", {"item_code": "Test Mobile Phone"}).delete()
 
 	def test_recommended_item(self):
 		"Check if added recommended items are fetched correctly."
@@ -385,7 +385,7 @@ class TestWebsiteItem(unittest.TestCase):
 		web_item.append("recommended_items", {"website_item": recommended_web_item.name})
 		web_item.save()
 
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		e_commerce_settings = get_shopping_cart_settings()
 		recommended_items = web_item.get_recommended_items(e_commerce_settings)
 
@@ -402,7 +402,7 @@ class TestWebsiteItem(unittest.TestCase):
 		# test results if show price is disabled
 		setup_e_commerce_settings({"show_price": 0})
 
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		e_commerce_settings = get_shopping_cart_settings()
 		recommended_items = web_item.get_recommended_items(e_commerce_settings)
 
@@ -412,7 +412,7 @@ class TestWebsiteItem(unittest.TestCase):
 		# tear down
 		web_item.delete()
 		recommended_web_item.delete()
-		frappe.get_cached_doc("Item", "Test Mobile Phone 1").delete()
+		capkpi.get_cached_doc("Item", "Test Mobile Phone 1").delete()
 
 	def test_recommended_item_for_guest_user(self):
 		"Check if added recommended items are fetched correctly for guest user."
@@ -432,9 +432,9 @@ class TestWebsiteItem(unittest.TestCase):
 		web_item.append("recommended_items", {"website_item": recommended_web_item.name})
 		web_item.save()
 
-		frappe.set_user("Guest")
+		capkpi.set_user("Guest")
 
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		e_commerce_settings = get_shopping_cart_settings()
 		recommended_items = web_item.get_recommended_items(e_commerce_settings)
 
@@ -443,11 +443,11 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertTrue(bool(recommended_items[0].get("price_info")))  # price fetched
 
 		# price hidden from guests
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		setup_e_commerce_settings({"hide_price_for_guest": 1})
-		frappe.set_user("Guest")
+		capkpi.set_user("Guest")
 
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 		e_commerce_settings = get_shopping_cart_settings()
 		recommended_items = web_item.get_recommended_items(e_commerce_settings)
 
@@ -456,10 +456,10 @@ class TestWebsiteItem(unittest.TestCase):
 		self.assertFalse(bool(recommended_items[0].get("price_info")))  # price fetched
 
 		# tear down
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		web_item.delete()
 		recommended_web_item.delete()
-		frappe.get_cached_doc("Item", "Test Mobile Phone 1").delete()
+		capkpi.get_cached_doc("Item", "Test Mobile Phone 1").delete()
 
 
 def create_regular_web_item(item_code=None, item_args=None, web_args=None):
@@ -467,13 +467,13 @@ def create_regular_web_item(item_code=None, item_args=None, web_args=None):
 	item_code = item_code or "Test Mobile Phone"
 	item = make_item(item_code, properties=item_args)
 
-	if not frappe.db.exists("Website Item", {"item_code": item_code}):
+	if not capkpi.db.exists("Website Item", {"item_code": item_code}):
 		web_item = make_website_item(item, save=False)
 		if web_args:
 			web_item.update(web_args)
 		web_item.save()
 	else:
-		web_item = frappe.get_cached_doc("Website Item", {"item_code": item_code})
+		web_item = capkpi.get_cached_doc("Website Item", {"item_code": item_code})
 
 	return web_item
 
@@ -483,8 +483,8 @@ def make_web_item_price(**kwargs):
 	if not item_code:
 		return
 
-	if not frappe.db.exists("Item Price", {"item_code": item_code}):
-		item_price = frappe.get_doc(
+	if not capkpi.db.exists("Item Price", {"item_code": item_code}):
+		item_price = capkpi.get_doc(
 			{
 				"doctype": "Item Price",
 				"item_code": item_code,
@@ -494,7 +494,7 @@ def make_web_item_price(**kwargs):
 		)
 		item_price.insert()
 	else:
-		item_price = frappe.get_cached_doc("Item Price", {"item_code": item_code})
+		item_price = capkpi.get_cached_doc("Item Price", {"item_code": item_code})
 
 	return item_price
 
@@ -504,8 +504,8 @@ def make_web_pricing_rule(**kwargs):
 	if not title:
 		return
 
-	if not frappe.db.exists("Pricing Rule", title):
-		pricing_rule = frappe.get_doc(
+	if not capkpi.db.exists("Pricing Rule", title):
+		pricing_rule = capkpi.get_doc(
 			{
 				"doctype": "Pricing Rule",
 				"title": title,
@@ -524,16 +524,16 @@ def make_web_pricing_rule(**kwargs):
 		)
 		pricing_rule.insert()
 	else:
-		pricing_rule = frappe.get_doc("Pricing Rule", {"title": title})
+		pricing_rule = capkpi.get_doc("Pricing Rule", {"title": title})
 
 	return pricing_rule
 
 
 def create_user_and_customer_if_not_exists(email, first_name=None):
-	if frappe.db.exists("User", email):
+	if capkpi.db.exists("User", email):
 		return
 
-	frappe.get_doc(
+	capkpi.get_doc(
 		{
 			"doctype": "User",
 			"user_type": "Website User",
@@ -543,7 +543,7 @@ def create_user_and_customer_if_not_exists(email, first_name=None):
 		}
 	).insert(ignore_permissions=True)
 
-	contact = frappe.get_last_doc("Contact", filters={"email_id": email})
+	contact = capkpi.get_last_doc("Contact", filters={"email_id": email})
 	link = contact.append("links", {})
 	link.link_doctype = "Customer"
 	link.link_name = "_Test Customer"

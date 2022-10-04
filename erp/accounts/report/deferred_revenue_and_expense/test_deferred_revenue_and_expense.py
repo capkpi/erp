@@ -1,8 +1,8 @@
 import unittest
 
-import frappe
-from frappe import qb
-from frappe.utils import nowdate
+import capkpi
+from capkpi import qb
+from capkpi.utils import nowdate
 
 from erp.accounts.doctype.account.test_account import create_account
 from erp.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
@@ -60,11 +60,11 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 			company="_Test Company DR",
 		)
 
-		acc_settings = frappe.get_doc("Accounts Settings", "Accounts Settings")
+		acc_settings = capkpi.get_doc("Accounts Settings", "Accounts Settings")
 		acc_settings.book_deferred_entries_based_on = "Months"
 		acc_settings.save()
 
-		customer = frappe.new_doc("Customer")
+		customer = capkpi.new_doc("Customer")
 		customer.customer_name = "_Test Customer DR"
 		customer.type = "Individual"
 		customer.insert()
@@ -102,7 +102,7 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		pda = frappe.get_doc(
+		pda = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date=nowdate(),
@@ -116,10 +116,10 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		pda.submit()
 
 		# execute report
-		fiscal_year = frappe.get_doc("Fiscal Year", frappe.defaults.get_user_default("fiscal_year"))
-		self.filters = frappe._dict(
+		fiscal_year = capkpi.get_doc("Fiscal Year", capkpi.defaults.get_user_default("fiscal_year"))
+		self.filters = capkpi._dict(
 			{
-				"company": frappe.defaults.get_user_default("Company"),
+				"company": capkpi.defaults.get_user_default("Company"),
 				"filter_based_on": "Date Range",
 				"period_start_date": "2021-05-01",
 				"period_end_date": "2021-08-01",
@@ -151,7 +151,7 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 			company="_Test Company DR",
 		)
 
-		acc_settings = frappe.get_doc("Accounts Settings", "Accounts Settings")
+		acc_settings = capkpi.get_doc("Accounts Settings", "Accounts Settings")
 		acc_settings.book_deferred_entries_based_on = "Months"
 		acc_settings.save()
 
@@ -177,7 +177,7 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 			supplier="_Test Furniture Supplier",
 			is_return=False,
 			update_stock=False,
-			posting_date=frappe.utils.datetime.date(2021, 5, 1),
+			posting_date=capkpi.utils.datetime.date(2021, 5, 1),
 			parent_cost_center="Main - _CD",
 			cost_center="Main - _CD",
 			do_not_save=True,
@@ -195,7 +195,7 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		pi.save()
 		pi.submit()
 
-		pda = frappe.get_doc(
+		pda = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date=nowdate(),
@@ -209,10 +209,10 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		pda.submit()
 
 		# execute report
-		fiscal_year = frappe.get_doc("Fiscal Year", frappe.defaults.get_user_default("fiscal_year"))
-		self.filters = frappe._dict(
+		fiscal_year = capkpi.get_doc("Fiscal Year", capkpi.defaults.get_user_default("fiscal_year"))
+		self.filters = capkpi._dict(
 			{
-				"company": frappe.defaults.get_user_default("Company"),
+				"company": capkpi.defaults.get_user_default("Company"),
 				"filter_based_on": "Date Range",
 				"period_start_date": "2021-05-01",
 				"period_end_date": "2021-08-01",
@@ -243,11 +243,11 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 			company="_Test Company DR",
 		)
 
-		acc_settings = frappe.get_doc("Accounts Settings", "Accounts Settings")
+		acc_settings = capkpi.get_doc("Accounts Settings", "Accounts Settings")
 		acc_settings.book_deferred_entries_based_on = "Months"
 		acc_settings.save()
 
-		customer = frappe.new_doc("Customer")
+		customer = capkpi.new_doc("Customer")
 		customer.customer_name = "_Test Customer DR"
 		customer.type = "Individual"
 		customer.insert()
@@ -283,7 +283,7 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		pda = frappe.get_doc(
+		pda = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date=nowdate(),
@@ -297,10 +297,10 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 		pda.submit()
 
 		# execute report
-		fiscal_year = frappe.get_doc("Fiscal Year", frappe.defaults.get_user_default("fiscal_year"))
-		self.filters = frappe._dict(
+		fiscal_year = capkpi.get_doc("Fiscal Year", capkpi.defaults.get_user_default("fiscal_year"))
+		self.filters = capkpi._dict(
 			{
-				"company": frappe.defaults.get_user_default("Company"),
+				"company": capkpi.defaults.get_user_default("Company"),
 				"filter_based_on": "Date Range",
 				"period_start_date": "2021-05-01",
 				"period_end_date": "2021-08-01",
@@ -324,9 +324,9 @@ class TestDeferredRevenueAndExpense(unittest.TestCase):
 
 
 def create_company():
-	company = frappe.db.exists("Company", "_Test Company DR")
+	company = capkpi.db.exists("Company", "_Test Company DR")
 	if not company:
-		company = frappe.new_doc("Company")
+		company = capkpi.new_doc("Company")
 		company.company_name = "_Test Company DR"
 		company.default_currency = "INR"
 		company.chart_of_accounts = "Standard"

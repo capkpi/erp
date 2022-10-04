@@ -3,9 +3,9 @@
 
 import unittest
 
-import frappe
-from frappe import qb
-from frappe.utils import flt, nowdate
+import capkpi
+from capkpi import qb
+from capkpi.utils import flt, nowdate
 
 from erp.accounts.doctype.payment_entry.payment_entry import (
 	InvalidPaymentEntry,
@@ -39,27 +39,27 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe.name, expected_gle)
 
-		so_advance_paid = frappe.db.get_value("Sales Order", so.name, "advance_paid")
+		so_advance_paid = capkpi.db.get_value("Sales Order", so.name, "advance_paid")
 		self.assertEqual(so_advance_paid, 1000)
 
 		pe.cancel()
 
-		so_advance_paid = frappe.db.get_value("Sales Order", so.name, "advance_paid")
+		so_advance_paid = capkpi.db.get_value("Sales Order", so.name, "advance_paid")
 		self.assertEqual(so_advance_paid, 0)
 
 	def test_payment_entry_for_blocked_supplier_invoice(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.hold_type = "Invoices"
 		supplier.save()
 
-		self.assertRaises(frappe.ValidationError, make_purchase_invoice)
+		self.assertRaises(capkpi.ValidationError, make_purchase_invoice)
 
 		supplier.on_hold = 0
 		supplier.save()
 
 	def test_payment_entry_for_blocked_supplier_payments(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.hold_type = "Payments"
 		supplier.save()
@@ -67,7 +67,7 @@ class TestPaymentEntry(unittest.TestCase):
 		pi = make_purchase_invoice()
 
 		self.assertRaises(
-			frappe.ValidationError,
+			capkpi.ValidationError,
 			get_payment_entry,
 			dt="Purchase Invoice",
 			dn=pi.name,
@@ -78,7 +78,7 @@ class TestPaymentEntry(unittest.TestCase):
 		supplier.save()
 
 	def test_payment_entry_for_blocked_supplier_payments_today_date(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.hold_type = "Payments"
 		supplier.release_date = nowdate()
@@ -87,7 +87,7 @@ class TestPaymentEntry(unittest.TestCase):
 		pi = make_purchase_invoice()
 
 		self.assertRaises(
-			frappe.ValidationError,
+			capkpi.ValidationError,
 			get_payment_entry,
 			dt="Purchase Invoice",
 			dn=pi.name,
@@ -101,7 +101,7 @@ class TestPaymentEntry(unittest.TestCase):
 		# this test is meant to fail only if something fails in the try block
 		with self.assertRaises(Exception):
 			try:
-				supplier = frappe.get_doc("Supplier", "_Test Supplier")
+				supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 				supplier.on_hold = 1
 				supplier.hold_type = "Payments"
 				supplier.release_date = "2018-03-01"
@@ -142,12 +142,12 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe.name, expected_gle)
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 0)
 
 		pe.cancel()
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 100)
 
 	def test_payment_entry_against_pi(self):
@@ -174,7 +174,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe.name, expected_gle)
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", pi.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", pi.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 0)
 
 	def test_payment_against_sales_invoice_to_check_status(self):
@@ -192,7 +192,7 @@ class TestPaymentEntry(unittest.TestCase):
 		pe.insert()
 		pe.submit()
 
-		outstanding_amount, status = frappe.db.get_value(
+		outstanding_amount, status = capkpi.db.get_value(
 			"Sales Invoice", si.name, ["outstanding_amount", "status"]
 		)
 		self.assertEqual(flt(outstanding_amount), 0)
@@ -200,7 +200,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		pe.cancel()
 
-		outstanding_amount, status = frappe.db.get_value(
+		outstanding_amount, status = capkpi.db.get_value(
 			"Sales Invoice", si.name, ["outstanding_amount", "status"]
 		)
 		self.assertEqual(flt(outstanding_amount), 100)
@@ -239,7 +239,7 @@ class TestPaymentEntry(unittest.TestCase):
 		create_payment_terms_template_with_discount()
 		si.payment_terms_template = "Test Discount Template"
 
-		frappe.db.set_value("Company", si.company, "default_discount_account", "Write Off - _TC")
+		capkpi.db.set_value("Company", si.company, "default_discount_account", "Write Off - _TC")
 
 		si.append(
 			"taxes",
@@ -280,7 +280,7 @@ class TestPaymentEntry(unittest.TestCase):
 		pe.insert()
 		pe.submit()
 
-		outstanding_amount, status = frappe.db.get_value(
+		outstanding_amount, status = capkpi.db.get_value(
 			"Purchase Invoice", pi.name, ["outstanding_amount", "status"]
 		)
 		self.assertEqual(flt(outstanding_amount), 0)
@@ -288,7 +288,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		pe.cancel()
 
-		outstanding_amount, status = frappe.db.get_value(
+		outstanding_amount, status = capkpi.db.get_value(
 			"Purchase Invoice", pi.name, ["outstanding_amount", "status"]
 		)
 		self.assertEqual(flt(outstanding_amount), 250)
@@ -296,7 +296,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 	def test_payment_entry_against_ec(self):
 
-		payable = frappe.get_cached_value("Company", "_Test Company", "default_payable_account")
+		payable = capkpi.get_cached_value("Company", "_Test Company", "default_payable_account")
 		ec = make_expense_claim(payable, 300, 300, "_Test Company", "Travel Expenses - _TC")
 		pe = get_payment_entry(
 			"Expense Claim", ec.name, bank_account="_Test Bank USD - _TC", bank_amount=300
@@ -315,8 +315,8 @@ class TestPaymentEntry(unittest.TestCase):
 		self.validate_gl_entries(pe.name, expected_gle)
 
 		outstanding_amount = flt(
-			frappe.db.get_value("Expense Claim", ec.name, "total_sanctioned_amount")
-		) - flt(frappe.db.get_value("Expense Claim", ec.name, "total_amount_reimbursed"))
+			capkpi.db.get_value("Expense Claim", ec.name, "total_sanctioned_amount")
+		) - flt(capkpi.db.get_value("Expense Claim", ec.name, "total_amount_reimbursed"))
 		self.assertEqual(outstanding_amount, 0)
 
 	def test_payment_entry_against_si_usd_to_inr(self):
@@ -356,7 +356,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe.name, expected_gle)
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 80)
 
 	def test_payment_entry_against_si_usd_to_usd_with_deduction_in_base_currency(self):
@@ -403,7 +403,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		save_new_records(test_records)
 
-		pe = frappe.new_doc("Payment Entry")
+		pe = capkpi.new_doc("Payment Entry")
 		pe.payment_type = "Pay"
 		pe.company = "_Test Company"
 		pe.posting_date = "2016-01-10"
@@ -426,7 +426,7 @@ class TestPaymentEntry(unittest.TestCase):
 		)
 
 	def test_internal_transfer_usd_to_inr(self):
-		pe = frappe.new_doc("Payment Entry")
+		pe = capkpi.new_doc("Payment Entry")
 		pe.payment_type = "Internal Transfer"
 		pe.company = "_Test Company"
 		pe.paid_from = "_Test Bank USD - _TC"
@@ -468,7 +468,7 @@ class TestPaymentEntry(unittest.TestCase):
 		self.validate_gl_entries(pe.name, expected_gle)
 
 	def test_payment_against_negative_sales_invoice(self):
-		pe1 = frappe.new_doc("Payment Entry")
+		pe1 = capkpi.new_doc("Payment Entry")
 		pe1.payment_type = "Pay"
 		pe1.company = "_Test Company"
 		pe1.party_type = "Customer"
@@ -488,7 +488,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		# create return entry against si1
 		create_sales_invoice(is_return=1, return_against=si1.name, qty=-1)
-		si1_outstanding = frappe.db.get_value("Sales Invoice", si1.name, "outstanding_amount")
+		si1_outstanding = capkpi.db.get_value("Sales Invoice", si1.name, "outstanding_amount")
 		self.assertEqual(si1_outstanding, -100)
 
 		# pay more than outstanding against si1
@@ -509,12 +509,12 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe3.name, expected_gle)
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si1.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si1.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 0)
 
 		pe3.cancel()
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si1.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si1.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, -100)
 
 	def validate_gl_entries(self, voucher_no, expected_gle):
@@ -529,7 +529,7 @@ class TestPaymentEntry(unittest.TestCase):
 			self.assertEqual(expected_gle[gle.account][3], gle.against_voucher)
 
 	def get_gle(self, voucher_no):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select account, debit, credit, against_voucher
 			from `tabGL Entry` where voucher_type='Payment Entry' and voucher_no=%s
 			order by account asc""",
@@ -608,7 +608,7 @@ class TestPaymentEntry(unittest.TestCase):
 
 		self.validate_gl_entries(pe.name, expected_gle)
 
-		outstanding_amount = flt(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
+		outstanding_amount = flt(capkpi.db.get_value("Sales Invoice", si.name, "outstanding_amount"))
 		self.assertEqual(outstanding_amount, 0)
 
 	def test_payment_entry_against_sales_invoice_with_cost_centre(self):
@@ -634,7 +634,7 @@ class TestPaymentEntry(unittest.TestCase):
 			"Debtors - _TC": {"cost_center": cost_center},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Payment Entry' and voucher_no=%s
@@ -673,7 +673,7 @@ class TestPaymentEntry(unittest.TestCase):
 			"Creditors - _TC": {"cost_center": cost_center},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Payment Entry' and voucher_no=%s
@@ -794,14 +794,14 @@ class TestPaymentEntry(unittest.TestCase):
 		# block invoice after creating payment entry
 		# since `get_payment_entry` will not attach blocked invoice to payment
 		pi.block_invoice()
-		with self.assertRaises(frappe.ValidationError) as err:
+		with self.assertRaises(capkpi.ValidationError) as err:
 			pe.save()
 
 		self.assertTrue("is on hold" in str(err.exception).lower())
 
 
 def create_payment_entry(**args):
-	payment_entry = frappe.new_doc("Payment Entry")
+	payment_entry = capkpi.new_doc("Payment Entry")
 	payment_entry.company = args.get("company") or "_Test Company"
 	payment_entry.payment_type = args.get("payment_type") or "Pay"
 	payment_entry.party_type = args.get("party_type") or "Supplier"
@@ -830,8 +830,8 @@ def create_payment_terms_template():
 	create_payment_term("Basic Amount Receivable")
 	create_payment_term("Tax Receivable")
 
-	if not frappe.db.exists("Payment Terms Template", "Test Receivable Template"):
-		payment_term_template = frappe.get_doc(
+	if not capkpi.db.exists("Payment Terms Template", "Test Receivable Template"):
+		payment_term_template = capkpi.get_doc(
 			{
 				"doctype": "Payment Terms Template",
 				"template_name": "Test Receivable Template",
@@ -860,8 +860,8 @@ def create_payment_terms_template_with_discount():
 
 	create_payment_term("30 Credit Days with 10% Discount")
 
-	if not frappe.db.exists("Payment Terms Template", "Test Discount Template"):
-		payment_term_template = frappe.get_doc(
+	if not capkpi.db.exists("Payment Terms Template", "Test Discount Template"):
+		payment_term_template = capkpi.get_doc(
 			{
 				"doctype": "Payment Terms Template",
 				"template_name": "Test Discount Template",
@@ -883,5 +883,5 @@ def create_payment_terms_template_with_discount():
 
 
 def create_payment_term(name):
-	if not frappe.db.exists("Payment Term", name):
-		frappe.get_doc({"doctype": "Payment Term", "payment_term_name": name}).insert()
+	if not capkpi.db.exists("Payment Term", name):
+		capkpi.get_doc({"doctype": "Payment Term", "payment_term_name": name}).insert()

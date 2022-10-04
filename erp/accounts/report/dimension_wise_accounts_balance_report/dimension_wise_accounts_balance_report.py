@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cstr, flt
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr, flt
 from six import itervalues
 
 import erp
@@ -32,7 +32,7 @@ def execute(filters=None):
 def get_data(filters, dimension_list):
 	company_currency = erp.get_company_currency(filters.company)
 
-	acc = frappe.db.sql(
+	acc = capkpi.db.sql(
 		"""
 		select
 			name, account_number, parent_account, lft, rgt, root_type,
@@ -51,13 +51,13 @@ def get_data(filters, dimension_list):
 
 	accounts, accounts_by_name, parent_children_map = filter_accounts(acc)
 
-	min_lft, max_rgt = frappe.db.sql(
+	min_lft, max_rgt = capkpi.db.sql(
 		"""select min(lft), max(rgt) from `tabAccount`
 		where company=%s""",
 		(filters.company),
 	)[0]
 
-	account = frappe.db.sql_list(
+	account = capkpi.db.sql_list(
 		"""select name from `tabAccount`
 		where lft >= %s and rgt <= %s and company = %s""",
 		(min_lft, max_rgt, filters.company),
@@ -66,7 +66,7 @@ def get_data(filters, dimension_list):
 	gl_entries_by_account = {}
 	set_gl_entries_by_account(dimension_list, filters, account, gl_entries_by_account)
 	format_gl_entries(
-		gl_entries_by_account, accounts_by_name, dimension_list, frappe.scrub(filters.get("dimension"))
+		gl_entries_by_account, accounts_by_name, dimension_list, capkpi.scrub(filters.get("dimension"))
 	)
 	accumulate_values_into_parents(accounts, accounts_by_name, dimension_list)
 	out = prepare_data(accounts, filters, company_currency, dimension_list)
@@ -79,7 +79,7 @@ def set_gl_entries_by_account(dimension_list, filters, account, gl_entries_by_ac
 	condition = get_condition(filters.get("dimension"))
 
 	if account:
-		condition += " and account in ({})".format(", ".join([frappe.db.escape(d) for d in account]))
+		condition += " and account in ({})".format(", ".join([capkpi.db.escape(d) for d in account]))
 
 	gl_filters = {
 		"company": filters.get("company"),
@@ -91,11 +91,11 @@ def set_gl_entries_by_account(dimension_list, filters, account, gl_entries_by_ac
 	gl_filters["dimensions"] = set(dimension_list)
 
 	if filters.get("include_default_book_entries"):
-		gl_filters["company_fb"] = frappe.db.get_value(
+		gl_filters["company_fb"] = capkpi.db.get_value(
 			"Company", filters.company, "default_finance_book"
 		)
 
-	gl_entries = frappe.db.sql(
+	gl_entries = capkpi.db.sql(
 		"""
 		select
 			posting_date, account, {dimension}, debit, credit, is_opening, fiscal_year,
@@ -109,7 +109,7 @@ def set_gl_entries_by_account(dimension_list, filters, account, gl_entries_by_ac
 		and posting_date <= %(to_date)s
 		and is_cancelled = 0
 		order by account, posting_date""".format(
-			dimension=frappe.scrub(filters.get("dimension")), condition=condition
+			dimension=capkpi.scrub(filters.get("dimension")), condition=condition
 		),
 		gl_filters,
 		as_dict=True,
@@ -125,7 +125,7 @@ def format_gl_entries(gl_entries_by_account, accounts_by_name, dimension_list, d
 		for entry in entries:
 			d = accounts_by_name.get(entry.account)
 			if not d:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("Could not retrieve information for {0}.").format(entry.account),
 					title="Error",
 					raise_exception=1,
@@ -133,8 +133,8 @@ def format_gl_entries(gl_entries_by_account, accounts_by_name, dimension_list, d
 
 			for dimension in dimension_list:
 				if dimension == entry.get(dimension_type):
-					d[frappe.scrub(dimension)] = (
-						d.get(frappe.scrub(dimension), 0.0) + flt(entry.debit) - flt(entry.credit)
+					d[capkpi.scrub(dimension)] = (
+						d.get(capkpi.scrub(dimension), 0.0) + flt(entry.debit) - flt(entry.credit)
 					)
 
 
@@ -157,12 +157,12 @@ def prepare_data(accounts, filters, company_currency, dimension_list):
 		}
 
 		for dimension in dimension_list:
-			row[frappe.scrub(dimension)] = flt(d.get(frappe.scrub(dimension), 0.0), 3)
+			row[capkpi.scrub(dimension)] = flt(d.get(capkpi.scrub(dimension), 0.0), 3)
 
-			if abs(row[frappe.scrub(dimension)]) >= 0.005:
+			if abs(row[capkpi.scrub(dimension)]) >= 0.005:
 				# ignore zero values
 				has_value = True
-				total += flt(d.get(frappe.scrub(dimension), 0.0), 3)
+				total += flt(d.get(capkpi.scrub(dimension), 0.0), 3)
 
 		row["has_value"] = has_value
 		row["total"] = total
@@ -176,27 +176,27 @@ def accumulate_values_into_parents(accounts, accounts_by_name, dimension_list):
 	for d in reversed(accounts):
 		if d.parent_account:
 			for dimension in dimension_list:
-				accounts_by_name[d.parent_account][frappe.scrub(dimension)] = accounts_by_name[
+				accounts_by_name[d.parent_account][capkpi.scrub(dimension)] = accounts_by_name[
 					d.parent_account
-				].get(frappe.scrub(dimension), 0.0) + d.get(frappe.scrub(dimension), 0.0)
+				].get(capkpi.scrub(dimension), 0.0) + d.get(capkpi.scrub(dimension), 0.0)
 
 
 def get_condition(dimension):
 	conditions = []
 
-	conditions.append("{0} in %(dimensions)s".format(frappe.scrub(dimension)))
+	conditions.append("{0} in %(dimensions)s".format(capkpi.scrub(dimension)))
 
 	return " and {}".format(" and ".join(conditions)) if conditions else ""
 
 
 def get_dimensions(filters):
-	meta = frappe.get_meta(filters.get("dimension"), cached=False)
+	meta = capkpi.get_meta(filters.get("dimension"), cached=False)
 	query_filters = {}
 
 	if meta.has_field("company"):
 		query_filters = {"company": filters.get("company")}
 
-	return frappe.get_all(filters.get("dimension"), filters=query_filters, pluck="name")
+	return capkpi.get_all(filters.get("dimension"), filters=query_filters, pluck="name")
 
 
 def get_columns(dimension_list):
@@ -220,7 +220,7 @@ def get_columns(dimension_list):
 	for dimension in dimension_list:
 		columns.append(
 			{
-				"fieldname": frappe.scrub(dimension),
+				"fieldname": capkpi.scrub(dimension),
 				"label": dimension,
 				"fieldtype": "Currency",
 				"options": "currency",

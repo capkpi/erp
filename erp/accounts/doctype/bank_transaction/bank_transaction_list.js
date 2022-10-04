@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.listview_settings['Bank Transaction'] = {
+capkpi.listview_settings['Bank Transaction'] = {
 	add_fields: ["unallocated_amount"],
 	get_indicator: function(doc) {
 		if(doc.docstatus == 2) {

@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 
-frappe.ui.form.on('Course Scheduling Tool', {
+capkpi.ui.form.on('Course Scheduling Tool', {
 	setup(frm) {
 		frm.add_fetch('student_group', 'program', 'program');
 		frm.add_fetch('student_group', 'course', 'course');
@@ -15,7 +15,7 @@ frappe.ui.form.on('Course Scheduling Tool', {
 			frm.call('schedule_course')
 				.then(r => {
 					if (!r.message) {
-						frappe.throw(__('There were errors creating Course Schedule'));
+						capkpi.throw(__('There were errors creating Course Schedule'));
 					}
 					const { course_schedules } = r.message;
 					if (course_schedules) {
@@ -36,7 +36,7 @@ frappe.ui.form.on('Course Scheduling Tool', {
 							</table>
 						`;
 
-						frappe.msgprint(html);
+						capkpi.msgprint(html);
 					}
 				});
 		});

@@ -1,8 +1,8 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-frappe.provide("education");
+capkpi.provide("education");
 
-frappe.ui.form.on('Student Attendance Tool', {
+capkpi.ui.form.on('Student Attendance Tool', {
 	onload: function(frm) {
 		frm.set_query("student_group", function() {
 			return {
@@ -15,11 +15,11 @@ frappe.ui.form.on('Student Attendance Tool', {
 	},
 
 	refresh: function(frm) {
-		if (frappe.route_options) {
-			frm.set_value("based_on", frappe.route_options.based_on);
-			frm.set_value("student_group", frappe.route_options.student_group);
-			frm.set_value("course_schedule", frappe.route_options.course_schedule);
-			frappe.route_options = null;
+		if (capkpi.route_options) {
+			frm.set_value("based_on", capkpi.route_options.based_on);
+			frm.set_value("student_group", capkpi.route_options.student_group);
+			frm.set_value("course_schedule", capkpi.route_options.course_schedule);
+			capkpi.route_options = null;
 		}
 		frm.disable_save();
 	},
@@ -36,7 +36,7 @@ frappe.ui.form.on('Student Attendance Tool', {
 		if ((frm.doc.student_group && frm.doc.date) || frm.doc.course_schedule) {
 			var method = "erp.education.doctype.student_attendance_tool.student_attendance_tool.get_student_attendance_records";
 
-			frappe.call({
+			capkpi.call({
 				method: method,
 				args: {
 					based_on: frm.doc.based_on,
@@ -52,8 +52,8 @@ frappe.ui.form.on('Student Attendance Tool', {
 	},
 
 	date: function(frm) {
-		if (frm.doc.date > frappe.datetime.get_today())
-			frappe.throw(__("Cannot mark attendance for future dates."));
+		if (frm.doc.date > capkpi.datetime.get_today())
+			capkpi.throw(__("Cannot mark attendance for future dates."));
 		frm.trigger("student_group");
 	},
 
@@ -135,11 +135,11 @@ education.StudentsEditor = Class.extend({
 					return !stud.disabled && !stud.checked;
 				});
 
-				frappe.confirm(__("Do you want to update attendance? <br> Present: {0} <br> Absent: {1}",
+				capkpi.confirm(__("Do you want to update attendance? <br> Present: {0} <br> Absent: {1}",
 					[students_present.length, students_absent.length]),
 					function() {	//ifyes
-						if(!frappe.request.ajax_count) {
-							frappe.call({
+						if(!capkpi.request.ajax_count) {
+							capkpi.call({
 								method: "erp.education.api.mark_attendance",
 								freeze: true,
 								freeze_message: __("Marking attendance"),
@@ -164,7 +164,7 @@ education.StudentsEditor = Class.extend({
 			});
 
 		var htmls = students.map(function(student) {
-			return frappe.render_template("student_button", {
+			return capkpi.render_template("student_button", {
 				student: student.student,
 				student_name: student.student_name,
 				group_roll_number: student.group_roll_number,

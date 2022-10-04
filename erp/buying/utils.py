@@ -5,9 +5,9 @@
 import json
 from typing import Dict
 
-import frappe
-from frappe import _
-from frappe.utils import cint, cstr, flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, cstr, flt, getdate
 
 from erp.stock.doctype.item.item import get_last_purchase_details, validate_end_of_life
 
@@ -35,10 +35,10 @@ def update_last_purchase_rate(doc, is_submit) -> None:
 			# Check if item code is present
 			# Conversion factor should not be mandatory for non itemized items
 			elif d.item_code:
-				frappe.throw(_("UOM Conversion factor is required in row {0}").format(d.idx))
+				capkpi.throw(_("UOM Conversion factor is required in row {0}").format(d.idx))
 
 		# update last purchsae rate
-		frappe.db.set_value("Item", d.item_code, "last_purchase_rate", flt(last_purchase_rate))
+		capkpi.db.set_value("Item", d.item_code, "last_purchase_rate", flt(last_purchase_rate))
 
 
 def validate_for_items(doc) -> None:
@@ -47,7 +47,7 @@ def validate_for_items(doc) -> None:
 		if not d.qty:
 			if doc.doctype == "Purchase Receipt" and d.rejected_qty:
 				continue
-			frappe.throw(_("Please enter quantity for Item {0}").format(d.item_code))
+			capkpi.throw(_("Please enter quantity for Item {0}").format(d.item_code))
 
 		set_stock_levels(row=d)  # update with latest quantities
 		item = validate_item_and_get_basic_data(row=d)
@@ -59,13 +59,13 @@ def validate_for_items(doc) -> None:
 	if (
 		items
 		and len(items) != len(set(items))
-		and not cint(frappe.db.get_single_value("Buying Settings", "allow_multiple_items") or 0)
+		and not cint(capkpi.db.get_single_value("Buying Settings", "allow_multiple_items") or 0)
 	):
-		frappe.throw(_("Same item cannot be entered multiple times."))
+		capkpi.throw(_("Same item cannot be entered multiple times."))
 
 
 def set_stock_levels(row) -> None:
-	projected_qty = frappe.db.get_value(
+	projected_qty = capkpi.db.get_value(
 		"Bin",
 		{
 			"item_code": row.item_code,
@@ -88,14 +88,14 @@ def set_stock_levels(row) -> None:
 
 
 def validate_item_and_get_basic_data(row) -> Dict:
-	item = frappe.db.get_values(
+	item = capkpi.db.get_values(
 		"Item",
 		filters={"name": row.item_code},
 		fieldname=["is_stock_item", "is_sub_contracted_item", "end_of_life", "disabled"],
 		as_dict=1,
 	)
 	if not item:
-		frappe.throw(_("Row #{0}: Item {1} does not exist").format(row.idx, frappe.bold(row.item_code)))
+		capkpi.throw(_("Row #{0}: Item {1} does not exist").format(row.idx, capkpi.bold(row.item_code)))
 
 	return item[0]
 
@@ -107,28 +107,28 @@ def validate_stock_item_warehouse(row, item) -> None:
 		and not row.warehouse
 		and not row.get("delivered_by_supplier")
 	):
-		frappe.throw(
+		capkpi.throw(
 			_("Row #{1}: Warehouse is mandatory for stock Item {0}").format(
-				frappe.bold(row.item_code), row.idx
+				capkpi.bold(row.item_code), row.idx
 			)
 		)
 
 
 def check_on_hold_or_closed_status(doctype, docname) -> None:
-	status = frappe.db.get_value(doctype, docname, "status")
+	status = capkpi.db.get_value(doctype, docname, "status")
 
 	if status in ("Closed", "On Hold"):
-		frappe.throw(
-			_("{0} {1} status is {2}").format(doctype, docname, status), frappe.InvalidStatusError
+		capkpi.throw(
+			_("{0} {1} status is {2}").format(doctype, docname, status), capkpi.InvalidStatusError
 		)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_linked_material_requests(items):
 	items = json.loads(items)
 	mr_list = []
 	for item in items:
-		material_request = frappe.db.sql(
+		material_request = capkpi.db.sql(
 			"""SELECT distinct mr.name AS mr_name,
 				(mr_item.qty - mr_item.ordered_qty) AS qty,
 				mr_item.item_code AS item_code,

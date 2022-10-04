@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["Accounts Receivable"] = {
+capkpi.query_reports["Accounts Receivable"] = {
 	"filters": [
 		{
 			"fieldname": "company",
@@ -9,13 +9,13 @@ frappe.query_reports["Accounts Receivable"] = {
 			"fieldtype": "Link",
 			"options": "Company",
 			"reqd": 1,
-			"default": frappe.defaults.get_user_default("Company")
+			"default": capkpi.defaults.get_user_default("Company")
 		},
 		{
 			"fieldname": "report_date",
 			"label": __("Posting Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today()
+			"default": capkpi.datetime.get_today()
 		},
 		{
 			"fieldname": "finance_book",
@@ -29,7 +29,7 @@ frappe.query_reports["Accounts Receivable"] = {
 			"fieldtype": "Link",
 			"options": "Cost Center",
 			get_query: () => {
-				var company = frappe.query_report.get_filter_value('company');
+				var company = capkpi.query_report.get_filter_value('company');
 				return {
 					filters: {
 						'company': company
@@ -43,26 +43,26 @@ frappe.query_reports["Accounts Receivable"] = {
 			"fieldtype": "Link",
 			"options": "Customer",
 			on_change: () => {
-				var customer = frappe.query_report.get_filter_value('customer');
-				var company = frappe.query_report.get_filter_value('company');
+				var customer = capkpi.query_report.get_filter_value('customer');
+				var company = capkpi.query_report.get_filter_value('company');
 				if (customer) {
-					frappe.db.get_value('Customer', customer, ["tax_id", "customer_name", "payment_terms"], function(value) {
-						frappe.query_report.set_filter_value('tax_id', value["tax_id"]);
-						frappe.query_report.set_filter_value('customer_name', value["customer_name"]);
-						frappe.query_report.set_filter_value('payment_terms', value["payment_terms"]);
+					capkpi.db.get_value('Customer', customer, ["tax_id", "customer_name", "payment_terms"], function(value) {
+						capkpi.query_report.set_filter_value('tax_id', value["tax_id"]);
+						capkpi.query_report.set_filter_value('customer_name', value["customer_name"]);
+						capkpi.query_report.set_filter_value('payment_terms', value["payment_terms"]);
 					});
 
-					frappe.db.get_value('Customer Credit Limit', {'parent': customer, 'company': company},
+					capkpi.db.get_value('Customer Credit Limit', {'parent': customer, 'company': company},
 						["credit_limit"], function(value) {
 						if (value) {
-							frappe.query_report.set_filter_value('credit_limit', value["credit_limit"]);
+							capkpi.query_report.set_filter_value('credit_limit', value["credit_limit"]);
 						}
 					}, "Customer");
 				} else {
-					frappe.query_report.set_filter_value('tax_id', "");
-					frappe.query_report.set_filter_value('customer_name', "");
-					frappe.query_report.set_filter_value('credit_limit', "");
-					frappe.query_report.set_filter_value('payment_terms', "");
+					capkpi.query_report.set_filter_value('tax_id', "");
+					capkpi.query_report.set_filter_value('customer_name', "");
+					capkpi.query_report.set_filter_value('credit_limit', "");
+					capkpi.query_report.set_filter_value('payment_terms', "");
 				}
 			}
 		},
@@ -72,7 +72,7 @@ frappe.query_reports["Accounts Receivable"] = {
 			"fieldtype": "Link",
 			"options": "Account",
 			get_query: () => {
-				var company = frappe.query_report.get_filter_value('company');
+				var company = capkpi.query_report.get_filter_value('company');
 				return {
 					filters: {
 						'company': company,
@@ -215,7 +215,7 @@ frappe.query_reports["Accounts Receivable"] = {
 	onload: function(report) {
 		report.page.add_inner_button(__("Accounts Receivable Summary"), function() {
 			var filters = report.get_values();
-			frappe.set_route('query-report', 'Accounts Receivable Summary', {company: filters.company});
+			capkpi.set_route('query-report', 'Accounts Receivable Summary', {company: filters.company});
 		});
 	}
 }

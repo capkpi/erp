@@ -2,8 +2,8 @@
 # See license.txt
 
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
 
 from erp.buying.doctype.supplier_scorecard_variable.supplier_scorecard_variable import (
 	VariablePathNotFound,
@@ -13,19 +13,19 @@ from erp.buying.doctype.supplier_scorecard_variable.supplier_scorecard_variable 
 class TestSupplierScorecardVariable(CapKPITestCase):
 	def test_variable_exist(self):
 		for d in test_existing_variables:
-			my_doc = frappe.get_doc("Supplier Scorecard Variable", d.get("name"))
+			my_doc = capkpi.get_doc("Supplier Scorecard Variable", d.get("name"))
 			self.assertEqual(my_doc.param_name, d.get("param_name"))
 			self.assertEqual(my_doc.variable_label, d.get("variable_label"))
 			self.assertEqual(my_doc.path, d.get("path"))
 
 	def test_path_exists(self):
 		for d in test_good_variables:
-			if frappe.db.exists(d):
-				frappe.delete_doc(d.get("doctype"), d.get("name"))
-			frappe.get_doc(d).insert()
+			if capkpi.db.exists(d):
+				capkpi.delete_doc(d.get("doctype"), d.get("name"))
+			capkpi.get_doc(d).insert()
 
 		for d in test_bad_variables:
-			self.assertRaises(VariablePathNotFound, frappe.get_doc(d).insert)
+			self.assertRaises(VariablePathNotFound, capkpi.get_doc(d).insert)
 
 
 test_existing_variables = [

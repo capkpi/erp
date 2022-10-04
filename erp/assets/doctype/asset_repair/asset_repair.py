@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import add_months, cint, flt, getdate, time_diff_in_hours
+import capkpi
+from capkpi import _
+from capkpi.utils import add_months, cint, flt, getdate, time_diff_in_hours
 
 from erp.accounts.general_ledger import make_gl_entries
 from erp.assets.doctype.asset.asset import get_asset_account
@@ -13,7 +13,7 @@ from erp.controllers.accounts_controller import AccountsController
 
 class AssetRepair(AccountsController):
 	def validate(self):
-		self.asset_doc = frappe.get_doc("Asset", self.asset)
+		self.asset_doc = capkpi.get_doc("Asset", self.asset)
 		self.update_status()
 
 		if self.get("stock_items"):
@@ -22,7 +22,7 @@ class AssetRepair(AccountsController):
 
 	def update_status(self):
 		if self.repair_status == "Pending":
-			frappe.db.set_value("Asset", self.asset, "status", "Out of Order")
+			capkpi.db.set_value("Asset", self.asset, "status", "Out of Order")
 		else:
 			self.asset_doc.set_status()
 
@@ -50,7 +50,7 @@ class AssetRepair(AccountsController):
 				self.make_gl_entries()
 
 				if (
-					frappe.db.get_value("Asset", self.asset, "calculate_depreciation")
+					capkpi.db.get_value("Asset", self.asset, "calculate_depreciation")
 					and self.increase_in_asset_life
 				):
 					self.modify_depreciation_schedule()
@@ -60,7 +60,7 @@ class AssetRepair(AccountsController):
 			self.asset_doc.save()
 
 	def before_cancel(self):
-		self.asset_doc = frappe.get_doc("Asset", self.asset)
+		self.asset_doc = capkpi.get_doc("Asset", self.asset)
 
 		if self.get("stock_consumption") or self.get("capitalize_repair_cost"):
 			self.decrease_asset_value()
@@ -73,7 +73,7 @@ class AssetRepair(AccountsController):
 				self.make_gl_entries(cancel=True)
 
 				if (
-					frappe.db.get_value("Asset", self.asset, "calculate_depreciation")
+					capkpi.db.get_value("Asset", self.asset, "calculate_depreciation")
 					and self.increase_in_asset_life
 				):
 					self.revert_depreciation_schedule_on_cancellation()
@@ -84,15 +84,15 @@ class AssetRepair(AccountsController):
 
 	def check_repair_status(self):
 		if self.repair_status == "Pending":
-			frappe.throw(_("Please update Repair Status."))
+			capkpi.throw(_("Please update Repair Status."))
 
 	def check_for_stock_items_and_warehouse(self):
 		if not self.get("stock_items"):
-			frappe.throw(
+			capkpi.throw(
 				_("Please enter Stock Items consumed during the Repair."), title=_("Missing Items")
 			)
 		if not self.warehouse:
-			frappe.throw(
+			capkpi.throw(
 				_("Please enter Warehouse from which Stock Items consumed during the Repair were taken."),
 				title=_("Missing Warehouse"),
 			)
@@ -126,7 +126,7 @@ class AssetRepair(AccountsController):
 		return total_value_of_stock_consumed
 
 	def decrease_stock_quantity(self):
-		stock_entry = frappe.get_doc(
+		stock_entry = capkpi.get_doc(
 			{"doctype": "Stock Entry", "stock_entry_type": "Material Issue", "company": self.company}
 		)
 
@@ -148,7 +148,7 @@ class AssetRepair(AccountsController):
 		self.db_set("stock_entry", stock_entry.name)
 
 	def increase_stock_quantity(self):
-		stock_entry = frappe.get_doc("Stock Entry", self.stock_entry)
+		stock_entry = capkpi.get_doc("Stock Entry", self.stock_entry)
 		stock_entry.flags.ignore_links = True
 		stock_entry.cancel()
 
@@ -159,14 +159,14 @@ class AssetRepair(AccountsController):
 
 	def get_gl_entries(self):
 		gl_entries = []
-		repair_and_maintenance_account = frappe.db.get_value(
+		repair_and_maintenance_account = capkpi.db.get_value(
 			"Company", self.company, "repair_and_maintenance_account"
 		)
 		fixed_asset_account = get_asset_account(
 			"fixed_asset_account", asset=self.asset, company=self.company
 		)
 		expense_account = (
-			frappe.get_doc("Purchase Invoice", self.purchase_invoice).items[0].expense_account
+			capkpi.get_doc("Purchase Invoice", self.purchase_invoice).items[0].expense_account
 		)
 
 		gl_entries.append(
@@ -188,7 +188,7 @@ class AssetRepair(AccountsController):
 
 		if self.get("stock_consumption"):
 			# creating GL Entries for each row in Stock Items based on the Stock Entry created for it
-			stock_entry = frappe.get_doc("Stock Entry", self.stock_entry)
+			stock_entry = capkpi.get_doc("Stock Entry", self.stock_entry)
 			for item in stock_entry.items:
 				gl_entries.append(
 					self.get_gl_dict(
@@ -292,7 +292,7 @@ class AssetRepair(AccountsController):
 			row.total_number_of_depreciations -= 1
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_downtime(failure_date, completion_date):
 	downtime = time_diff_in_hours(completion_date, failure_date)
 	return round(downtime, 2)

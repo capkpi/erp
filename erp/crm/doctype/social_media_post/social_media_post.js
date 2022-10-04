@@ -1,15 +1,15 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-frappe.ui.form.on('Social Media Post', {
+capkpi.ui.form.on('Social Media Post', {
 	validate: function(frm) {
 		if (frm.doc.twitter === 0 && frm.doc.linkedin === 0) {
-			frappe.throw(__("Select atleast one Social Media Platform to Share on."));
+			capkpi.throw(__("Select atleast one Social Media Platform to Share on."));
 		}
 		if (frm.doc.scheduled_time) {
 			let scheduled_time = new Date(frm.doc.scheduled_time);
 			let date_time = new Date();
 			if (scheduled_time.getTime() < date_time.getTime()) {
-				frappe.throw(__("Scheduled Time must be a future time."));
+				capkpi.throw(__("Scheduled Time must be a future time."));
 			}
 		}
 		frm.trigger('validate_tweet_length');
@@ -25,7 +25,7 @@ frappe.ui.form.on('Social Media Post', {
 
 	validate_tweet_length: function(frm) {
 		if (frm.doc.text && frm.doc.text.length > 280) {
-			frappe.throw(__("Tweet length Must be less than 280."));
+			capkpi.throw(__("Tweet length Must be less than 280."));
 		}
 	},
 
@@ -35,7 +35,7 @@ frappe.ui.form.on('Social Media Post', {
 
 	make_dashboard: function(frm) {
 		if (frm.doc.post_status == "Posted") {
-			frappe.call({
+			capkpi.call({
 				doc: frm.doc,
 				method: 'get_post',
 				freeze: true,
@@ -87,9 +87,9 @@ frappe.ui.form.on('Social Media Post', {
 			}
 			if (frm.doc.post_status !='Deleted') {
 				frm.add_custom_button(('Delete Post'), function() {
-					frappe.confirm(__('Are you sure want to delete the Post from Social Media platforms?'),
+					capkpi.confirm(__('Are you sure want to delete the Post from Social Media platforms?'),
 						function() {
-							frappe.call({
+							capkpi.call({
 								doc: frm.doc,
 								method: 'delete_post',
 								freeze: true,
@@ -126,7 +126,7 @@ frappe.ui.form.on('Social Media Post', {
 
 	add_post_btn: function(frm) {
 		frm.add_custom_button(__('Post Now'), function() {
-			frappe.call({
+			capkpi.call({
 				doc: frm.doc,
 				method: 'post',
 				freeze: true,

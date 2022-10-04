@@ -4,8 +4,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import flt, nowdate
+import capkpi
+from capkpi.utils import flt, nowdate
 
 from erp.accounts.doctype.account.test_account import get_inventory_account
 from erp.accounts.doctype.journal_entry.journal_entry import StockAccountInvalidTransaction
@@ -14,22 +14,22 @@ from erp.exceptions import InvalidAccountCurrency
 
 class TestJournalEntry(unittest.TestCase):
 	def test_journal_entry_with_against_jv(self):
-		jv_invoice = frappe.copy_doc(test_records[2])
-		base_jv = frappe.copy_doc(test_records[0])
+		jv_invoice = capkpi.copy_doc(test_records[2])
+		base_jv = capkpi.copy_doc(test_records[0])
 		self.jv_against_voucher_testcase(base_jv, jv_invoice)
 
 	def test_jv_against_sales_order(self):
 		from erp.selling.doctype.sales_order.test_sales_order import make_sales_order
 
 		sales_order = make_sales_order(do_not_save=True)
-		base_jv = frappe.copy_doc(test_records[0])
+		base_jv = capkpi.copy_doc(test_records[0])
 		self.jv_against_voucher_testcase(base_jv, sales_order)
 
 	def test_jv_against_purchase_order(self):
 		from erp.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 
 		purchase_order = create_purchase_order(do_not_save=True)
-		base_jv = frappe.copy_doc(test_records[1])
+		base_jv = capkpi.copy_doc(test_records[1])
 		self.jv_against_voucher_testcase(base_jv, purchase_order)
 
 	def jv_against_voucher_testcase(self, base_jv, test_voucher):
@@ -40,7 +40,7 @@ class TestJournalEntry(unittest.TestCase):
 
 		if test_voucher.doctype == "Journal Entry":
 			self.assertTrue(
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""select name from `tabJournal Entry Account`
 				where account = %s and docstatus = 1 and parent = %s""",
 					("_Test Receivable - _TC", test_voucher.name),
@@ -48,7 +48,7 @@ class TestJournalEntry(unittest.TestCase):
 			)
 
 		self.assertFalse(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select name from `tabJournal Entry Account`
 			where reference_type = %s and reference_name = %s""",
 				(test_voucher.doctype, test_voucher.name),
@@ -63,10 +63,10 @@ class TestJournalEntry(unittest.TestCase):
 		base_jv.insert()
 		base_jv.submit()
 
-		submitted_voucher = frappe.get_doc(test_voucher.doctype, test_voucher.name)
+		submitted_voucher = capkpi.get_doc(test_voucher.doctype, test_voucher.name)
 
 		self.assertTrue(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select name from `tabJournal Entry Account`
 			where reference_type = %s and reference_name = %s and {0}=400""".format(
 					dr_or_cr
@@ -81,7 +81,7 @@ class TestJournalEntry(unittest.TestCase):
 
 	def advance_paid_testcase(self, base_jv, test_voucher, dr_or_cr):
 		# Test advance paid field
-		advance_paid = frappe.db.sql(
+		advance_paid = capkpi.db.sql(
 			"""select advance_paid from `tab%s`
 					where name=%s"""
 			% (test_voucher.doctype, "%s"),
@@ -96,7 +96,7 @@ class TestJournalEntry(unittest.TestCase):
 			# if test_voucher is a Journal Entry, test cancellation of test_voucher
 			test_voucher.cancel()
 			self.assertFalse(
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""select name from `tabJournal Entry Account`
 				where reference_type='Journal Entry' and reference_name=%s""",
 					test_voucher.name,
@@ -105,11 +105,11 @@ class TestJournalEntry(unittest.TestCase):
 
 		elif test_voucher.doctype in ["Sales Order", "Purchase Order"]:
 			# if test_voucher is a Sales Order/Purchase Order, test error on cancellation of test_voucher
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Accounts Settings", "Accounts Settings", "unlink_advance_payment_on_cancelation_of_order", 0
 			)
-			submitted_voucher = frappe.get_doc(test_voucher.doctype, test_voucher.name)
-			self.assertRaises(frappe.LinkExistsError, submitted_voucher.cancel)
+			submitted_voucher = capkpi.get_doc(test_voucher.doctype, test_voucher.name)
+			self.assertRaises(capkpi.LinkExistsError, submitted_voucher.cancel)
 
 	def test_jv_against_stock_account(self):
 		company = "_Test Company with perpetual inventory"
@@ -125,7 +125,7 @@ class TestJournalEntry(unittest.TestCase):
 		if not diff:
 			diff = 100
 
-		jv = frappe.new_doc("Journal Entry")
+		jv = capkpi.new_doc("Journal Entry")
 		jv.company = company
 		jv.posting_date = nowdate()
 		jv.append(
@@ -151,7 +151,7 @@ class TestJournalEntry(unittest.TestCase):
 
 		if account_bal == stock_bal:
 			self.assertRaises(StockAccountInvalidTransaction, jv.submit)
-			frappe.db.rollback()
+			capkpi.db.rollback()
 		else:
 			jv.submit()
 			jv.cancel()
@@ -164,7 +164,7 @@ class TestJournalEntry(unittest.TestCase):
 		jv.get("accounts")[1].credit_in_account_currency = 5000
 		jv.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Journal Entry' and voucher_no=%s
@@ -205,7 +205,7 @@ class TestJournalEntry(unittest.TestCase):
 		# cancel
 		jv.cancel()
 
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select name from `tabGL Entry`
 			where voucher_type='Sales Invoice' and voucher_no=%s""",
 			jv.name,
@@ -226,7 +226,7 @@ class TestJournalEntry(unittest.TestCase):
 		rjv.posting_date = nowdate()
 		rjv.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Journal Entry' and voucher_no=%s
@@ -287,10 +287,10 @@ class TestJournalEntry(unittest.TestCase):
 		jv.submit()
 
 	def test_inter_company_jv(self):
-		frappe.db.set_value("Account", "Sales Expenses - _TC", "inter_company_account", 1)
-		frappe.db.set_value("Account", "Buildings - _TC", "inter_company_account", 1)
-		frappe.db.set_value("Account", "Sales Expenses - _TC1", "inter_company_account", 1)
-		frappe.db.set_value("Account", "Buildings - _TC1", "inter_company_account", 1)
+		capkpi.db.set_value("Account", "Sales Expenses - _TC", "inter_company_account", 1)
+		capkpi.db.set_value("Account", "Buildings - _TC", "inter_company_account", 1)
+		capkpi.db.set_value("Account", "Sales Expenses - _TC1", "inter_company_account", 1)
+		capkpi.db.set_value("Account", "Buildings - _TC1", "inter_company_account", 1)
 		jv = make_journal_entry(
 			"Sales Expenses - _TC",
 			"Buildings - _TC",
@@ -351,7 +351,7 @@ class TestJournalEntry(unittest.TestCase):
 			"_Test Bank - _TC": {"cost_center": cost_center},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, debit, credit
 			from `tabGL Entry` where voucher_type='Journal Entry' and voucher_no=%s
 			order by account asc""",
@@ -367,7 +367,7 @@ class TestJournalEntry(unittest.TestCase):
 	def test_jv_with_project(self):
 		from erp.projects.doctype.project.test_project import make_project
 
-		if not frappe.db.exists("Project", {"project_name": "Journal Entry Project"}):
+		if not capkpi.db.exists("Project", {"project_name": "Journal Entry Project"}):
 			project = make_project(
 				{
 					"project_name": "Journal Entry Project",
@@ -377,7 +377,7 @@ class TestJournalEntry(unittest.TestCase):
 			)
 			project_name = project.name
 		else:
-			project_name = frappe.get_value("Project", {"project_name": "_Test Project"})
+			project_name = capkpi.get_value("Project", {"project_name": "_Test Project"})
 
 		jv = make_journal_entry("_Test Cash - _TC", "_Test Bank - _TC", 100, save=False)
 		for d in jv.accounts:
@@ -394,7 +394,7 @@ class TestJournalEntry(unittest.TestCase):
 			"_Test Bank - _TC": {"project": project_name},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, project, debit, credit
 			from `tabGL Entry` where voucher_type='Journal Entry' and voucher_no=%s
 			order by account asc""",
@@ -443,7 +443,7 @@ def make_journal_entry(
 	if not cost_center:
 		cost_center = "_Test Cost Center - _TC"
 
-	jv = frappe.new_doc("Journal Entry")
+	jv = capkpi.new_doc("Journal Entry")
 	jv.posting_date = posting_date or nowdate()
 	jv.company = "_Test Company"
 	jv.user_remark = "test"
@@ -478,4 +478,4 @@ def make_journal_entry(
 	return jv
 
 
-test_records = frappe.get_test_records("Journal Entry")
+test_records = capkpi.get_test_records("Journal Entry")

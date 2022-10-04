@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint, get_link_to_form
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint, get_link_to_form
 
 
 class AssetCategory(Document):
@@ -18,9 +18,9 @@ class AssetCategory(Document):
 	def validate_finance_books(self):
 		for d in self.finance_books:
 			for field in ("Total Number of Depreciations", "Frequency of Depreciation"):
-				if cint(d.get(frappe.scrub(field))) < 1:
-					frappe.throw(
-						_("Row {0}: {1} must be greater than 0").format(d.idx, field), frappe.MandatoryError
+				if cint(d.get(capkpi.scrub(field))) < 1:
+					capkpi.throw(
+						_("Row {0}: {1} must be greater than 0").format(d.idx, field), capkpi.MandatoryError
 					)
 
 	def validate_account_currency(self):
@@ -32,19 +32,19 @@ class AssetCategory(Document):
 		]
 		invalid_accounts = []
 		for d in self.accounts:
-			company_currency = frappe.get_value("Company", d.get("company_name"), "default_currency")
+			company_currency = capkpi.get_value("Company", d.get("company_name"), "default_currency")
 			for type_of_account in account_types:
 				if d.get(type_of_account):
-					account_currency = frappe.get_value("Account", d.get(type_of_account), "account_currency")
+					account_currency = capkpi.get_value("Account", d.get(type_of_account), "account_currency")
 					if account_currency != company_currency:
 						invalid_accounts.append(
-							frappe._dict({"type": type_of_account, "idx": d.idx, "account": d.get(type_of_account)})
+							capkpi._dict({"type": type_of_account, "idx": d.idx, "account": d.get(type_of_account)})
 						)
 
 		for d in invalid_accounts:
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{}: Currency of {} - {} doesn't matches company currency.").format(
-					d.idx, frappe.bold(frappe.unscrub(d.type)), frappe.bold(d.account)
+					d.idx, capkpi.bold(capkpi.unscrub(d.type)), capkpi.bold(d.account)
 				),
 				title=_("Invalid Account"),
 			)
@@ -61,18 +61,18 @@ class AssetCategory(Document):
 				if d.get(fieldname):
 					selected_account = d.get(fieldname)
 					key_to_match = next(iter(account_type_map.get(fieldname)))  # acount_type or root_type
-					selected_key_type = frappe.db.get_value("Account", selected_account, key_to_match)
+					selected_key_type = capkpi.db.get_value("Account", selected_account, key_to_match)
 					expected_key_types = account_type_map[fieldname][key_to_match]
 
 					if selected_key_type not in expected_key_types:
-						frappe.throw(
+						capkpi.throw(
 							_(
 								"Row #{}: {} of {} should be {}. Please modify the account or select a different account."
 							).format(
 								d.idx,
-								frappe.unscrub(key_to_match),
-								frappe.bold(selected_account),
-								frappe.bold(expected_key_types),
+								capkpi.unscrub(key_to_match),
+								capkpi.bold(selected_account),
+								capkpi.bold(expected_key_types),
 							),
 							title=_("Invalid Account"),
 						)
@@ -81,7 +81,7 @@ class AssetCategory(Document):
 		if self.enable_cwip_accounting:
 			missing_cwip_accounts_for_company = []
 			for d in self.accounts:
-				if not d.capital_work_in_progress_account and not frappe.db.get_value(
+				if not d.capital_work_in_progress_account and not capkpi.db.get_value(
 					"Company", d.company_name, "capital_work_in_progress_account"
 				):
 					missing_cwip_accounts_for_company.append(get_link_to_form("Company", d.company_name))
@@ -93,26 +93,26 @@ class AssetCategory(Document):
 				msg += _("You can also set default CWIP account in Company {}").format(
 					", ".join(missing_cwip_accounts_for_company)
 				)
-				frappe.throw(msg, title=_("Missing Account"))
+				capkpi.throw(msg, title=_("Missing Account"))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_asset_category_account(
 	fieldname, item=None, asset=None, account=None, asset_category=None, company=None
 ):
-	if item and frappe.db.get_value("Item", item, "is_fixed_asset"):
-		asset_category = frappe.db.get_value("Item", item, ["asset_category"])
+	if item and capkpi.db.get_value("Item", item, "is_fixed_asset"):
+		asset_category = capkpi.db.get_value("Item", item, ["asset_category"])
 
 	elif not asset_category or not company:
 		if account:
-			if frappe.db.get_value("Account", account, "account_type") != "Fixed Asset":
+			if capkpi.db.get_value("Account", account, "account_type") != "Fixed Asset":
 				account = None
 
 		if not account:
-			asset_details = frappe.db.get_value("Asset", asset, ["asset_category", "company"])
+			asset_details = capkpi.db.get_value("Asset", asset, ["asset_category", "company"])
 			asset_category, company = asset_details or [None, None]
 
-	account = frappe.db.get_value(
+	account = capkpi.db.get_value(
 		"Asset Category Account",
 		filters={"parent": asset_category, "company_name": company},
 		fieldname=fieldname,

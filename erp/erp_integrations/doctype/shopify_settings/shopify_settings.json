@@ -90,7 +90,7 @@
    "fieldtype": "Section Break"
   },
   {
-   "description": "eg: frappe.myshopify.com",
+   "description": "eg: capkpi.myshopify.com",
    "fieldname": "shopify_url",
    "fieldtype": "Data",
    "in_list_view": 1,

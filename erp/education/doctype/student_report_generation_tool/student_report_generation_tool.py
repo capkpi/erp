@@ -4,10 +4,10 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils.pdf import get_pdf
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils.pdf import get_pdf
 
 from erp.education.report.course_wise_assessment_report.course_wise_assessment_report import (
 	get_child_assessment_groups,
@@ -19,12 +19,12 @@ class StudentReportGenerationTool(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def preview_report_card(doc):
-	doc = frappe._dict(json.loads(doc))
+	doc = capkpi._dict(json.loads(doc))
 	doc.students = [doc.student]
 	if not (doc.student_name and doc.student_batch):
-		program_enrollment = frappe.get_all(
+		program_enrollment = capkpi.get_all(
 			"Program Enrollment",
 			fields=["student_batch_name", "student_name"],
 			filters={"student": doc.student, "docstatus": ("!=", 2), "academic_year": doc.academic_year},
@@ -53,15 +53,15 @@ def preview_report_card(doc):
 	template = (
 		"erp/education/doctype/student_report_generation_tool/student_report_generation_tool.html"
 	)
-	base_template_path = "frappe/www/printview.html"
+	base_template_path = "capkpi/www/printview.html"
 
-	from frappe.www.printview import get_letter_head
+	from capkpi.www.printview import get_letter_head
 
 	letterhead = get_letter_head(
-		frappe._dict({"letter_head": doc.letterhead}), not doc.add_letterhead
+		capkpi._dict({"letter_head": doc.letterhead}), not doc.add_letterhead
 	)
 
-	html = frappe.render_template(
+	html = capkpi.render_template(
 		template,
 		{
 			"doc": doc,
@@ -73,21 +73,21 @@ def preview_report_card(doc):
 			"add_letterhead": doc.add_letterhead if doc.add_letterhead else 0,
 		},
 	)
-	final_template = frappe.render_template(
+	final_template = capkpi.render_template(
 		base_template_path, {"body": html, "title": "Report Card"}
 	)
 
-	frappe.response.filename = "Report Card " + doc.students[0] + ".pdf"
-	frappe.response.filecontent = get_pdf(final_template)
-	frappe.response.type = "download"
+	capkpi.response.filename = "Report Card " + doc.students[0] + ".pdf"
+	capkpi.response.filecontent = get_pdf(final_template)
+	capkpi.response.type = "download"
 
 
 def get_courses_criteria(courses):
-	course_criteria = frappe._dict()
+	course_criteria = capkpi._dict()
 	for course in courses:
 		course_criteria[course] = [
 			d.assessment_criteria
-			for d in frappe.get_all(
+			for d in capkpi.get_all(
 				"Course Assessment Criteria", fields=["assessment_criteria"], filters={"parent": course}
 			)
 		]
@@ -96,16 +96,16 @@ def get_courses_criteria(courses):
 
 def get_attendance_count(student, academic_year, academic_term=None):
 	if academic_year:
-		from_date, to_date = frappe.db.get_value(
+		from_date, to_date = capkpi.db.get_value(
 			"Academic Year", academic_year, ["year_start_date", "year_end_date"]
 		)
 	elif academic_term:
-		from_date, to_date = frappe.db.get_value(
+		from_date, to_date = capkpi.db.get_value(
 			"Academic Term", academic_term, ["term_start_date", "term_end_date"]
 		)
 	if from_date and to_date:
 		attendance = dict(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select status, count(student) as no_of_days
 			from `tabStudent Attendance` where student = %s and docstatus = 1
 			and date between %s and %s group by status""",
@@ -118,4 +118,4 @@ def get_attendance_count(student, academic_year, academic_term=None):
 			attendance["Present"] = 0
 		return attendance
 	else:
-		frappe.throw(_("Provide the academic year and set the starting and ending date."))
+		capkpi.throw(_("Provide the academic year and set the starting and ending date."))

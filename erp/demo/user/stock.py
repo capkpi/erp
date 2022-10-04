@@ -4,8 +4,8 @@
 
 import random
 
-import frappe
-from frappe.desk import query_report
+import capkpi
+from capkpi.desk import query_report
 
 import erp
 from erp.stock.doctype.batch.batch import UnableToSelectBatchError
@@ -16,7 +16,7 @@ from erp.stock.stock_ledger import NegativeStockError
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_manufacturing_user"))
+	capkpi.set_user(capkpi.db.get_global("demo_manufacturing_user"))
 
 	make_purchase_receipt()
 	make_delivery_note()
@@ -35,19 +35,19 @@ def make_purchase_receipt():
 			: random.randint(1, 10)
 		]
 		for po in po_list:
-			pr = frappe.get_doc(make_purchase_receipt(po))
+			pr = capkpi.get_doc(make_purchase_receipt(po))
 
 			if pr.is_subcontracted == "Yes":
 				pr.supplier_warehouse = "Supplier - WPL"
 
-			pr.posting_date = frappe.flags.current_date
+			pr.posting_date = capkpi.flags.current_date
 			pr.insert()
 			try:
 				pr.submit()
 			except NegativeStockError:
 				print("Negative stock for {0}".format(po))
 				pass
-			frappe.db.commit()
+			capkpi.db.commit()
 
 
 def make_delivery_note():
@@ -61,20 +61,20 @@ def make_delivery_note():
 		for so in list(set([r[0] for r in query_report.run(report)["result"] if r[0] != "Total"]))[
 			: random.randint(1, 3)
 		]:
-			dn = frappe.get_doc(make_delivery_note(so))
-			dn.posting_date = frappe.flags.current_date
+			dn = capkpi.get_doc(make_delivery_note(so))
+			dn.posting_date = capkpi.flags.current_date
 			for d in dn.get("items"):
 				if not d.expense_account:
 					d.expense_account = "Cost of Goods Sold - {0}".format(
-						frappe.get_cached_value("Company", dn.company, "abbr")
+						capkpi.get_cached_value("Company", dn.company, "abbr")
 					)
 
 			try:
 				dn.insert()
 				dn.submit()
-				frappe.db.commit()
+				capkpi.db.commit()
 			except (NegativeStockError, SerialNoRequiredError, SerialNoQtyError, UnableToSelectBatchError):
-				frappe.db.rollback()
+				capkpi.db.rollback()
 
 
 def make_stock_reconciliation():
@@ -85,8 +85,8 @@ def make_stock_reconciliation():
 	)
 
 	if random.random() < 0.4:
-		stock_reco = frappe.new_doc("Stock Reconciliation")
-		stock_reco.posting_date = frappe.flags.current_date
+		stock_reco = capkpi.new_doc("Stock Reconciliation")
+		stock_reco.posting_date = capkpi.flags.current_date
 		stock_reco.company = erp.get_default_company()
 		stock_reco.get_items_for("Stores - WPL")
 		if stock_reco.items:
@@ -96,11 +96,11 @@ def make_stock_reconciliation():
 			try:
 				stock_reco.insert(ignore_permissions=True, ignore_mandatory=True)
 				stock_reco.submit()
-				frappe.db.commit()
+				capkpi.db.commit()
 			except OpeningEntryAccountError:
-				frappe.db.rollback()
+				capkpi.db.rollback()
 			except EmptyStockReconciliationItemsError:
-				frappe.db.rollback()
+				capkpi.db.rollback()
 
 
 def submit_draft_stock_entries():
@@ -111,44 +111,44 @@ def submit_draft_stock_entries():
 	)
 
 	# try posting older drafts (if exists)
-	frappe.db.commit()
-	for st in frappe.db.get_values("Stock Entry", {"docstatus": 0}, "name"):
+	capkpi.db.commit()
+	for st in capkpi.db.get_values("Stock Entry", {"docstatus": 0}, "name"):
 		try:
-			ste = frappe.get_doc("Stock Entry", st[0])
-			ste.posting_date = frappe.flags.current_date
+			ste = capkpi.get_doc("Stock Entry", st[0])
+			ste.posting_date = capkpi.flags.current_date
 			ste.save()
 			ste.submit()
-			frappe.db.commit()
+			capkpi.db.commit()
 		except (
 			NegativeStockError,
 			IncorrectValuationRateError,
 			DuplicateEntryForWorkOrderError,
 			OperationsNotCompleteError,
 		):
-			frappe.db.rollback()
+			capkpi.db.rollback()
 
 
 def make_sales_return_records():
 	if random.random() < 0.1:
-		for data in frappe.get_all("Delivery Note", fields=["name"], filters={"docstatus": 1}):
+		for data in capkpi.get_all("Delivery Note", fields=["name"], filters={"docstatus": 1}):
 			if random.random() < 0.1:
 				try:
 					dn = make_sales_return(data.name)
 					dn.insert()
 					dn.submit()
-					frappe.db.commit()
+					capkpi.db.commit()
 				except Exception:
-					frappe.db.rollback()
+					capkpi.db.rollback()
 
 
 def make_purchase_return_records():
 	if random.random() < 0.1:
-		for data in frappe.get_all("Purchase Receipt", fields=["name"], filters={"docstatus": 1}):
+		for data in capkpi.get_all("Purchase Receipt", fields=["name"], filters={"docstatus": 1}):
 			if random.random() < 0.1:
 				try:
 					pr = make_purchase_return(data.name)
 					pr.insert()
 					pr.submit()
-					frappe.db.commit()
+					capkpi.db.commit()
 				except Exception:
-					frappe.db.rollback()
+					capkpi.db.rollback()

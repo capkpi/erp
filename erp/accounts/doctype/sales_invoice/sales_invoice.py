@@ -2,12 +2,12 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint, throw
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.model.mapper import get_mapped_doc
-from frappe.model.utils import get_fetch_values
-from frappe.utils import (
+import capkpi
+from capkpi import _, msgprint, throw
+from capkpi.contacts.doctype.address.address import get_address_display
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.model.utils import get_fetch_values
+from capkpi.utils import (
 	add_days,
 	add_months,
 	cint,
@@ -142,7 +142,7 @@ class SalesInvoice(SellingController):
 			set_batch_nos(self, "warehouse", True)
 
 		if self.redeem_loyalty_points:
-			lp = frappe.get_doc("Loyalty Program", self.loyalty_program)
+			lp = capkpi.get_doc("Loyalty Program", self.loyalty_program)
 			self.loyalty_redemption_account = (
 				lp.expense_account if not self.loyalty_redemption_account else self.loyalty_redemption_account
 			)
@@ -184,15 +184,15 @@ class SalesInvoice(SellingController):
 	def validate_fixed_asset(self):
 		for d in self.get("items"):
 			if d.is_fixed_asset and d.meta.get_field("asset") and d.asset:
-				asset = frappe.get_doc("Asset", d.asset)
+				asset = capkpi.get_doc("Asset", d.asset)
 				if self.doctype == "Sales Invoice" and self.docstatus == 1:
 					if self.update_stock:
-						frappe.throw(_("'Update Stock' cannot be checked for fixed asset sale"))
+						capkpi.throw(_("'Update Stock' cannot be checked for fixed asset sale"))
 
 					elif asset.status in ("Scrapped", "Cancelled") or (
 						asset.status == "Sold" and not self.is_return
 					):
-						frappe.throw(
+						capkpi.throw(
 							_("Row #{0}: Asset {1} cannot be submitted, it is already {2}").format(
 								d.idx, d.asset, asset.status
 							)
@@ -200,11 +200,11 @@ class SalesInvoice(SellingController):
 
 	def validate_item_cost_centers(self):
 		for item in self.items:
-			cost_center_company = frappe.get_cached_value("Cost Center", item.cost_center, "company")
+			cost_center_company = capkpi.get_cached_value("Cost Center", item.cost_center, "company")
 			if cost_center_company != self.company:
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: Cost Center {1} does not belong to company {2}").format(
-						frappe.bold(item.idx), frappe.bold(item.cost_center), frappe.bold(self.company)
+						capkpi.bold(item.idx), capkpi.bold(item.cost_center), capkpi.bold(self.company)
 					)
 				)
 
@@ -248,7 +248,7 @@ class SalesInvoice(SellingController):
 		self.validate_pos_paid_amount()
 
 		if not self.auto_repeat:
-			frappe.get_doc("Authorization Control").validate_approving_authority(
+			capkpi.get_doc("Authorization Control").validate_approving_authority(
 				self.doctype, self.company, self.base_grand_total, self
 			)
 
@@ -289,7 +289,7 @@ class SalesInvoice(SellingController):
 		self.update_time_sheet(self.name)
 
 		if (
-			frappe.db.get_single_value("Selling Settings", "sales_update_frequency") == "Each Transaction"
+			capkpi.db.get_single_value("Selling Settings", "sales_update_frequency") == "Each Transaction"
 		):
 			update_company_current_month_sales(self.company)
 			self.update_project()
@@ -301,14 +301,14 @@ class SalesInvoice(SellingController):
 		elif (
 			self.is_return and self.return_against and not self.is_consolidated and self.loyalty_program
 		):
-			against_si_doc = frappe.get_doc("Sales Invoice", self.return_against)
+			against_si_doc = capkpi.get_doc("Sales Invoice", self.return_against)
 			against_si_doc.delete_loyalty_point_entry()
 			against_si_doc.make_loyalty_point_entry()
 		if self.redeem_loyalty_points and not self.is_consolidated and self.loyalty_points:
 			self.apply_loyalty_points()
 
 		# Healthcare Service Invoice.
-		domain_settings = frappe.get_doc("Domain Settings")
+		domain_settings = capkpi.get_doc("Domain Settings")
 		active_domains = [d.domain for d in domain_settings.active_domains]
 
 		if "Healthcare" in active_domains:
@@ -327,11 +327,11 @@ class SalesInvoice(SellingController):
 				total_amount_in_payments += payment.amount
 			invoice_total = self.rounded_total or self.grand_total
 			if total_amount_in_payments < invoice_total:
-				frappe.throw(_("Total payments amount can't be greater than {}").format(-invoice_total))
+				capkpi.throw(_("Total payments amount can't be greater than {}").format(-invoice_total))
 
 	def validate_pos_paid_amount(self):
 		if len(self.payments) == 0 and self.is_pos:
-			frappe.throw(_("At least one mode of payment is required for POS invoice."))
+			capkpi.throw(_("At least one mode of payment is required for POS invoice."))
 
 	def check_if_consolidated_invoice(self):
 		# since POS Invoice extends Sales Invoice, we explicitly check if doctype is Sales Invoice
@@ -339,15 +339,15 @@ class SalesInvoice(SellingController):
 			invoice_or_credit_note = (
 				"consolidated_credit_note" if self.is_return else "consolidated_invoice"
 			)
-			pos_closing_entry = frappe.get_all(
+			pos_closing_entry = capkpi.get_all(
 				"POS Invoice Merge Log", filters={invoice_or_credit_note: self.name}, pluck="pos_closing_entry"
 			)
 			if pos_closing_entry and pos_closing_entry[0]:
 				msg = _("To cancel a {} you need to cancel the POS Closing Entry {}.").format(
-					frappe.bold("Consolidated Sales Invoice"),
+					capkpi.bold("Consolidated Sales Invoice"),
 					get_link_to_form("POS Closing Entry", pos_closing_entry[0]),
 				)
-				frappe.throw(msg, title=_("Not Allowed"))
+				capkpi.throw(msg, title=_("Not Allowed"))
 
 	def before_cancel(self):
 		self.check_if_consolidated_invoice()
@@ -387,10 +387,10 @@ class SalesInvoice(SellingController):
 		if self.update_stock == 1:
 			self.repost_future_sle_and_gle()
 
-		frappe.db.set(self, "status", "Cancelled")
+		capkpi.db.set(self, "status", "Cancelled")
 
 		if (
-			frappe.db.get_single_value("Selling Settings", "sales_update_frequency") == "Each Transaction"
+			capkpi.db.get_single_value("Selling Settings", "sales_update_frequency") == "Each Transaction"
 		):
 			update_company_current_month_sales(self.company)
 			self.update_project()
@@ -399,14 +399,14 @@ class SalesInvoice(SellingController):
 		elif (
 			self.is_return and self.return_against and not self.is_consolidated and self.loyalty_program
 		):
-			against_si_doc = frappe.get_doc("Sales Invoice", self.return_against)
+			against_si_doc = capkpi.get_doc("Sales Invoice", self.return_against)
 			against_si_doc.delete_loyalty_point_entry()
 			against_si_doc.make_loyalty_point_entry()
 
 		unlink_inter_company_doc(self.doctype, self.name, self.inter_company_invoice_reference)
 
 		# Healthcare Service Invoice.
-		domain_settings = frappe.get_doc("Domain Settings")
+		domain_settings = capkpi.get_doc("Domain Settings")
 		active_domains = [d.domain for d in domain_settings.active_domains]
 
 		if "Healthcare" in active_domains:
@@ -457,7 +457,7 @@ class SalesInvoice(SellingController):
 		from erp.selling.doctype.customer.customer import check_credit_limit
 
 		validate_against_credit_limit = False
-		bypass_credit_limit_check_at_sales_order = frappe.db.get_value(
+		bypass_credit_limit_check_at_sales_order = capkpi.db.get_value(
 			"Customer Credit Limit",
 			filters={"parent": self.customer, "parenttype": "Customer", "company": self.company},
 			fieldname=["bypass_credit_limit_check"],
@@ -475,7 +475,7 @@ class SalesInvoice(SellingController):
 
 	def unlink_sales_invoice_from_timesheets(self):
 		for row in self.timesheets:
-			timesheet = frappe.get_doc("Timesheet", row.time_sheet)
+			timesheet = capkpi.get_doc("Timesheet", row.time_sheet)
 			for time_log in timesheet.time_logs:
 				if time_log.sales_invoice == self.name:
 					time_log.sales_invoice = None
@@ -485,13 +485,13 @@ class SalesInvoice(SellingController):
 			timesheet.set_status()
 			timesheet.db_update_all()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def set_missing_values(self, for_validate=False):
 		pos = self.set_pos_fields(for_validate)
 
 		if not self.debit_to:
 			self.debit_to = get_party_account("Customer", self.customer, self.company)
-			self.party_account_currency = frappe.db.get_value(
+			self.party_account_currency = capkpi.db.get_value(
 				"Account", self.debit_to, "account_currency", cache=True
 			)
 		if not self.due_date and self.customer:
@@ -500,7 +500,7 @@ class SalesInvoice(SellingController):
 		super(SalesInvoice, self).set_missing_values(for_validate)
 
 		print_format = pos.get("print_format") if pos else None
-		if not print_format and not cint(frappe.db.get_value("Print Format", "POS Invoice", "disabled")):
+		if not print_format and not cint(capkpi.db.get_value("Print Format", "POS Invoice", "disabled")):
 			print_format = "POS Invoice"
 
 		if pos:
@@ -515,7 +515,7 @@ class SalesInvoice(SellingController):
 	def update_time_sheet(self, sales_invoice):
 		for d in self.timesheets:
 			if d.time_sheet:
-				timesheet = frappe.get_doc("Timesheet", d.time_sheet)
+				timesheet = capkpi.get_doc("Timesheet", d.time_sheet)
 				self.update_time_sheet_detail(timesheet, d, sales_invoice)
 				timesheet.calculate_total_amounts()
 				timesheet.calculate_percentage_billed()
@@ -549,9 +549,9 @@ class SalesInvoice(SellingController):
 	def validate_time_sheets_are_submitted(self):
 		for data in self.timesheets:
 			if data.time_sheet:
-				status = frappe.db.get_value("Timesheet", data.time_sheet, "status")
+				status = capkpi.db.get_value("Timesheet", data.time_sheet, "status")
 				if status not in ["Submitted", "Payslip"]:
-					frappe.throw(_("Timesheet {0} is already completed or cancelled").format(data.time_sheet))
+					capkpi.throw(_("Timesheet {0} is already completed or cancelled").format(data.time_sheet))
 
 	def set_pos_fields(self, for_validate=False):
 		"""Set retail related fields from POS Profiles"""
@@ -559,7 +559,7 @@ class SalesInvoice(SellingController):
 			return
 
 		if not self.account_for_change_amount:
-			self.account_for_change_amount = frappe.get_cached_value(
+			self.account_for_change_amount = capkpi.get_cached_value(
 				"Company", self.company, "default_cash_account"
 			)
 
@@ -573,7 +573,7 @@ class SalesInvoice(SellingController):
 
 		pos = {}
 		if self.pos_profile:
-			pos = frappe.get_doc("POS Profile", self.pos_profile)
+			pos = capkpi.get_doc("POS Profile", self.pos_profile)
 
 		if not self.get("payments") and not for_validate:
 			update_multi_mode_option(self, pos)
@@ -610,10 +610,10 @@ class SalesInvoice(SellingController):
 				self.company_address = pos.get("company_address")
 
 			if self.customer:
-				customer_price_list, customer_group = frappe.get_value(
+				customer_price_list, customer_group = capkpi.get_value(
 					"Customer", self.customer, ["default_price_list", "customer_group"]
 				)
-				customer_group_price_list = frappe.get_value(
+				customer_group_price_list = capkpi.get_value(
 					"Customer Group", customer_group, "default_price_list"
 				)
 				selling_price_list = (
@@ -632,7 +632,7 @@ class SalesInvoice(SellingController):
 			for item in self.get("items"):
 				if item.get("item_code"):
 					profile_details = get_pos_profile_item_details(
-						pos, frappe._dict(item.as_dict()), pos, update_data=True
+						pos, capkpi._dict(item.as_dict()), pos, update_data=True
 					)
 					for fname, val in iteritems(profile_details):
 						if (not for_validate) or (for_validate and not item.get(fname)):
@@ -640,7 +640,7 @@ class SalesInvoice(SellingController):
 
 			# fetch terms
 			if self.tc_name and not self.terms:
-				self.terms = frappe.db.get_value("Terms and Conditions", self.tc_name, "terms")
+				self.terms = capkpi.db.get_value("Terms and Conditions", self.tc_name, "terms")
 
 			# fetch charges
 			if self.taxes_and_charges and not len(self.get("taxes")):
@@ -649,7 +649,7 @@ class SalesInvoice(SellingController):
 		return pos
 
 	def get_company_abbr(self):
-		return frappe.db.sql("select abbr from tabCompany where name=%s", self.company)[0][0]
+		return capkpi.db.sql("select abbr from tabCompany where name=%s", self.company)[0][0]
 
 	def validate_debit_to_acc(self):
 		if not self.debit_to:
@@ -657,38 +657,38 @@ class SalesInvoice(SellingController):
 			if not self.debit_to:
 				self.raise_missing_debit_credit_account_error("Customer", self.customer)
 
-		account = frappe.get_cached_value(
+		account = capkpi.get_cached_value(
 			"Account", self.debit_to, ["account_type", "report_type", "account_currency"], as_dict=True
 		)
 
 		if not account:
-			frappe.throw(_("Debit To is required"), title=_("Account Missing"))
+			capkpi.throw(_("Debit To is required"), title=_("Account Missing"))
 
 		if account.report_type != "Balance Sheet":
 			msg = (
-				_("Please ensure {} account is a Balance Sheet account.").format(frappe.bold("Debit To")) + " "
+				_("Please ensure {} account is a Balance Sheet account.").format(capkpi.bold("Debit To")) + " "
 			)
 			msg += _(
 				"You can change the parent account to a Balance Sheet account or select a different account."
 			)
-			frappe.throw(msg, title=_("Invalid Account"))
+			capkpi.throw(msg, title=_("Invalid Account"))
 
 		if self.customer and account.account_type != "Receivable":
 			msg = (
 				_("Please ensure {} account {} is a Receivable account.").format(
-					frappe.bold("Debit To"), frappe.bold(self.debit_to)
+					capkpi.bold("Debit To"), capkpi.bold(self.debit_to)
 				)
 				+ " "
 			)
 			msg += _("Change the account type to Receivable or select a different account.")
-			frappe.throw(msg, title=_("Invalid Account"))
+			capkpi.throw(msg, title=_("Invalid Account"))
 
 		self.party_account_currency = account.account_currency
 
 	def clear_unallocated_mode_of_payments(self):
 		self.set("payments", self.get("payments", {"amount": ["not in", [0, None, ""]]}))
 
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""delete from `tabSales Invoice Payment` where parent = %s
 			and amount = 0""",
 			self.name,
@@ -721,7 +721,7 @@ class SalesInvoice(SellingController):
 		)
 
 		if (
-			cint(frappe.db.get_single_value("Selling Settings", "maintain_same_sales_rate"))
+			cint(capkpi.db.get_single_value("Selling Settings", "maintain_same_sales_rate"))
 			and not self.is_return
 		):
 			self.validate_rate_with_reference_doc(
@@ -762,9 +762,9 @@ class SalesInvoice(SellingController):
 			"Delivery Note": ["dn_required", "update_stock"],
 		}
 		for key, value in iteritems(prev_doc_field_map):
-			if frappe.db.get_single_value("Selling Settings", value[0]) == "Yes":
+			if capkpi.db.get_single_value("Selling Settings", value[0]) == "Yes":
 
-				if frappe.get_value("Customer", self.customer, value[0]):
+				if capkpi.get_value("Customer", self.customer, value[0]):
 					continue
 
 				for d in self.get("items"):
@@ -774,7 +774,7 @@ class SalesInvoice(SellingController):
 	def validate_proj_cust(self):
 		"""check for does customer belong to same project as entered.."""
 		if self.project and self.customer:
-			res = frappe.db.sql(
+			res = capkpi.db.sql(
 				"""select name from `tabProject`
 				where name = %s and (customer = %s or customer is null or customer = '')""",
 				(self.project, self.customer),
@@ -788,7 +788,7 @@ class SalesInvoice(SellingController):
 			if flt(self.paid_amount) + flt(self.write_off_amount) - flt(invoice_total) > 1.0 / (
 				10.0 ** (self.precision("grand_total") + 1.0)
 			):
-				frappe.throw(_("Paid amount + Write Off Amount can not be greater than Grand Total"))
+				capkpi.throw(_("Paid amount + Write Off Amount can not be greater than Grand Total"))
 
 	def validate_item_code(self):
 		for d in self.get("items"):
@@ -802,9 +802,9 @@ class SalesInvoice(SellingController):
 			if (
 				not d.warehouse
 				and d.item_code
-				and frappe.get_cached_value("Item", d.item_code, "is_stock_item")
+				and capkpi.get_cached_value("Item", d.item_code, "is_stock_item")
 			):
-				frappe.throw(_("Warehouse required for stock Item {0}").format(d.item_code))
+				capkpi.throw(_("Warehouse required for stock Item {0}").format(d.item_code))
 
 	def validate_delivery_note(self):
 		for d in self.get("items"):
@@ -816,7 +816,7 @@ class SalesInvoice(SellingController):
 
 	def validate_write_off_account(self):
 		if flt(self.write_off_amount) and not self.write_off_account:
-			self.write_off_account = frappe.get_cached_value("Company", self.company, "write_off_account")
+			self.write_off_account = capkpi.get_cached_value("Company", self.company, "write_off_account")
 
 		if flt(self.write_off_amount) and not self.write_off_account:
 			msgprint(_("Please enter Write Off Account"), raise_exception=1)
@@ -828,13 +828,13 @@ class SalesInvoice(SellingController):
 	def validate_c_form(self):
 		"""Blank C-form no if C-form applicable marked as 'No'"""
 		if self.amended_from and self.c_form_applicable == "No" and self.c_form_no:
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""delete from `tabC-Form Invoice Detail` where invoice_no = %s
 					and parent = %s""",
 				(self.amended_from, self.c_form_no),
 			)
 
-			frappe.db.set(self, "c_form_no", "")
+			capkpi.db.set(self, "c_form_no", "")
 
 	def validate_c_form_on_cancel(self):
 		"""Display message if C-Form no exists on cancellation of Sales Invoice"""
@@ -847,13 +847,13 @@ class SalesInvoice(SellingController):
 	def validate_dropship_item(self):
 		for item in self.items:
 			if item.sales_order:
-				if frappe.db.get_value("Sales Order Item", item.so_detail, "delivered_by_supplier"):
-					frappe.throw(_("Could not update stock, invoice contains drop shipping item."))
+				if capkpi.db.get_value("Sales Order Item", item.so_detail, "delivered_by_supplier"):
+					capkpi.throw(_("Could not update stock, invoice contains drop shipping item."))
 
 	def update_current_stock(self):
 		for d in self.get("items"):
 			if d.item_code and d.warehouse:
-				bin = frappe.db.sql(
+				bin = capkpi.db.sql(
 					"select actual_qty from `tabBin` where item_code = %s and warehouse = %s",
 					(d.item_code, d.warehouse),
 					as_dict=1,
@@ -861,7 +861,7 @@ class SalesInvoice(SellingController):
 				d.actual_qty = bin and flt(bin[0]["actual_qty"]) or 0
 
 		for d in self.get("packed_items"):
-			bin = frappe.db.sql(
+			bin = capkpi.db.sql(
 				"select actual_qty, projected_qty from `tabBin` where item_code =	%s and warehouse = %s",
 				(d.item_code, d.warehouse),
 				as_dict=1,
@@ -880,7 +880,7 @@ class SalesInvoice(SellingController):
 	def set_billing_hours_and_amount(self):
 		if not self.project:
 			for timesheet in self.timesheets:
-				ts_doc = frappe.get_doc("Timesheet", timesheet.time_sheet)
+				ts_doc = capkpi.get_doc("Timesheet", timesheet.time_sheet)
 				if not timesheet.billing_hours and ts_doc.total_billable_hours:
 					timesheet.billing_hours = ts_doc.total_billable_hours
 
@@ -893,7 +893,7 @@ class SalesInvoice(SellingController):
 		else:
 			self.calculate_billing_amount_for_timesheet()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def add_timesheet_data(self):
 		self.set("timesheets", [])
 		if self.project:
@@ -920,15 +920,15 @@ class SalesInvoice(SellingController):
 		self.total_billing_hours = timesheet_sum("billing_hours")
 
 	def get_warehouse(self):
-		user_pos_profile = frappe.db.sql(
+		user_pos_profile = capkpi.db.sql(
 			"""select name, warehouse from `tabPOS Profile`
 			where ifnull(user,'') = %s and company = %s""",
-			(frappe.session["user"], self.company),
+			(capkpi.session["user"], self.company),
 		)
 		warehouse = user_pos_profile[0][1] if user_pos_profile else None
 
 		if not warehouse:
-			global_pos_profile = frappe.db.sql(
+			global_pos_profile = capkpi.db.sql(
 				"""select name, warehouse from `tabPOS Profile`
 				where (user is null or user = '') and company = %s""",
 				self.company,
@@ -956,10 +956,10 @@ class SalesInvoice(SellingController):
 
 	def check_prev_docstatus(self):
 		for d in self.get("items"):
-			if d.sales_order and frappe.db.get_value("Sales Order", d.sales_order, "docstatus") != 1:
-				frappe.throw(_("Sales Order {0} is not submitted").format(d.sales_order))
+			if d.sales_order and capkpi.db.get_value("Sales Order", d.sales_order, "docstatus") != 1:
+				capkpi.throw(_("Sales Order {0} is not submitted").format(d.sales_order))
 
-			if d.delivery_note and frappe.db.get_value("Delivery Note", d.delivery_note, "docstatus") != 1:
+			if d.delivery_note and capkpi.db.get_value("Delivery Note", d.delivery_note, "docstatus") != 1:
 				throw(_("Delivery Note {0} is not submitted").format(d.delivery_note))
 
 	def make_gl_entries(self, gl_entries=None, from_repost=False):
@@ -1175,9 +1175,9 @@ class SalesInvoice(SellingController):
 
 	def get_asset(self, item):
 		if item.get("asset"):
-			asset = frappe.get_doc("Asset", item.asset)
+			asset = capkpi.get_doc("Asset", item.asset)
 		else:
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: You must select an Asset for Item {1}.").format(item.idx, item.item_name),
 				title=_("Missing Asset"),
 			)
@@ -1189,7 +1189,7 @@ class SalesInvoice(SellingController):
 		if (
 			len(asset.finance_books) > 1 and not item.finance_book and asset.finance_books[0].finance_book
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Select finance book for the item {0} at row {1}").format(item.item_code, item.idx)
 			)
 
@@ -1212,13 +1212,13 @@ class SalesInvoice(SellingController):
 		asset.load_from_db()
 
 	def modify_depreciation_schedule_for_asset_repairs(self, asset):
-		asset_repairs = frappe.get_all(
+		asset_repairs = capkpi.get_all(
 			"Asset Repair", filters={"asset": asset.name}, fields=["name", "increase_in_asset_life"]
 		)
 
 		for repair in asset_repairs:
 			if repair.increase_in_asset_life:
-				asset_repair = frappe.get_doc("Asset Repair", repair.name)
+				asset_repair = capkpi.get_doc("Asset Repair", repair.name)
 				asset_repair.modify_depreciation_schedule()
 				asset.prepare_depreciation_data()
 
@@ -1243,10 +1243,10 @@ class SalesInvoice(SellingController):
 
 					reverse_journal_entry = make_reverse_journal_entry(schedule.journal_entry)
 					reverse_journal_entry.posting_date = nowdate()
-					frappe.flags.is_reverse_depr_entry = True
+					capkpi.flags.is_reverse_depr_entry = True
 					reverse_journal_entry.submit()
 
-					frappe.flags.is_reverse_depr_entry = False
+					capkpi.flags.is_reverse_depr_entry = False
 					asset.flags.ignore_validate_update_after_submit = True
 					schedule.journal_entry = None
 					depreciation_amount = self.get_depreciation_amount_in_je(reverse_journal_entry)
@@ -1254,7 +1254,7 @@ class SalesInvoice(SellingController):
 					asset.save()
 
 	def get_posting_date_of_sales_invoice(self):
-		return frappe.db.get_value("Sales Invoice", self.return_against, "posting_date")
+		return capkpi.db.get_value("Sales Invoice", self.return_against, "posting_date")
 
 	# if the invoice had been posted on the date the depreciation was initially supposed to happen, the depreciation shouldn't be undone
 	def sale_was_made_on_original_schedule_date(
@@ -1286,7 +1286,7 @@ class SalesInvoice(SellingController):
 	def enable_discount_accounting(self):
 		if not hasattr(self, "_enable_discount_accounting"):
 			self._enable_discount_accounting = cint(
-				frappe.db.get_single_value("Accounts Settings", "enable_discount_accounting")
+				capkpi.db.get_single_value("Accounts Settings", "enable_discount_accounting")
 			)
 
 		return self._enable_discount_accounting
@@ -1333,7 +1333,7 @@ class SalesInvoice(SellingController):
 		if cint(self.is_pos):
 
 			skip_change_gl_entries = not cint(
-				frappe.db.get_single_value("Accounts Settings", "post_change_gl_entries")
+				capkpi.db.get_single_value("Accounts Settings", "post_change_gl_entries")
 			)
 
 			for payment_mode in self.payments:
@@ -1422,13 +1422,13 @@ class SalesInvoice(SellingController):
 					)
 				)
 			else:
-				frappe.throw(_("Select change amount account"), title="Mandatory Field")
+				capkpi.throw(_("Select change amount account"), title="Mandatory Field")
 
 	def make_write_off_gl_entry(self, gl_entries):
 		# write off entries, applicable if only pos
 		if self.write_off_account and flt(self.write_off_amount, self.precision("write_off_amount")):
 			write_off_account_currency = get_account_currency(self.write_off_account)
-			default_cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+			default_cost_center = capkpi.get_cached_value("Company", self.company, "cost_center")
 
 			gl_entries.append(
 				self.get_gl_dict(
@@ -1499,13 +1499,13 @@ class SalesInvoice(SellingController):
 		updated_delivery_notes = []
 		for d in self.get("items"):
 			if d.dn_detail:
-				billed_amt = frappe.db.sql(
+				billed_amt = capkpi.db.sql(
 					"""select sum(amount) from `tabSales Invoice Item`
 					where dn_detail=%s and docstatus=1""",
 					d.dn_detail,
 				)
 				billed_amt = billed_amt and billed_amt[0][0] or 0
-				frappe.db.set_value(
+				capkpi.db.set_value(
 					"Delivery Note Item", d.dn_detail, "billed_amt", billed_amt, update_modified=update_modified
 				)
 				updated_delivery_notes.append(d.delivery_note)
@@ -1513,7 +1513,7 @@ class SalesInvoice(SellingController):
 				updated_delivery_notes += update_billed_amount_based_on_so(d.so_detail, update_modified)
 
 		for dn in set(updated_delivery_notes):
-			frappe.get_doc("Delivery Note", dn).update_billing_percentage(update_modified=update_modified)
+			capkpi.get_doc("Delivery Note", dn).update_billing_percentage(update_modified=update_modified)
 
 	def on_recurring(self, reference_doc, auto_repeat_doc):
 		for fieldname in ("c_form_applicable", "c_form_no", "write_off_amount"):
@@ -1532,8 +1532,8 @@ class SalesInvoice(SellingController):
 				continue
 
 			for serial_no in get_serial_nos(item.serial_no):
-				if serial_no and frappe.db.get_value("Serial No", serial_no, "item_code") == item.item_code:
-					frappe.db.set_value("Serial No", serial_no, "sales_invoice", invoice)
+				if serial_no and capkpi.db.get_value("Serial No", serial_no, "item_code") == item.item_code:
+					capkpi.db.set_value("Serial No", serial_no, "sales_invoice", invoice)
 
 	def validate_serial_numbers(self):
 		"""
@@ -1557,7 +1557,7 @@ class SalesInvoice(SellingController):
 			if not item.delivery_note or not item.dn_detail:
 				continue
 
-			serial_nos = frappe.db.get_value("Delivery Note Item", item.dn_detail, "serial_no") or ""
+			serial_nos = capkpi.db.get_value("Delivery Note Item", item.dn_detail, "serial_no") or ""
 			dn_serial_nos = set(get_serial_nos(serial_nos))
 
 			serial_nos = item.serial_no or ""
@@ -1565,18 +1565,18 @@ class SalesInvoice(SellingController):
 			serial_no_diff = si_serial_nos - dn_serial_nos
 
 			if serial_no_diff:
-				dn_link = frappe.utils.get_link_to_form("Delivery Note", item.delivery_note)
-				serial_no_msg = ", ".join(frappe.bold(d) for d in serial_no_diff)
+				dn_link = capkpi.utils.get_link_to_form("Delivery Note", item.delivery_note)
+				serial_no_msg = ", ".join(capkpi.bold(d) for d in serial_no_diff)
 
 				msg = _("Row #{0}: The following Serial Nos are not present in Delivery Note {1}:").format(
 					item.idx, dn_link
 				)
 				msg += " " + serial_no_msg
 
-				frappe.throw(msg=msg, title=_("Serial Nos Mismatch"))
+				capkpi.throw(msg=msg, title=_("Serial Nos Mismatch"))
 
 			if item.serial_no and cint(item.qty) != len(si_serial_nos):
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: {1} Serial numbers required for Item {2}. You have provided {3}.").format(
 						item.idx, item.qty, item.item_code, len(si_serial_nos)
 					)
@@ -1584,19 +1584,19 @@ class SalesInvoice(SellingController):
 
 	def update_project(self):
 		if self.project:
-			project = frappe.get_doc("Project", self.project)
+			project = capkpi.get_doc("Project", self.project)
 			project.update_billed_amount()
 			project.db_update()
 
 	def verify_payment_amount_is_positive(self):
 		for entry in self.payments:
 			if entry.amount < 0:
-				frappe.throw(_("Row #{0} (Payment Table): Amount must be positive").format(entry.idx))
+				capkpi.throw(_("Row #{0} (Payment Table): Amount must be positive").format(entry.idx))
 
 	def verify_payment_amount_is_negative(self):
 		for entry in self.payments:
 			if entry.amount > 0:
-				frappe.throw(_("Row #{0} (Payment Table): Amount must be negative").format(entry.idx))
+				capkpi.throw(_("Row #{0} (Payment Table): Amount must be negative").format(entry.idx))
 
 	# collection of the loyalty points, create the ledger entry for that.
 	def make_loyalty_point_entry(self):
@@ -1620,7 +1620,7 @@ class SalesInvoice(SellingController):
 			collection_factor = lp_details.collection_factor if lp_details.collection_factor else 1.0
 			points_earned = cint(eligible_amount / collection_factor)
 
-			doc = frappe.get_doc(
+			doc = capkpi.get_doc(
 				{
 					"doctype": "Loyalty Point Entry",
 					"company": self.company,
@@ -1641,13 +1641,13 @@ class SalesInvoice(SellingController):
 
 	# valdite the redemption and then delete the loyalty points earned on cancel of the invoice
 	def delete_loyalty_point_entry(self):
-		lp_entry = frappe.db.sql(
+		lp_entry = capkpi.db.sql(
 			"select name from `tabLoyalty Point Entry` where invoice=%s", (self.name), as_dict=1
 		)
 
 		if not lp_entry:
 			return
-		against_lp_entry = frappe.db.sql(
+		against_lp_entry = capkpi.db.sql(
 			"""select name, invoice from `tabLoyalty Point Entry`
 			where redeem_against=%s""",
 			(lp_entry[0].name),
@@ -1655,13 +1655,13 @@ class SalesInvoice(SellingController):
 		)
 		if against_lp_entry:
 			invoice_list = ", ".join([d.invoice for d in against_lp_entry])
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"""{} can't be cancelled since the Loyalty Points earned has been redeemed. First cancel the {} No {}"""
 				).format(self.doctype, self.doctype, invoice_list)
 			)
 		else:
-			frappe.db.sql("""delete from `tabLoyalty Point Entry` where invoice=%s""", (self.name))
+			capkpi.db.sql("""delete from `tabLoyalty Point Entry` where invoice=%s""", (self.name))
 			# Set loyalty program
 			self.set_loyalty_program_tier()
 
@@ -1672,14 +1672,14 @@ class SalesInvoice(SellingController):
 			loyalty_program=self.loyalty_program,
 			include_expired_entry=True,
 		)
-		frappe.db.set_value("Customer", self.customer, "loyalty_program_tier", lp_details.tier_name)
+		capkpi.db.set_value("Customer", self.customer, "loyalty_program_tier", lp_details.tier_name)
 
 	def get_returned_amount(self):
-		from frappe.query_builder.functions import Coalesce, Sum
+		from capkpi.query_builder.functions import Coalesce, Sum
 
-		doc = frappe.qb.DocType(self.doctype)
+		doc = capkpi.qb.DocType(self.doctype)
 		returned_amount = (
-			frappe.qb.from_(doc)
+			capkpi.qb.from_(doc)
 			.select(Sum(doc.grand_total))
 			.where(
 				(doc.docstatus == 1) & (doc.is_return == 1) & (Coalesce(doc.return_against, "") == self.name)
@@ -1711,7 +1711,7 @@ class SalesInvoice(SellingController):
 				redeemed_points = points_to_redeem
 			else:
 				redeemed_points = available_points
-			doc = frappe.get_doc(
+			doc = capkpi.get_doc(
 				{
 					"doctype": "Loyalty Point Entry",
 					"company": self.company,
@@ -1734,21 +1734,21 @@ class SalesInvoice(SellingController):
 				break
 
 	# Healthcare
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def set_healthcare_services(self, checked_values):
 		self.set("items", [])
 		from erp.stock.get_item_details import get_item_details
 
 		for checked_item in checked_values:
 			item_line = self.append("items", {})
-			price_list, price_list_currency = frappe.db.get_values(
+			price_list, price_list_currency = capkpi.db.get_values(
 				"Price List", {"selling": 1}, ["name", "currency"]
 			)[0]
 			args = {
 				"doctype": "Sales Invoice",
 				"item_code": checked_item["item"],
 				"company": self.company,
-				"customer": frappe.db.get_value("Patient", self.patient, "customer"),
+				"customer": capkpi.db.get_value("Patient", self.patient, "customer"),
 				"selling_price_list": price_list,
 				"price_list_currency": price_list_currency,
 				"plc_conversion_rate": 1.0,
@@ -1800,7 +1800,7 @@ class SalesInvoice(SellingController):
 				elif (
 					outstanding_amount <= 0
 					and self.is_return == 0
-					and frappe.db.get_value(
+					and capkpi.db.get_value(
 						"Sales Invoice", {"is_return": 1, "return_against": self.name, "docstatus": 1}
 					)
 				):
@@ -1860,7 +1860,7 @@ def is_overdue(doc, total):
 def get_discounting_status(sales_invoice):
 	status = None
 
-	invoice_discounting_list = frappe.db.sql(
+	invoice_discounting_list = capkpi.db.sql(
 		"""
 		select status
 		from `tabInvoice Discounting` id, `tabDiscounted Invoice` d
@@ -1901,22 +1901,22 @@ def validate_inter_company_party(doctype, party, company, inter_company_referenc
 			ref_doc = "Sales Order"
 
 	if inter_company_reference:
-		doc = frappe.get_doc(ref_doc, inter_company_reference)
+		doc = capkpi.get_doc(ref_doc, inter_company_reference)
 		ref_party = doc.supplier if doctype in ["Sales Invoice", "Sales Order"] else doc.customer
-		if not frappe.db.get_value(partytype, {"represents_company": doc.company}, "name") == party:
-			frappe.throw(_("Invalid {0} for Inter Company Transaction.").format(partytype))
-		if not frappe.get_cached_value(ref_partytype, ref_party, "represents_company") == company:
-			frappe.throw(_("Invalid Company for Inter Company Transaction."))
+		if not capkpi.db.get_value(partytype, {"represents_company": doc.company}, "name") == party:
+			capkpi.throw(_("Invalid {0} for Inter Company Transaction.").format(partytype))
+		if not capkpi.get_cached_value(ref_partytype, ref_party, "represents_company") == company:
+			capkpi.throw(_("Invalid Company for Inter Company Transaction."))
 
-	elif frappe.db.get_value(partytype, {"name": party, internal: 1}, "name") == party:
-		companies = frappe.get_all(
+	elif capkpi.db.get_value(partytype, {"name": party, internal: 1}, "name") == party:
+		companies = capkpi.get_all(
 			"Allowed To Transact With",
 			fields=["company"],
 			filters={"parenttype": partytype, "parent": party},
 		)
 		companies = [d.company for d in companies]
 		if not company in companies:
-			frappe.throw(
+			capkpi.throw(
 				_("{0} not allowed to transact with {1}. Please change the Company.").format(
 					partytype, company
 				)
@@ -1931,7 +1931,7 @@ def update_linked_doc(doctype, name, inter_company_reference):
 		ref_field = "inter_company_order_reference"
 
 	if inter_company_reference:
-		frappe.db.set_value(doctype, inter_company_reference, ref_field, name)
+		capkpi.db.set_value(doctype, inter_company_reference, ref_field, name)
 
 
 def unlink_inter_company_doc(doctype, name, inter_company_reference):
@@ -1944,8 +1944,8 @@ def unlink_inter_company_doc(doctype, name, inter_company_reference):
 		ref_field = "inter_company_order_reference"
 
 	if inter_company_reference:
-		frappe.db.set_value(doctype, name, ref_field, "")
-		frappe.db.set_value(ref_doc, inter_company_reference, ref_field, "")
+		capkpi.db.set_value(doctype, name, ref_field, "")
+		capkpi.db.set_value(ref_doc, inter_company_reference, ref_field, "")
 
 
 def get_list_context(context=None):
@@ -1963,13 +1963,13 @@ def get_list_context(context=None):
 	return list_context
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_bank_cash_account(mode_of_payment, company):
-	account = frappe.db.get_value(
+	account = capkpi.db.get_value(
 		"Mode of Payment Account", {"parent": mode_of_payment, "company": company}, "default_account"
 	)
 	if not account:
-		frappe.throw(
+		capkpi.throw(
 			_("Please set default Cash or Bank account in Mode of Payment {0}").format(
 				get_link_to_form("Mode of Payment", mode_of_payment)
 			),
@@ -1978,7 +1978,7 @@ def get_bank_cash_account(mode_of_payment, company):
 	return {"account": account}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_maintenance_schedule(source_name, target_doc=None):
 	doclist = get_mapped_doc(
 		"Sales Invoice",
@@ -1995,7 +1995,7 @@ def make_maintenance_schedule(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_delivery_note(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.run_method("set_missing_values")
@@ -2042,7 +2042,7 @@ def make_delivery_note(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_sales_return(source_name, target_doc=None):
 	from erp.controllers.sales_and_purchase_return import make_return_doc
 
@@ -2057,33 +2057,33 @@ def set_account_for_mode_of_payment(self):
 
 def get_inter_company_details(doc, doctype):
 	if doctype in ["Sales Invoice", "Sales Order", "Delivery Note"]:
-		parties = frappe.db.get_all(
+		parties = capkpi.db.get_all(
 			"Supplier",
 			fields=["name"],
 			filters={"disabled": 0, "is_internal_supplier": 1, "represents_company": doc.company},
 		)
-		company = frappe.get_cached_value("Customer", doc.customer, "represents_company")
+		company = capkpi.get_cached_value("Customer", doc.customer, "represents_company")
 
 		if not parties:
-			frappe.throw(
+			capkpi.throw(
 				_("No Supplier found for Inter Company Transactions which represents company {0}").format(
-					frappe.bold(doc.company)
+					capkpi.bold(doc.company)
 				)
 			)
 
 		party = get_internal_party(parties, "Supplier", doc)
 	else:
-		parties = frappe.db.get_all(
+		parties = capkpi.db.get_all(
 			"Customer",
 			fields=["name"],
 			filters={"disabled": 0, "is_internal_customer": 1, "represents_company": doc.company},
 		)
-		company = frappe.get_cached_value("Supplier", doc.supplier, "represents_company")
+		company = capkpi.get_cached_value("Supplier", doc.supplier, "represents_company")
 
 		if not parties:
-			frappe.throw(
+			capkpi.throw(
 				_("No Customer found for Inter Company Transactions which represents company {0}").format(
-					frappe.bold(doc.company)
+					capkpi.bold(doc.company)
 				)
 			)
 
@@ -2098,7 +2098,7 @@ def get_internal_party(parties, link_doctype, doc):
 	else:
 		# If more than one Internal Supplier/Customer, get supplier/customer on basis of address
 		if doc.get("company_address") or doc.get("shipping_address"):
-			party = frappe.db.get_value(
+			party = capkpi.db.get_value(
 				"Dynamic Link",
 				{
 					"parent": doc.get("company_address") or doc.get("shipping_address"),
@@ -2124,42 +2124,42 @@ def validate_inter_company_transaction(doc, doctype):
 		if doctype in ["Sales Invoice", "Sales Order", "Delivery Note"]
 		else doc.buying_price_list
 	)
-	valid_price_list = frappe.db.get_value(
+	valid_price_list = capkpi.db.get_value(
 		"Price List", {"name": price_list, "buying": 1, "selling": 1}
 	)
 	if not valid_price_list and not doc.is_internal_transfer():
-		frappe.throw(_("Selected Price List should have buying and selling fields checked."))
+		capkpi.throw(_("Selected Price List should have buying and selling fields checked."))
 
 	party = details.get("party")
 	if not party:
 		partytype = "Supplier" if doctype in ["Sales Invoice", "Sales Order"] else "Customer"
-		frappe.throw(_("No {0} found for Inter Company Transactions.").format(partytype))
+		capkpi.throw(_("No {0} found for Inter Company Transactions.").format(partytype))
 
 	company = details.get("company")
-	default_currency = frappe.get_cached_value("Company", company, "default_currency")
+	default_currency = capkpi.get_cached_value("Company", company, "default_currency")
 	if default_currency != doc.currency:
-		frappe.throw(
+		capkpi.throw(
 			_("Company currencies of both the companies should match for Inter Company Transactions.")
 		)
 
 	return
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_inter_company_purchase_invoice(source_name, target_doc=None):
 	return make_inter_company_transaction("Sales Invoice", source_name, target_doc)
 
 
 def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	if doctype in ["Sales Invoice", "Sales Order"]:
-		source_doc = frappe.get_doc(doctype, source_name)
+		source_doc = capkpi.get_doc(doctype, source_name)
 		target_doctype = "Purchase Invoice" if doctype == "Sales Invoice" else "Purchase Order"
 		target_detail_field = "sales_invoice_item" if doctype == "Sales Invoice" else "sales_order_item"
 		source_document_warehouse_field = "target_warehouse"
 		target_document_warehouse_field = "from_warehouse"
 		received_items = get_received_items(source_name, target_doctype, target_detail_field)
 	else:
-		source_doc = frappe.get_doc(doctype, source_name)
+		source_doc = capkpi.get_doc(doctype, source_name)
 		target_doctype = "Sales Invoice" if doctype == "Purchase Invoice" else "Sales Order"
 		source_document_warehouse_field = "from_warehouse"
 		target_document_warehouse_field = "target_warehouse"
@@ -2175,7 +2175,7 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	def update_details(source_doc, target_doc, source_parent):
 		target_doc.inter_company_invoice_reference = source_doc.name
 		if target_doc.doctype in ["Purchase Invoice", "Purchase Order"]:
-			currency = frappe.db.get_value("Supplier", details.get("party"), "default_currency")
+			currency = capkpi.db.get_value("Supplier", details.get("party"), "default_currency")
 			target_doc.company = details.get("company")
 			target_doc.supplier = details.get("party")
 			target_doc.is_internal_supplier = 1
@@ -2202,7 +2202,7 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 			)
 
 		else:
-			currency = frappe.db.get_value("Customer", details.get("party"), "default_currency")
+			currency = capkpi.db.get_value("Customer", details.get("party"), "default_currency")
 			target_doc.company = details.get("company")
 			target_doc.customer = details.get("party")
 			target_doc.selling_price_list = source_doc.buying_price_list
@@ -2278,7 +2278,7 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 
 
 def get_received_items(reference_name, doctype, reference_fieldname):
-	target_doctypes = frappe.get_all(
+	target_doctypes = capkpi.get_all(
 		doctype,
 		filters={"inter_company_invoice_reference": reference_name, "docstatus": 1},
 		as_list=True,
@@ -2287,8 +2287,8 @@ def get_received_items(reference_name, doctype, reference_fieldname):
 	if target_doctypes:
 		target_doctypes = list(target_doctypes[0])
 
-	received_items_map = frappe._dict(
-		frappe.get_all(
+	received_items_map = capkpi._dict(
+		capkpi.get_all(
 			doctype + " Item",
 			filters={"parent": ("in", target_doctypes)},
 			fields=[reference_fieldname, "qty"],
@@ -2364,7 +2364,7 @@ def update_pr_items(doc, sales_item_map, purchase_item_map, parent_child_map, wa
 
 
 def get_delivery_note_details(internal_reference):
-	si_item_details = frappe.get_all(
+	si_item_details = capkpi.get_all(
 		"Delivery Note Item", fields=["name", "so_detail"], filters={"parent": internal_reference}
 	)
 
@@ -2375,7 +2375,7 @@ def get_sales_invoice_details(internal_reference):
 	dn_item_map = {}
 	so_item_map = {}
 
-	si_item_details = frappe.get_all(
+	si_item_details = capkpi.get_all(
 		"Sales Invoice Item",
 		fields=["name", "so_detail", "dn_detail"],
 		filters={"parent": internal_reference},
@@ -2395,7 +2395,7 @@ def get_pd_details(doctype, sd_detail_map, sd_detail_field):
 	accepted_warehouse_map = {}
 	parent_child_map = {}
 
-	pd_item_details = frappe.get_all(
+	pd_item_details = capkpi.get_all(
 		doctype,
 		fields=[sd_detail_field, "name", "warehouse", "parent"],
 		filters={sd_detail_field: ("in", list(sd_detail_map.values()))},
@@ -2446,32 +2446,32 @@ def update_address(doc, address_field, address_display_field, address_name):
 	doc.set(address_display_field, get_address_display(doc.get(address_field)))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_loyalty_programs(customer):
 	"""sets applicable loyalty program to the customer or returns a list of applicable programs"""
 	from erp.selling.doctype.customer.customer import get_loyalty_programs
 
-	customer = frappe.get_doc("Customer", customer)
+	customer = capkpi.get_doc("Customer", customer)
 	if customer.loyalty_program:
 		return [customer.loyalty_program]
 
 	lp_details = get_loyalty_programs(customer)
 
 	if len(lp_details) == 1:
-		frappe.db.set(customer, "loyalty_program", lp_details[0])
+		capkpi.db.set(customer, "loyalty_program", lp_details[0])
 		return lp_details
 	else:
 		return lp_details
 
 
 def on_doctype_update():
-	frappe.db.add_index("Sales Invoice", ["customer", "is_return", "return_against"])
+	capkpi.db.add_index("Sales Invoice", ["customer", "is_return", "return_against"])
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_invoice_discounting(source_name, target_doc=None):
-	invoice = frappe.get_doc("Sales Invoice", source_name)
-	invoice_discounting = frappe.new_doc("Invoice Discounting")
+	invoice = capkpi.get_doc("Sales Invoice", source_name)
+	invoice_discounting = capkpi.new_doc("Invoice Discounting")
 	invoice_discounting.company = invoice.company
 	invoice_discounting.append(
 		"invoices",
@@ -2513,11 +2513,11 @@ def update_multi_mode_option(doc, pos_profile):
 			msg = _("Please set default Cash or Bank account in Mode of Payment {}")
 		else:
 			msg = _("Please set default Cash or Bank account in Mode of Payments {}")
-		frappe.throw(msg.format(", ".join(invalid_modes)), title=_("Missing Account"))
+		capkpi.throw(msg.format(", ".join(invalid_modes)), title=_("Missing Account"))
 
 
 def get_all_mode_of_payments(doc):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select mpa.default_account, mpa.parent, mp.type as type
 		from `tabMode of Payment Account` mpa,`tabMode of Payment` mp
@@ -2528,7 +2528,7 @@ def get_all_mode_of_payments(doc):
 
 
 def get_mode_of_payments_info(mode_of_payments, company):
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		select
 			mpa.default_account, mpa.parent as mop, mp.type as type
@@ -2550,7 +2550,7 @@ def get_mode_of_payments_info(mode_of_payments, company):
 
 
 def get_mode_of_payment_info(mode_of_payment, company):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select mpa.default_account, mpa.parent, mp.type as type
 		from `tabMode of Payment Account` mpa,`tabMode of Payment` mp
@@ -2560,9 +2560,9 @@ def get_mode_of_payment_info(mode_of_payment, company):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_dunning(source_name, target_doc=None):
-	from frappe.model.mapper import get_mapped_doc
+	from capkpi.model.mapper import get_mapped_doc
 
 	from erp.accounts.doctype.dunning.dunning import (
 		calculate_interest_and_amount,
@@ -2574,10 +2574,10 @@ def create_dunning(source_name, target_doc=None):
 		target.outstanding_amount = source.outstanding_amount
 		overdue_days = (getdate(target.posting_date) - getdate(source.due_date)).days
 		target.overdue_days = overdue_days
-		if frappe.db.exists(
+		if capkpi.db.exists(
 			"Dunning Type", {"start_day": ["<", overdue_days], "end_day": [">=", overdue_days]}
 		):
-			dunning_type = frappe.get_doc(
+			dunning_type = capkpi.get_doc(
 				"Dunning Type", {"start_day": ["<", overdue_days], "end_day": [">=", overdue_days]}
 			)
 			target.dunning_type = dunning_type.name
@@ -2617,7 +2617,7 @@ def check_if_return_invoice_linked_with_payment_entry(self):
 	# If a Return invoice is linked with payment entry along with other invoices,
 	# the cancellation of the Return causes allocated amount to be greater than paid
 
-	if not frappe.db.get_single_value(
+	if not capkpi.db.get_single_value(
 		"Accounts Settings", "unlink_payment_on_cancellation_of_invoice"
 	):
 		return
@@ -2628,7 +2628,7 @@ def check_if_return_invoice_linked_with_payment_entry(self):
 	else:
 		invoice = self.name
 
-	payment_entries = frappe.db.sql_list(
+	payment_entries = capkpi.db.sql_list(
 		"""
 		SELECT
 			t1.name
@@ -2646,7 +2646,7 @@ def check_if_return_invoice_linked_with_payment_entry(self):
 	links_to_pe = []
 	if payment_entries:
 		for payment in payment_entries:
-			payment_entry = frappe.get_doc("Payment Entry", payment)
+			payment_entry = capkpi.get_doc("Payment Entry", payment)
 			if len(payment_entry.references) > 1:
 				links_to_pe.append(payment_entry.name)
 		if links_to_pe:
@@ -2656,4 +2656,4 @@ def check_if_return_invoice_linked_with_payment_entry(self):
 			message = _("Please cancel and amend the Payment Entry")
 			message += " " + ", ".join(payment_entries_link) + " "
 			message += _("to unallocate the amount of this Return Invoice before cancelling it.")
-			frappe.throw(message)
+			capkpi.throw(message)

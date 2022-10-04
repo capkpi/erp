@@ -3,16 +3,16 @@
 
 import unittest
 
-import frappe
-from frappe.utils import datetime
+import capkpi
+from capkpi.utils import datetime
 
 test_dependencies = ["Crop", "Fertilizer", "Location", "Disease"]
 
 
 class TestCropCycle(unittest.TestCase):
 	def test_crop_cycle_creation(self):
-		cycle = frappe.get_doc("Crop Cycle", "Basil from seed 2017")
-		self.assertTrue(frappe.db.exists("Crop Cycle", "Basil from seed 2017"))
+		cycle = capkpi.get_doc("Crop Cycle", "Basil from seed 2017")
+		self.assertTrue(capkpi.db.exists("Crop Cycle", "Basil from seed 2017"))
 
 		# check if the tasks were created
 		self.assertEqual(check_task_creation(), True)
@@ -55,10 +55,10 @@ def check_task_creation():
 		},
 	}
 
-	all_tasks = frappe.get_all("Task")
+	all_tasks = capkpi.get_all("Task")
 
 	for task in all_tasks:
-		sample_task = frappe.get_doc("Task", task.name)
+		sample_task = capkpi.get_doc("Task", task.name)
 
 		if sample_task.subject in list(all_task_dict):
 			if (
@@ -72,4 +72,4 @@ def check_task_creation():
 
 
 def check_project_creation():
-	return True if frappe.db.exists("Project", {"project_name": "Basil from seed 2017"}) else False
+	return True if capkpi.db.exists("Project", {"project_name": "Basil from seed 2017"}) else False

@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import today
+import capkpi
+from capkpi.utils import today
 
 from erp.accounts.utils import get_fiscal_year
 
@@ -22,7 +22,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 		cancel_invoices()
 
 	def test_cumulative_threshold_tds(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier", "tax_withholding_category", "Cumulative Threshold TDS"
 		)
 		invoices = []
@@ -57,7 +57,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 
 	def test_single_threshold_tds(self):
 		invoices = []
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier1", "tax_withholding_category", "Single Threshold TDS"
 		)
 		pi = create_purchase_invoice(supplier="Test TDS Supplier1", rate=20000)
@@ -68,7 +68,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 		self.assertEqual(pi.grand_total, 18000)
 
 		# check gl entry for the purchase invoice
-		gl_entries = frappe.db.get_all("GL Entry", filters={"voucher_no": pi.name}, fields=["*"])
+		gl_entries = capkpi.db.get_all("GL Entry", filters={"voucher_no": pi.name}, fields=["*"])
 		self.assertEqual(len(gl_entries), 3)
 		for d in gl_entries:
 			if d.account == pi.credit_to:
@@ -93,7 +93,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 
 	def test_tax_withholding_category_checks(self):
 		invoices = []
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier3", "tax_withholding_category", "New TDS Category"
 		)
 
@@ -118,7 +118,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 			d.cancel()
 
 	def test_cumulative_threshold_tcs(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Customer", "Test TCS Customer", "tax_withholding_category", "Cumulative Threshold TCS"
 		)
 		invoices = []
@@ -153,7 +153,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 			d.cancel()
 
 	def test_tds_calculation_on_net_total(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier4", "tax_withholding_category", "Cumulative Threshold TDS"
 		)
 		invoices = []
@@ -187,7 +187,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 			d.cancel()
 
 	def test_multi_category_single_supplier(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier5", "tax_withholding_category", "Test Service Category"
 		)
 		invoices = []
@@ -212,7 +212,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 			d.cancel()
 
 	def test_tax_withholding_category_voucher_display(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Supplier", "Test TDS Supplier6", "tax_withholding_category", "Test Multi Invoice Category"
 		)
 		invoices = []
@@ -255,7 +255,7 @@ class TestTaxWithholdingCategory(unittest.TestCase):
 
 
 def cancel_invoices():
-	purchase_invoices = frappe.get_all(
+	purchase_invoices = capkpi.get_all(
 		"Purchase Invoice",
 		{
 			"supplier": ["in", ["Test TDS Supplier", "Test TDS Supplier1", "Test TDS Supplier2"]],
@@ -264,23 +264,23 @@ def cancel_invoices():
 		pluck="name",
 	)
 
-	sales_invoices = frappe.get_all(
+	sales_invoices = capkpi.get_all(
 		"Sales Invoice", {"customer": "Test TCS Customer", "docstatus": 1}, pluck="name"
 	)
 
 	for d in purchase_invoices:
-		frappe.get_doc("Purchase Invoice", d).cancel()
+		capkpi.get_doc("Purchase Invoice", d).cancel()
 
 	for d in sales_invoices:
-		frappe.get_doc("Sales Invoice", d).cancel()
+		capkpi.get_doc("Sales Invoice", d).cancel()
 
 
 def create_purchase_invoice(**args):
 	# return sales invoice doc object
-	item = frappe.db.get_value("Item", {"item_name": "TDS Item"}, "name")
+	item = capkpi.db.get_value("Item", {"item_name": "TDS Item"}, "name")
 
-	args = frappe._dict(args)
-	pi = frappe.get_doc(
+	args = capkpi._dict(args)
+	pi = capkpi.get_doc(
 		{
 			"doctype": "Purchase Invoice",
 			"posting_date": today(),
@@ -310,10 +310,10 @@ def create_purchase_invoice(**args):
 
 def create_sales_invoice(**args):
 	# return sales invoice doc object
-	item = frappe.db.get_value("Item", {"item_name": "TCS Item"}, "name")
+	item = capkpi.db.get_value("Item", {"item_name": "TCS Item"}, "name")
 
-	args = frappe._dict(args)
-	si = frappe.get_doc(
+	args = capkpi._dict(args)
+	si = capkpi.get_doc(
 		{
 			"doctype": "Sales Invoice",
 			"posting_date": today(),
@@ -352,10 +352,10 @@ def create_records():
 		"Test TDS Supplier5",
 		"Test TDS Supplier6",
 	]:
-		if frappe.db.exists("Supplier", name):
+		if capkpi.db.exists("Supplier", name):
 			continue
 
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"supplier_group": "_Test Supplier Group",
 				"supplier_name": name,
@@ -364,16 +364,16 @@ def create_records():
 		).insert()
 
 	for name in ["Test TCS Customer"]:
-		if frappe.db.exists("Customer", name):
+		if capkpi.db.exists("Customer", name):
 			continue
 
-		frappe.get_doc(
+		capkpi.get_doc(
 			{"customer_group": "_Test Customer Group", "customer_name": name, "doctype": "Customer"}
 		).insert()
 
 	# create item
-	if not frappe.db.exists("Item", "TDS Item"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Item", "TDS Item"):
+		capkpi.get_doc(
 			{
 				"doctype": "Item",
 				"item_code": "TDS Item",
@@ -383,8 +383,8 @@ def create_records():
 			}
 		).insert()
 
-	if not frappe.db.exists("Item", "TCS Item"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Item", "TCS Item"):
+		capkpi.get_doc(
 			{
 				"doctype": "Item",
 				"item_code": "TCS Item",
@@ -395,8 +395,8 @@ def create_records():
 		).insert()
 
 	# create tds account
-	if not frappe.db.exists("Account", "TDS - _TC"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Account", "TDS - _TC"):
+		capkpi.get_doc(
 			{
 				"doctype": "Account",
 				"company": "_Test Company",
@@ -408,8 +408,8 @@ def create_records():
 		).insert()
 
 	# create tcs account
-	if not frappe.db.exists("Account", "TCS - _TC"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Account", "TCS - _TC"):
+		capkpi.get_doc(
 			{
 				"doctype": "Account",
 				"company": "_Test Company",
@@ -424,8 +424,8 @@ def create_records():
 def create_tax_with_holding_category():
 	fiscal_year = get_fiscal_year(today(), company="_Test Company")
 	# Cumulative threshold
-	if not frappe.db.exists("Tax Withholding Category", "Cumulative Threshold TDS"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Cumulative Threshold TDS"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Cumulative Threshold TDS",
@@ -443,8 +443,8 @@ def create_tax_with_holding_category():
 			}
 		).insert()
 
-	if not frappe.db.exists("Tax Withholding Category", "Cumulative Threshold TCS"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Cumulative Threshold TCS"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Cumulative Threshold TCS",
@@ -463,8 +463,8 @@ def create_tax_with_holding_category():
 		).insert()
 
 	# Single thresold
-	if not frappe.db.exists("Tax Withholding Category", "Single Threshold TDS"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Single Threshold TDS"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Single Threshold TDS",
@@ -482,8 +482,8 @@ def create_tax_with_holding_category():
 			}
 		).insert()
 
-	if not frappe.db.exists("Tax Withholding Category", "New TDS Category"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "New TDS Category"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "New TDS Category",
@@ -504,8 +504,8 @@ def create_tax_with_holding_category():
 			}
 		).insert()
 
-	if not frappe.db.exists("Tax Withholding Category", "Test Service Category"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Test Service Category"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Test Service Category",
@@ -523,8 +523,8 @@ def create_tax_with_holding_category():
 			}
 		).insert()
 
-	if not frappe.db.exists("Tax Withholding Category", "Test Goods Category"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Test Goods Category"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Test Goods Category",
@@ -542,8 +542,8 @@ def create_tax_with_holding_category():
 			}
 		).insert()
 
-	if not frappe.db.exists("Tax Withholding Category", "Test Multi Invoice Category"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Tax Withholding Category", "Test Multi Invoice Category"):
+		capkpi.get_doc(
 			{
 				"doctype": "Tax Withholding Category",
 				"name": "Test Multi Invoice Category",

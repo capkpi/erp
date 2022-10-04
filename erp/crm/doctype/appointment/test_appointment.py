@@ -4,14 +4,14 @@
 import datetime
 import unittest
 
-import frappe
+import capkpi
 
 
 def create_test_lead():
-	test_lead = frappe.db.exists({"doctype": "Lead", "lead_name": "Test Lead"})
+	test_lead = capkpi.db.exists({"doctype": "Lead", "lead_name": "Test Lead"})
 	if test_lead:
-		return frappe.get_doc("Lead", test_lead[0][0])
-	test_lead = frappe.get_doc(
+		return capkpi.get_doc("Lead", test_lead[0][0])
+	test_lead = capkpi.get_doc(
 		{"doctype": "Lead", "lead_name": "Test Lead", "email_id": "test@example.com"}
 	)
 	test_lead.insert(ignore_permissions=True)
@@ -19,7 +19,7 @@ def create_test_lead():
 
 
 def create_test_appointments():
-	test_appointment = frappe.db.exists(
+	test_appointment = capkpi.db.exists(
 		{
 			"doctype": "Appointment",
 			"scheduled_time": datetime.datetime.now(),
@@ -27,8 +27,8 @@ def create_test_appointments():
 		}
 	)
 	if test_appointment:
-		return frappe.get_doc("Appointment", test_appointment[0][0])
-	test_appointment = frappe.get_doc(
+		return capkpi.get_doc("Appointment", test_appointment[0][0])
+	test_appointment = capkpi.get_doc(
 		{
 			"doctype": "Appointment",
 			"email": "test@example.com",
@@ -52,9 +52,9 @@ class TestAppointment(unittest.TestCase):
 		self.test_appointment = create_test_appointments()
 
 	def test_calendar_event_created(self):
-		cal_event = frappe.get_doc("Event", self.test_appointment.calendar_event)
+		cal_event = capkpi.get_doc("Event", self.test_appointment.calendar_event)
 		self.assertEqual(cal_event.starts_on, self.test_appointment.scheduled_time)
 
 	def test_lead_linked(self):
-		lead = frappe.get_doc("Lead", self.test_lead.name)
+		lead = capkpi.get_doc("Lead", self.test_lead.name)
 		self.assertIsNotNone(lead)

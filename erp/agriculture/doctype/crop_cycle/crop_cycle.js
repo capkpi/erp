@@ -1,12 +1,12 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Crop Cycle', {
+capkpi.ui.form.on('Crop Cycle', {
 	refresh: (frm) => {
 		if (!frm.doc.__islocal)
 			frm.add_custom_button(__('Reload Linked Analysis'), () => frm.call("reload_linked_analysis"));
 
-		frappe.realtime.on("List of Linked Docs", (output) => {
+		capkpi.realtime.on("List of Linked Docs", (output) => {
 			let analysis_doctypes = ['Soil Texture', 'Plant Analysis', 'Soil Analysis'];
 			let analysis_doctypes_docs = ['soil_texture', 'plant_analysis', 'soil_analysis'];
 			let obj_to_append = {soil_analysis: [], soil_texture: [], plant_analysis: []};

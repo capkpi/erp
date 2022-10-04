@@ -3,15 +3,15 @@
 
 import json
 
-import frappe
-from frappe.utils import cint
+import capkpi
+from capkpi.utils import cint
 
 from erp.e_commerce.product_data_engine.filters import ProductFiltersBuilder
 from erp.e_commerce.product_data_engine.query import ProductQuery
 from erp.setup.doctype.item_group.item_group import get_child_groups_for_website
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def get_product_filter_data(query_args=None):
 	"""
 	Returns filtered products and discount filters.
@@ -28,7 +28,7 @@ def get_product_filter_data(query_args=None):
 	if isinstance(query_args, str):
 		query_args = json.loads(query_args)
 
-	query_args = frappe._dict(query_args)
+	query_args = capkpi._dict(query_args)
 	if query_args:
 		search = query_args.get("search")
 		field_filters = query_args.get("field_filters", {})
@@ -55,8 +55,8 @@ def get_product_filter_data(query_args=None):
 			attribute_filters, field_filters, search_term=search, start=start, item_group=item_group
 		)
 	except Exception:
-		traceback = frappe.get_traceback()
-		frappe.log_error(traceback, frappe._("Product Engine Error"))
+		traceback = capkpi.get_traceback()
+		capkpi.log_error(traceback, capkpi._("Product Engine Error"))
 		return {"exc": "Something went wrong!"}
 
 	# discount filter data
@@ -76,6 +76,6 @@ def get_product_filter_data(query_args=None):
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def get_guest_redirect_on_action():
-	return frappe.db.get_single_value("E Commerce Settings", "redirect_on_action")
+	return capkpi.db.get_single_value("E Commerce Settings", "redirect_on_action")

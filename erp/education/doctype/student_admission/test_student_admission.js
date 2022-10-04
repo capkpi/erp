@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Student Admission', function(assert) {
 	assert.expect(10);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Student Admission', [
+			return capkpi.tests.make('Student Admission', [
 				{academic_year: '2016-17'},
 				{admission_start_date: '2016-04-20'},
 				{admission_end_date: '2016-05-31'},

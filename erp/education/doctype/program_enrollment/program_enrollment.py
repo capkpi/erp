@@ -2,12 +2,12 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.desk.reportview import get_match_cond
-from frappe.model.document import Document
-from frappe.query_builder.functions import Min
-from frappe.utils import comma_and, get_link_to_form, getdate
+import capkpi
+from capkpi import _, msgprint
+from capkpi.desk.reportview import get_match_cond
+from capkpi.model.document import Document
+from capkpi.query_builder.functions import Min
+from capkpi.utils import comma_and, get_link_to_form, getdate
 
 
 class ProgramEnrollment(Document):
@@ -17,7 +17,7 @@ class ProgramEnrollment(Document):
 		if self.academic_term:
 			self.validate_academic_term()
 		if not self.student_name:
-			self.student_name = frappe.db.get_value("Student", self.student, "title")
+			self.student_name = capkpi.db.get_value("Student", self.student, "title")
 		if not self.courses:
 			self.extend("courses", self.get_courses())
 
@@ -27,45 +27,45 @@ class ProgramEnrollment(Document):
 		self.create_course_enrollments()
 
 	def validate_academic_year(self):
-		start_date, end_date = frappe.db.get_value(
+		start_date, end_date = capkpi.db.get_value(
 			"Academic Year", self.academic_year, ["year_start_date", "year_end_date"]
 		)
 		if self.enrollment_date:
 			if start_date and getdate(self.enrollment_date) < getdate(start_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Enrollment Date cannot be before the Start Date of the Academic Year {0}").format(
 						get_link_to_form("Academic Year", self.academic_year)
 					)
 				)
 
 			if end_date and getdate(self.enrollment_date) > getdate(end_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Enrollment Date cannot be after the End Date of the Academic Term {0}").format(
 						get_link_to_form("Academic Year", self.academic_year)
 					)
 				)
 
 	def validate_academic_term(self):
-		start_date, end_date = frappe.db.get_value(
+		start_date, end_date = capkpi.db.get_value(
 			"Academic Term", self.academic_term, ["term_start_date", "term_end_date"]
 		)
 		if self.enrollment_date:
 			if start_date and getdate(self.enrollment_date) < getdate(start_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Enrollment Date cannot be before the Start Date of the Academic Term {0}").format(
 						get_link_to_form("Academic Term", self.academic_term)
 					)
 				)
 
 			if end_date and getdate(self.enrollment_date) > getdate(end_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Enrollment Date cannot be after the End Date of the Academic Term {0}").format(
 						get_link_to_form("Academic Term", self.academic_term)
 					)
 				)
 
 	def validate_duplication(self):
-		enrollment = frappe.get_all(
+		enrollment = capkpi.get_all(
 			"Program Enrollment",
 			filters={
 				"student": self.student,
@@ -77,18 +77,18 @@ class ProgramEnrollment(Document):
 			},
 		)
 		if enrollment:
-			frappe.throw(_("Student is already enrolled."))
+			capkpi.throw(_("Student is already enrolled."))
 
 	def update_student_joining_date(self):
-		table = frappe.qb.DocType("Program Enrollment")
+		table = capkpi.qb.DocType("Program Enrollment")
 		date = (
-			frappe.qb.from_(table)
+			capkpi.qb.from_(table)
 			.select(Min(table.enrollment_date).as_("enrollment_date"))
 			.where(table.student == self.student)
 		).run(as_dict=True)
 
 		if date:
-			frappe.db.set_value("Student", self.student, "joining_date", date[0].enrollment_date)
+			capkpi.db.set_value("Student", self.student, "joining_date", date[0].enrollment_date)
 
 	def make_fee_records(self):
 		from erp.education.api import get_fee_components
@@ -97,7 +97,7 @@ class ProgramEnrollment(Document):
 		for d in self.fees:
 			fee_components = get_fee_components(d.fee_structure)
 			if fee_components:
-				fees = frappe.new_doc("Fees")
+				fees = capkpi.new_doc("Fees")
 				fees.update(
 					{
 						"student": self.student,
@@ -123,16 +123,16 @@ class ProgramEnrollment(Document):
 			]
 			msgprint(_("Fee Records Created - {0}").format(comma_and(fee_list)))
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_courses(self):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select course from `tabProgram Course` where parent = %s and required = 1""",
 			(self.program),
 			as_dict=1,
 		)
 
 	def create_course_enrollments(self):
-		student = frappe.get_doc("Student", self.student)
+		student = capkpi.get_doc("Student", self.student)
 		course_list = [course.course for course in self.courses]
 		for course_name in course_list:
 			student.enroll_in_course(
@@ -140,17 +140,17 @@ class ProgramEnrollment(Document):
 			)
 
 	def get_all_course_enrollments(self):
-		course_enrollment_names = frappe.get_list(
+		course_enrollment_names = capkpi.get_list(
 			"Course Enrollment", filters={"program_enrollment": self.name}
 		)
 		return [
-			frappe.get_doc("Course Enrollment", course_enrollment.name)
+			capkpi.get_doc("Course Enrollment", course_enrollment.name)
 			for course_enrollment in course_enrollment_names
 		]
 
 	def get_quiz_progress(self):
-		student = frappe.get_doc("Student", self.student)
-		quiz_progress = frappe._dict()
+		student = capkpi.get_doc("Student", self.student)
+		quiz_progress = capkpi._dict()
 		progress_list = []
 		for course_enrollment in self.get_all_course_enrollments():
 			course_progress = course_enrollment.get_progress(student)
@@ -166,14 +166,14 @@ class ProgramEnrollment(Document):
 		return quiz_progress
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_program_courses(doctype, txt, searchfield, start, page_len, filters):
 	if not filters.get("program"):
-		frappe.msgprint(_("Please select a Program first."))
+		capkpi.msgprint(_("Please select a Program first."))
 		return []
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select course, course_name from `tabProgram Course`
 		where  parent = %(program)s and course like %(txt)s {match_cond}
 		order by
@@ -187,16 +187,16 @@ def get_program_courses(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_students(doctype, txt, searchfield, start, page_len, filters):
 	if not filters.get("academic_term"):
-		filters["academic_term"] = frappe.defaults.get_defaults().academic_term
+		filters["academic_term"] = capkpi.defaults.get_defaults().academic_term
 
 	if not filters.get("academic_year"):
-		filters["academic_year"] = frappe.defaults.get_defaults().academic_year
+		filters["academic_year"] = capkpi.defaults.get_defaults().academic_year
 
-	enrolled_students = frappe.get_list(
+	enrolled_students = capkpi.get_list(
 		"Program Enrollment",
 		filters={
 			"academic_term": filters.get("academic_term"),
@@ -207,7 +207,7 @@ def get_students(doctype, txt, searchfield, start, page_len, filters):
 
 	students = [d.student for d in enrolled_students] if enrolled_students else [""]
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select
 			name, title from tabStudent
 		where

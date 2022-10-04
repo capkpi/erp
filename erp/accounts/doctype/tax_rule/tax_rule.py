@@ -4,27 +4,27 @@
 
 import functools
 
-import frappe
-from frappe import _
-from frappe.contacts.doctype.address.address import get_default_address
-from frappe.model.document import Document
-from frappe.utils import cint, cstr
-from frappe.utils.nestedset import get_root_of
+import capkpi
+from capkpi import _
+from capkpi.contacts.doctype.address.address import get_default_address
+from capkpi.model.document import Document
+from capkpi.utils import cint, cstr
+from capkpi.utils.nestedset import get_root_of
 from past.builtins import cmp
 from six import iteritems
 
 from erp.setup.doctype.customer_group.customer_group import get_parent_customer_groups
 
 
-class IncorrectCustomerGroup(frappe.ValidationError):
+class IncorrectCustomerGroup(capkpi.ValidationError):
 	pass
 
 
-class IncorrectSupplierType(frappe.ValidationError):
+class IncorrectSupplierType(capkpi.ValidationError):
 	pass
 
 
-class ConflictingTaxRule(frappe.ValidationError):
+class ConflictingTaxRule(capkpi.ValidationError):
 	pass
 
 
@@ -51,11 +51,11 @@ class TaxRule(Document):
 				self.supplier_group = None
 
 		if not (self.sales_tax_template or self.purchase_tax_template):
-			frappe.throw(_("Tax Template is mandatory."))
+			capkpi.throw(_("Tax Template is mandatory."))
 
 	def validate_date(self):
 		if self.from_date and self.to_date and self.from_date > self.to_date:
-			frappe.throw(_("From Date cannot be greater than To Date"))
+			capkpi.throw(_("From Date cannot be greater than To Date"))
 
 	def validate_filters(self):
 		filters = {
@@ -84,7 +84,7 @@ class TaxRule(Document):
 		for d in filters:
 			if conds:
 				conds += " and "
-			conds += """ifnull({0}, '') = {1}""".format(d, frappe.db.escape(cstr(filters[d])))
+			conds += """ifnull({0}, '') = {1}""".format(d, capkpi.db.escape(cstr(filters[d])))
 
 		if self.from_date and self.to_date:
 			conds += """ and ((from_date > '{from_date}' and from_date < '{to_date}') or
@@ -100,7 +100,7 @@ class TaxRule(Document):
 		elif self.to_date and not self.from_date:
 			conds += """ and from_date < '{to_date}'""".format(to_date=self.to_date)
 
-		tax_rule = frappe.db.sql(
+		tax_rule = capkpi.db.sql(
 			"select name, priority \
 			from `tabTax Rule` where {0} and name != '{1}'".format(
 				conds, self.name
@@ -110,40 +110,40 @@ class TaxRule(Document):
 
 		if tax_rule:
 			if tax_rule[0].priority == self.priority:
-				frappe.throw(_("Tax Rule Conflicts with {0}").format(tax_rule[0].name), ConflictingTaxRule)
+				capkpi.throw(_("Tax Rule Conflicts with {0}").format(tax_rule[0].name), ConflictingTaxRule)
 
 	def validate_use_for_shopping_cart(self):
 		"""If shopping cart is enabled and no tax rule exists for shopping cart, enable this one"""
 		if (
 			not self.use_for_shopping_cart
-			and cint(frappe.db.get_single_value("E Commerce Settings", "enabled"))
-			and not frappe.db.get_value("Tax Rule", {"use_for_shopping_cart": 1, "name": ["!=", self.name]})
+			and cint(capkpi.db.get_single_value("E Commerce Settings", "enabled"))
+			and not capkpi.db.get_value("Tax Rule", {"use_for_shopping_cart": 1, "name": ["!=", self.name]})
 		):
 
 			self.use_for_shopping_cart = 1
-			frappe.msgprint(
+			capkpi.msgprint(
 				_(
 					"Enabling 'Use for Shopping Cart', as Shopping Cart is enabled and there should be at least one Tax Rule for Shopping Cart"
 				)
 			)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_details(party, party_type, args=None):
 	out = {}
 	billing_address, shipping_address = None, None
 	if args:
 		if args.get("billing_address"):
-			billing_address = frappe.get_doc("Address", args.get("billing_address"))
+			billing_address = capkpi.get_doc("Address", args.get("billing_address"))
 		if args.get("shipping_address"):
-			shipping_address = frappe.get_doc("Address", args.get("shipping_address"))
+			shipping_address = capkpi.get_doc("Address", args.get("shipping_address"))
 	else:
 		billing_address_name = get_default_address(party_type, party)
 		shipping_address_name = get_default_address(party_type, party, "is_shipping_address")
 		if billing_address_name:
-			billing_address = frappe.get_doc("Address", billing_address_name)
+			billing_address = capkpi.get_doc("Address", billing_address_name)
 		if shipping_address_name:
-			shipping_address = frappe.get_doc("Address", shipping_address_name)
+			shipping_address = capkpi.get_doc("Address", shipping_address_name)
 
 	if billing_address:
 		out["billing_city"] = billing_address.city
@@ -164,7 +164,7 @@ def get_party_details(party, party_type, args=None):
 
 def get_tax_template(posting_date, args):
 	"""Get matching tax rule"""
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 	conditions = [
 		"""(from_date is null or from_date <= '{0}')
 		and (to_date is null or to_date >= '{0}')""".format(
@@ -173,7 +173,7 @@ def get_tax_template(posting_date, args):
 	]
 
 	conditions.append(
-		"ifnull(tax_category, '') = {0}".format(frappe.db.escape(cstr(args.get("tax_category"))))
+		"ifnull(tax_category, '') = {0}".format(capkpi.db.escape(cstr(args.get("tax_category"))))
 	)
 	if "tax_category" in args.keys():
 		del args["tax_category"]
@@ -187,9 +187,9 @@ def get_tax_template(posting_date, args):
 			customer_group_condition = get_customer_group_condition(value)
 			conditions.append("ifnull({0}, '') in ('', {1})".format(key, customer_group_condition))
 		else:
-			conditions.append("ifnull({0}, '') in ('', {1})".format(key, frappe.db.escape(cstr(value))))
+			conditions.append("ifnull({0}, '') in ('', {1})".format(key, capkpi.db.escape(cstr(value))))
 
-	tax_rule = frappe.db.sql(
+	tax_rule = capkpi.db.sql(
 		"""select * from `tabTax Rule`
 		where {0}""".format(
 			" and ".join(conditions)
@@ -216,7 +216,7 @@ def get_tax_template(posting_date, args):
 	tax_template = rule.sales_tax_template or rule.purchase_tax_template
 	doctype = "{0} Taxes and Charges Template".format(rule.tax_type)
 
-	if frappe.db.get_value(doctype, tax_template, "disabled") == 1:
+	if capkpi.db.get_value(doctype, tax_template, "disabled") == 1:
 		return None
 
 	return tax_template
@@ -225,7 +225,7 @@ def get_tax_template(posting_date, args):
 def get_customer_group_condition(customer_group):
 	condition = ""
 	customer_groups = [
-		"%s" % (frappe.db.escape(d.name)) for d in get_parent_customer_groups(customer_group)
+		"%s" % (capkpi.db.escape(d.name)) for d in get_parent_customer_groups(customer_group)
 	]
 	if customer_groups:
 		condition = ",".join(["%s"] * len(customer_groups)) % (tuple(customer_groups))

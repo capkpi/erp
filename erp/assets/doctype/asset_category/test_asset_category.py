@@ -3,15 +3,15 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestAssetCategory(unittest.TestCase):
 	def test_mandatory_fields(self):
-		asset_category = frappe.new_doc("Asset Category")
+		asset_category = capkpi.new_doc("Asset Category")
 		asset_category.asset_category_name = "Computers"
 
-		self.assertRaises(frappe.MandatoryError, asset_category.insert)
+		self.assertRaises(capkpi.MandatoryError, asset_category.insert)
 
 		asset_category.total_number_of_depreciations = 3
 		asset_category.frequency_of_depreciation = 3
@@ -27,16 +27,16 @@ class TestAssetCategory(unittest.TestCase):
 
 		try:
 			asset_category.insert()
-		except frappe.DuplicateEntryError:
+		except capkpi.DuplicateEntryError:
 			pass
 
 	def test_cwip_accounting(self):
-		company_cwip_acc = frappe.db.get_value(
+		company_cwip_acc = capkpi.db.get_value(
 			"Company", "_Test Company", "capital_work_in_progress_account"
 		)
-		frappe.db.set_value("Company", "_Test Company", "capital_work_in_progress_account", "")
+		capkpi.db.set_value("Company", "_Test Company", "capital_work_in_progress_account", "")
 
-		asset_category = frappe.new_doc("Asset Category")
+		asset_category = capkpi.new_doc("Asset Category")
 		asset_category.asset_category_name = "Computers"
 		asset_category.enable_cwip_accounting = 1
 
@@ -52,4 +52,4 @@ class TestAssetCategory(unittest.TestCase):
 			},
 		)
 
-		self.assertRaises(frappe.ValidationError, asset_category.insert)
+		self.assertRaises(capkpi.ValidationError, asset_category.insert)

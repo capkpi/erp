@@ -1,10 +1,10 @@
 # Copyright (c) 2013, CapKPI Technologies Pvt. Ltd. and contributors
 # License: MIT. See LICENSE
 
-import frappe
-from frappe import _, qb
-from frappe.query_builder import Column, functions
-from frappe.utils import add_days, date_diff, flt, get_first_day, get_last_day, rounded
+import capkpi
+from capkpi import _, qb
+from capkpi.query_builder import Column, functions
+from capkpi.utils import add_days, date_diff, flt, get_first_day, get_last_day, rounded
 
 from erp.accounts.report.financial_statements import get_period_list
 
@@ -46,7 +46,7 @@ class Deferred_Item(object):
 		"""
 		Generate report data for output
 		"""
-		ret_data = frappe._dict({"name": self.item_name})
+		ret_data = capkpi._dict({"name": self.item_name})
 		for period in self.period_total:
 			ret_data[period.key] = period.total
 			ret_data.indent = 1
@@ -106,9 +106,9 @@ class Deferred_Item(object):
 
 	def make_dummy_gle(self, name, date, amount):
 		"""
-		return - frappe._dict() of a dummy gle entry
+		return - capkpi._dict() of a dummy gle entry
 		"""
-		entry = frappe._dict(
+		entry = capkpi._dict(
 			{"name": name, "gle_posting_date": date, "debit": 0, "credit": 0, "posted": "not"}
 		)
 		if self.type == "Deferred Sale Item":
@@ -152,7 +152,7 @@ class Deferred_Item(object):
 						actual += self.get_amount(posting)
 
 			self.period_total.append(
-				frappe._dict({"key": period.key, "total": period_sum, "actual": actual})
+				capkpi._dict({"key": period.key, "total": period_sum, "actual": actual})
 			)
 		return self.period_total
 
@@ -162,7 +162,7 @@ class Deferred_Invoice(object):
 		"""
 		Helper class for processing invoices with deferred revenue/expense items
 		invoice - string : invoice name
-		items - list : frappe._dict() with item details. Refer Deferred_Item for required fields
+		items - list : capkpi._dict() with item details. Refer Deferred_Item for required fields
 		"""
 		self.name = invoice
 		self.posting_date = items[0].posting_date
@@ -188,7 +188,7 @@ class Deferred_Invoice(object):
 		"""
 		# initialize period_total list for invoice
 		for period in self.period_list:
-			self.period_total.append(frappe._dict({"key": period.key, "total": 0, "actual": 0}))
+			self.period_total.append(capkpi._dict({"key": period.key, "total": 0, "actual": 0}))
 
 		for item in self.items:
 			item_total = item.calculate_item_revenue_expense_for_period()
@@ -209,7 +209,7 @@ class Deferred_Invoice(object):
 		generate report data for invoice, includes invoice total
 		"""
 		ret_data = []
-		inv_total = frappe._dict({"name": self.name})
+		inv_total = capkpi._dict({"name": self.name})
 		for x in self.period_total:
 			inv_total[x.key] = x.total
 			inv_total.indent = 0
@@ -226,10 +226,10 @@ class Deferred_Revenue_and_Expense_Report(object):
 
 		# If no filters are provided, get user defaults
 		if not filters:
-			fiscal_year = frappe.get_doc("Fiscal Year", frappe.defaults.get_user_default("fiscal_year"))
-			self.filters = frappe._dict(
+			fiscal_year = capkpi.get_doc("Fiscal Year", capkpi.defaults.get_user_default("fiscal_year"))
+			self.filters = capkpi._dict(
 				{
-					"company": frappe.defaults.get_user_default("Company"),
+					"company": capkpi.defaults.get_user_default("Company"),
 					"filter_based_on": "Fiscal Year",
 					"period_start_date": fiscal_year.year_start_date,
 					"period_end_date": fiscal_year.year_end_date,
@@ -241,7 +241,7 @@ class Deferred_Revenue_and_Expense_Report(object):
 				}
 			)
 		else:
-			self.filters = frappe._dict(filters)
+			self.filters = capkpi._dict(filters)
 
 		self.period_list = None
 		self.deferred_invoices = []
@@ -342,7 +342,7 @@ class Deferred_Revenue_and_Expense_Report(object):
 		"""
 		# initialize period_total list for report
 		for period in self.period_list:
-			self.period_total.append(frappe._dict({"key": period.key, "total": 0, "actual": 0}))
+			self.period_total.append(capkpi._dict({"key": period.key, "total": 0, "actual": 0}))
 
 		for inv in self.deferred_invoices:
 			inv_total = inv.calculate_invoice_revenue_expense_for_period()
@@ -380,9 +380,9 @@ class Deferred_Revenue_and_Expense_Report(object):
 		# add total row
 		if ret is not []:
 			if self.filters.type == "Revenue":
-				total_row = frappe._dict({"name": "Total Deferred Income"})
+				total_row = capkpi._dict({"name": "Total Deferred Income"})
 			elif self.filters.type == "Expense":
-				total_row = frappe._dict({"name": "Total Deferred Expense"})
+				total_row = capkpi._dict({"name": "Total Deferred Expense"})
 
 			for idx, period in enumerate(self.period_list, 0):
 				total_row[period.key] = self.period_total[idx].total

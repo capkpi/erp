@@ -4,8 +4,8 @@
 
 import json
 
-import frappe
-from frappe.utils import cint, flt, getdate
+import capkpi
+from capkpi.utils import cint, flt, getdate
 from six import string_types
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -20,7 +20,7 @@ class Dunning(AccountsController):
 		self.validate_overdue_days()
 		self.validate_amount()
 		if not self.income_account:
-			self.income_account = frappe.db.get_value("Company", self.company, "default_income_account")
+			self.income_account = capkpi.db.get_value("Company", self.company, "default_income_account")
 
 	def validate_overdue_days(self):
 		self.overdue_days = (getdate(self.posting_date) - getdate(self.due_date)).days or 0
@@ -56,13 +56,13 @@ class Dunning(AccountsController):
 			"conversion_rate",
 			"cost_center",
 		]
-		inv = frappe.db.get_value("Sales Invoice", self.sales_invoice, invoice_fields, as_dict=1)
+		inv = capkpi.db.get_value("Sales Invoice", self.sales_invoice, invoice_fields, as_dict=1)
 
 		accounting_dimensions = get_accounting_dimensions()
 		invoice_fields.extend(accounting_dimensions)
 
 		dunning_in_company_currency = flt(self.dunning_amount * inv.conversion_rate)
-		default_cost_center = frappe.get_cached_value("Company", self.company, "cost_center")
+		default_cost_center = capkpi.get_cached_value("Company", self.company, "cost_center")
 
 		gl_entries.append(
 			self.get_gl_dict(
@@ -104,14 +104,14 @@ class Dunning(AccountsController):
 def resolve_dunning(doc, state):
 	for reference in doc.references:
 		if reference.reference_doctype == "Sales Invoice" and reference.outstanding_amount <= 0:
-			dunnings = frappe.get_list(
+			dunnings = capkpi.get_list(
 				"Dunning",
 				filters={"sales_invoice": reference.reference_name, "status": ("!=", "Resolved")},
 				ignore_permissions=True,
 			)
 
 			for dunning in dunnings:
-				frappe.db.set_value("Dunning", dunning.name, "status", "Resolved")
+				capkpi.db.set_value("Dunning", dunning.name, "status", "Resolved")
 
 
 def calculate_interest_and_amount(outstanding_amount, rate_of_interest, dunning_fee, overdue_days):
@@ -129,7 +129,7 @@ def calculate_interest_and_amount(outstanding_amount, rate_of_interest, dunning_
 	}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_dunning_letter_text(dunning_type, doc, language=None):
 	if isinstance(doc, string_types):
 		doc = json.loads(doc)
@@ -137,12 +137,12 @@ def get_dunning_letter_text(dunning_type, doc, language=None):
 		filters = {"parent": dunning_type, "language": language}
 	else:
 		filters = {"parent": dunning_type, "is_default_language": 1}
-	letter_text = frappe.db.get_value(
+	letter_text = capkpi.db.get_value(
 		"Dunning Letter Text", filters, ["body_text", "closing_text", "language"], as_dict=1
 	)
 	if letter_text:
 		return {
-			"body_text": frappe.render_template(letter_text.body_text, doc),
-			"closing_text": frappe.render_template(letter_text.closing_text, doc),
+			"body_text": capkpi.render_template(letter_text.body_text, doc),
+			"closing_text": capkpi.render_template(letter_text.closing_text, doc),
 			"language": letter_text.language,
 		}

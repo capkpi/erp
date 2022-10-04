@@ -1,11 +1,11 @@
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestUtils(unittest.TestCase):
 	def test_reset_default_field_value(self):
-		doc = frappe.get_doc(
+		doc = capkpi.get_doc(
 			{
 				"doctype": "Purchase Receipt",
 				"set_warehouse": "Warehouse 1",
@@ -32,7 +32,7 @@ class TestUtils(unittest.TestCase):
 
 	def test_reset_default_field_value_in_mfg_stock_entry(self):
 		# manufacture stock entry with rows having blank source/target wh
-		se = frappe.get_doc(
+		se = capkpi.get_doc(
 			doctype="Stock Entry",
 			purpose="Manufacture",
 			stock_entry_type="Manufacture",
@@ -40,10 +40,10 @@ class TestUtils(unittest.TestCase):
 			from_warehouse="_Test Warehouse - _TC",
 			to_warehouse="_Test Warehouse 1 - _TC",
 			items=[
-				frappe._dict(
+				capkpi._dict(
 					item_code="_Test Item", qty=1, basic_rate=200, s_warehouse="_Test Warehouse - _TC"
 				),
-				frappe._dict(
+				capkpi._dict(
 					item_code="_Test FG Item", qty=4, t_warehouse="_Test Warehouse 1 - _TC", is_finished_item=1
 				),
 			],
@@ -57,7 +57,7 @@ class TestUtils(unittest.TestCase):
 		se.delete()
 
 	def test_reset_default_field_value_in_transfer_stock_entry(self):
-		doc = frappe.get_doc(
+		doc = capkpi.get_doc(
 			{
 				"doctype": "Stock Entry",
 				"purpose": "Material Receipt",

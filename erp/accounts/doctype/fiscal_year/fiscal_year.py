@@ -2,27 +2,27 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
+import capkpi
 from dateutil.relativedelta import relativedelta
-from frappe import _, msgprint
-from frappe.model.document import Document
-from frappe.utils import add_days, add_years, cstr, getdate
+from capkpi import _, msgprint
+from capkpi.model.document import Document
+from capkpi.utils import add_days, add_years, cstr, getdate
 
 
-class FiscalYearIncorrectDate(frappe.ValidationError):
+class FiscalYearIncorrectDate(capkpi.ValidationError):
 	pass
 
 
 class FiscalYear(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def set_as_default(self):
-		frappe.db.set_value("Global Defaults", None, "current_fiscal_year", self.name)
-		global_defaults = frappe.get_doc("Global Defaults")
+		capkpi.db.set_value("Global Defaults", None, "current_fiscal_year", self.name)
+		global_defaults = capkpi.get_doc("Global Defaults")
 		global_defaults.check_permission("write")
 		global_defaults.on_update()
 
 		# clear cache
-		frappe.clear_cache()
+		capkpi.clear_cache()
 
 		msgprint(
 			_(
@@ -35,7 +35,7 @@ class FiscalYear(Document):
 		self.validate_overlap()
 
 		if not self.is_new():
-			year_start_end_dates = frappe.db.sql(
+			year_start_end_dates = capkpi.db.sql(
 				"""select year_start_date, year_end_date
 				from `tabFiscal Year` where name=%s""",
 				(self.name),
@@ -46,7 +46,7 @@ class FiscalYear(Document):
 					getdate(self.year_start_date) != year_start_end_dates[0][0]
 					or getdate(self.year_end_date) != year_start_end_dates[0][1]
 				):
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Cannot change Fiscal Year Start Date and Fiscal Year End Date once the Fiscal Year is saved."
 						)
@@ -59,7 +59,7 @@ class FiscalYear(Document):
 			return
 
 		if getdate(self.year_start_date) > getdate(self.year_end_date):
-			frappe.throw(
+			capkpi.throw(
 				_("Fiscal Year Start Date should be one year earlier than Fiscal Year End Date"),
 				FiscalYearIncorrectDate,
 			)
@@ -67,27 +67,27 @@ class FiscalYear(Document):
 		date = getdate(self.year_start_date) + relativedelta(years=1) - relativedelta(days=1)
 
 		if getdate(self.year_end_date) != date:
-			frappe.throw(
+			capkpi.throw(
 				_("Fiscal Year End Date should be one year after Fiscal Year Start Date"),
 				FiscalYearIncorrectDate,
 			)
 
 	def on_update(self):
 		check_duplicate_fiscal_year(self)
-		frappe.cache().delete_value("fiscal_years")
+		capkpi.cache().delete_value("fiscal_years")
 
 	def on_trash(self):
-		global_defaults = frappe.get_doc("Global Defaults")
+		global_defaults = capkpi.get_doc("Global Defaults")
 		if global_defaults.current_fiscal_year == self.name:
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"You cannot delete Fiscal Year {0}. Fiscal Year {0} is set as default in Global Settings"
 				).format(self.name)
 			)
-		frappe.cache().delete_value("fiscal_years")
+		capkpi.cache().delete_value("fiscal_years")
 
 	def validate_overlap(self):
-		existing_fiscal_years = frappe.db.sql(
+		existing_fiscal_years = capkpi.db.sql(
 			"""select name from `tabFiscal Year`
 			where (
 				(%(year_start_date)s between year_start_date and year_end_date)
@@ -105,7 +105,7 @@ class FiscalYear(Document):
 
 		if existing_fiscal_years:
 			for existing in existing_fiscal_years:
-				company_for_existing = frappe.db.sql_list(
+				company_for_existing = capkpi.db.sql_list(
 					"""select company from `tabFiscal Year Company`
 					where parent=%s""",
 					existing.name,
@@ -120,40 +120,40 @@ class FiscalYear(Document):
 						overlap = True
 
 				if overlap:
-					frappe.throw(
+					capkpi.throw(
 						_("Year start date or end date is overlapping with {0}. To avoid please set company").format(
 							existing.name
 						),
-						frappe.NameError,
+						capkpi.NameError,
 					)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def check_duplicate_fiscal_year(doc):
-	year_start_end_dates = frappe.db.sql(
+	year_start_end_dates = capkpi.db.sql(
 		"""select name, year_start_date, year_end_date from `tabFiscal Year` where name!=%s""",
 		(doc.name),
 	)
 	for fiscal_year, ysd, yed in year_start_end_dates:
 		if (getdate(doc.year_start_date) == ysd and getdate(doc.year_end_date) == yed) and (
-			not frappe.flags.in_test
+			not capkpi.flags.in_test
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Fiscal Year Start Date and Fiscal Year End Date are already set in Fiscal Year {0}").format(
 					fiscal_year
 				)
 			)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def auto_create_fiscal_year():
-	for d in frappe.db.sql(
+	for d in capkpi.db.sql(
 		"""select name from `tabFiscal Year` where year_end_date = date_add(current_date, interval 3 day)"""
 	):
 		try:
-			current_fy = frappe.get_doc("Fiscal Year", d[0])
+			current_fy = capkpi.get_doc("Fiscal Year", d[0])
 
-			new_fy = frappe.copy_doc(current_fy, ignore_no_copy=False)
+			new_fy = capkpi.copy_doc(current_fy, ignore_no_copy=False)
 
 			new_fy.year_start_date = add_days(current_fy.year_end_date, 1)
 			new_fy.year_end_date = add_years(current_fy.year_end_date, 1)
@@ -164,10 +164,10 @@ def auto_create_fiscal_year():
 			new_fy.auto_created = 1
 
 			new_fy.insert(ignore_permissions=True)
-		except frappe.NameError:
+		except capkpi.NameError:
 			pass
 
 
 def get_from_and_to_date(fiscal_year):
 	fields = ["year_start_date as from_date", "year_end_date as to_date"]
-	return frappe.db.get_value("Fiscal Year", fiscal_year, fields, as_dict=1)
+	return capkpi.db.get_value("Fiscal Year", fiscal_year, fields, as_dict=1)

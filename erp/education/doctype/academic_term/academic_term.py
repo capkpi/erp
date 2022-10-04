@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import getdate
 
 
 class AcademicTerm(Document):
@@ -23,7 +23,7 @@ class AcademicTerm(Document):
 			and self.term_end_date
 			and getdate(self.term_start_date) > getdate(self.term_end_date)
 		):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"The Term End Date cannot be earlier than the Term Start Date. Please correct the dates and try again."
 				)
@@ -32,13 +32,13 @@ class AcademicTerm(Document):
 		# Check that the start of the term is not before the start of the academic year
 		# and end of term is not after the end of the academic year"""
 
-		year = frappe.get_doc("Academic Year", self.academic_year)
+		year = capkpi.get_doc("Academic Year", self.academic_year)
 		if (
 			self.term_start_date
 			and getdate(year.year_start_date)
 			and (getdate(self.term_start_date) < getdate(year.year_start_date))
 		):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"The Term Start Date cannot be earlier than the Year Start Date of the Academic Year to which the term is linked (Academic Year {}). Please correct the dates and try again."
 				).format(self.academic_year)
@@ -49,7 +49,7 @@ class AcademicTerm(Document):
 			and getdate(year.year_end_date)
 			and (getdate(self.term_end_date) > getdate(year.year_end_date))
 		):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"The Term End Date cannot be later than the Year End Date of the Academic Year to which the term is linked (Academic Year {}). Please correct the dates and try again."
 				).format(self.academic_year)
@@ -57,13 +57,13 @@ class AcademicTerm(Document):
 
 
 def validate_duplication(self):
-	term = frappe.db.sql(
+	term = capkpi.db.sql(
 		"""select name from `tabAcademic Term` where academic_year= %s and term_name= %s
     and docstatus<2 and name != %s""",
 		(self.academic_year, self.term_name, self.name),
 	)
 	if term:
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"An academic term with this 'Academic Year' {0} and 'Term Name' {1} already exists. Please modify these entries and try again."
 			).format(self.academic_year, self.term_name)

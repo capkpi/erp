@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 
-import frappe
+import capkpi
 
 
 def execute(filters=None):
@@ -16,7 +16,7 @@ def execute(filters=None):
 		},
 	]
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		SELECT
 			date(creation) as creation_date,

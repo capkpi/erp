@@ -2,19 +2,19 @@
 // License: GNU General Public License v3. See license.txt
 
 
-frappe.require("assets/erp/js/financial_statements.js", function() {
-	frappe.query_reports["Profit and Loss Statement"] = $.extend({},
+capkpi.require("assets/erp/js/financial_statements.js", function() {
+	capkpi.query_reports["Profit and Loss Statement"] = $.extend({},
 		erp.financial_statements);
 
 	erp.utils.add_dimensions('Profit and Loss Statement', 10);
 
-	frappe.query_reports["Profit and Loss Statement"]["filters"].push(
+	capkpi.query_reports["Profit and Loss Statement"]["filters"].push(
 		{
 			"fieldname": "project",
 			"label": __("Project"),
 			"fieldtype": "MultiSelectList",
 			get_data: function(txt) {
-				return frappe.db.get_link_options('Project', txt);
+				return capkpi.db.get_link_options('Project', txt);
 			}
 		},
 		{

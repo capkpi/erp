@@ -1,8 +1,8 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.require("assets/erp/js/sales_trends_filters.js", function() {
-	frappe.query_reports["Sales Invoice Trends"] = {
+capkpi.require("assets/erp/js/sales_trends_filters.js", function() {
+	capkpi.query_reports["Sales Invoice Trends"] = {
 		filters: erp.get_sales_trends_filters()
 	}
 });

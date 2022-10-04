@@ -50,7 +50,7 @@ erp.ProductGrid = class {
 				<div class="card-img-container">
 					<a href="/${ item.route || '#' }" style="text-decoration: none;">
 						<div class="card-img-top no-image">
-							${ frappe.get_abbr(title) }
+							${ capkpi.get_abbr(title) }
 						</div>
 					</a>
 				</div>

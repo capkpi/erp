@@ -1,2 +1,2 @@
-frappe.ui.form.on("Academic Year", {
+capkpi.ui.form.on("Academic Year", {
 });

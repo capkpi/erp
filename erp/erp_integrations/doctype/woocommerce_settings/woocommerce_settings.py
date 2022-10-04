@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.model.document import Document
-from frappe.utils.nestedset import get_root_of
+import capkpi
+from capkpi import _
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_field
+from capkpi.model.document import Document
+from capkpi.utils.nestedset import get_root_of
 from six.moves.urllib.parse import urlparse
 
 
@@ -40,8 +40,8 @@ class WoocommerceSettings(Document):
 				)
 				create_custom_field(doctype, df)
 
-			if not frappe.get_value("Item Group", {"name": _("WooCommerce Products")}):
-				item_group = frappe.new_doc("Item Group")
+			if not capkpi.get_value("Item Group", {"name": _("WooCommerce Products")}):
+				item_group = capkpi.new_doc("Item Group")
 				item_group.item_group_name = _("WooCommerce Products")
 				item_group.parent_item_group = get_root_of("Item Group")
 				item_group.insert()
@@ -49,22 +49,22 @@ class WoocommerceSettings(Document):
 	def validate_settings(self):
 		if self.enable_sync:
 			if not self.secret:
-				self.set("secret", frappe.generate_hash())
+				self.set("secret", capkpi.generate_hash())
 
 			if not self.woocommerce_server_url:
-				frappe.throw(_("Please enter Woocommerce Server URL"))
+				capkpi.throw(_("Please enter Woocommerce Server URL"))
 
 			if not self.api_consumer_key:
-				frappe.throw(_("Please enter API Consumer Key"))
+				capkpi.throw(_("Please enter API Consumer Key"))
 
 			if not self.api_consumer_secret:
-				frappe.throw(_("Please enter API Consumer Secret"))
+				capkpi.throw(_("Please enter API Consumer Secret"))
 
 	def create_webhook_url(self):
 		endpoint = "/api/method/erp.erp_integrations.connectors.woocommerce_connection.order"
 
 		try:
-			url = frappe.request.url
+			url = capkpi.request.url
 		except RuntimeError:
 			# for CI Test to work
 			url = "http://localhost:8000"
@@ -75,15 +75,15 @@ class WoocommerceSettings(Document):
 		self.endpoint = delivery_url
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def generate_secret():
-	woocommerce_settings = frappe.get_doc("Woocommerce Settings")
-	woocommerce_settings.secret = frappe.generate_hash()
+	woocommerce_settings = capkpi.get_doc("Woocommerce Settings")
+	woocommerce_settings.secret = capkpi.generate_hash()
 	woocommerce_settings.save()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_series():
 	return {
-		"sales_order_series": frappe.get_meta("Sales Order").get_options("naming_series") or "SO-WOO-",
+		"sales_order_series": capkpi.get_meta("Sales Order").get_options("naming_series") or "SO-WOO-",
 	}

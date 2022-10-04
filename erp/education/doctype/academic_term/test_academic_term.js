@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Academic Term', function(assert){
 	assert.expect(4);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Academic Term', [
+			return capkpi.tests.make('Academic Term', [
 				{academic_year: '2016-17'},
 				{term_name: "Semester 1"},
 				{term_start_date: '2016-07-20'},

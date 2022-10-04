@@ -6,21 +6,21 @@ QUnit.test('Test: Assessment Plan', function(assert){
 	let done = assert.async();
 	let room_name, instructor_name, assessment_name;
 
-	frappe.run_serially([
-		() => frappe.db.get_value('Room', {'room_name': 'Room 1'}, 'name'),
+	capkpi.run_serially([
+		() => capkpi.db.get_value('Room', {'room_name': 'Room 1'}, 'name'),
 		(room) => {room_name = room.message.name;}, // Fetching Room name
-		() => frappe.db.get_value('Instructor', {'instructor_name': 'Instructor 1'}, 'name'),
+		() => capkpi.db.get_value('Instructor', {'instructor_name': 'Instructor 1'}, 'name'),
 		(instructor) => {instructor_name = instructor.message.name;}, // Fetching Instructor name
 
 		() => {
-			return frappe.tests.make('Assessment Plan', [
+			return capkpi.tests.make('Assessment Plan', [
 				{assessment_name: "Test-Mid-Term"},
 				{assessment_group: 'Assessment-group-5'},
 				{maximum_assessment_score: 100},
 				{student_group: 'test-course-wise-group-2'},
 				{course: 'Test_Sub'},
 				{grading_scale: 'GTU'},
-				{schedule_date: frappe.datetime.nowdate()},
+				{schedule_date: capkpi.datetime.nowdate()},
 				{room: room_name},
 				{examiner: instructor_name},
 				{supervisor: instructor_name},
@@ -35,17 +35,17 @@ QUnit.test('Test: Assessment Plan', function(assert){
 			assert.equal(cur_frm.doc.assessment_criteria[0].maximum_score, 100, 'Maximum score correctly set');
 		}, // Checking if the table was auto-filled upon selecting appropriate fields
 
-		() => frappe.timeout(1),
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.timeout(0.5),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(0.5),
+		() => capkpi.timeout(1),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.timeout(0.5),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(0.5),
 		() => {assert.equal(cur_frm.doc.docstatus, 1, "Assessment Plan submitted successfully");},
 
-		() => frappe.click_button('Assessment Result'), // Checking out Assessment Result button option
-		() => frappe.timeout(0.5),
+		() => capkpi.click_button('Assessment Result'), // Checking out Assessment Result button option
+		() => capkpi.timeout(0.5),
 		() => {
-			assert.deepEqual(frappe.get_route(), ["Form", "Assessment Result Tool"], 'Assessment Result properly linked');
+			assert.deepEqual(capkpi.get_route(), ["Form", "Assessment Result Tool"], 'Assessment Result properly linked');
 			assert.equal(cur_frm.doc.assessment_plan, assessment_name, 'Assessment correctly set');
 			assert.equal(cur_frm.doc.student_group, 'test-course-wise-group-2', 'Course for Assessment correctly set');
 		},

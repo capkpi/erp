@@ -5,10 +5,10 @@
 import json
 import os
 
-import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.model.document import Document
-from frappe.permissions import add_permission, update_permission_property
+import capkpi
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_fields
+from capkpi.model.document import Document
+from capkpi.permissions import add_permission, update_permission_property
 
 from erp.erp_integrations.taxjar_integration import get_client
 
@@ -19,11 +19,11 @@ class TaxJarSettings(Document):
 		TAXJAR_CALCULATE_TAX = self.taxjar_calculate_tax
 		TAXJAR_SANDBOX_MODE = self.is_sandbox
 
-		fields_already_exist = frappe.db.exists(
+		fields_already_exist = capkpi.db.exists(
 			"Custom Field",
 			{"dt": ("in", ["Item", "Sales Invoice Item"]), "fieldname": "product_tax_category"},
 		)
-		fields_hidden = frappe.get_value(
+		fields_hidden = capkpi.get_value(
 			"Custom Field", {"dt": ("in", ["Sales Invoice Item"])}, "hidden"
 		)
 
@@ -32,7 +32,7 @@ class TaxJarSettings(Document):
 				add_product_tax_categories()
 				make_custom_fields()
 				add_permissions()
-				frappe.enqueue("erp.regional.united_states.setup.add_product_tax_categories", now=False)
+				capkpi.enqueue("erp.regional.united_states.setup.add_product_tax_categories", now=False)
 
 			elif fields_already_exist and fields_hidden:
 				toggle_tax_category_fields(hidden="0")
@@ -43,12 +43,12 @@ class TaxJarSettings(Document):
 	def validate(self):
 		self.calculate_taxes_validation_for_create_transactions()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def update_nexus_list(self):
 		client = get_client()
 		nexus = client.nexus_regions()
 
-		new_nexus_list = [frappe._dict(address) for address in nexus]
+		new_nexus_list = [capkpi._dict(address) for address in nexus]
 
 		self.set("nexus", [])
 		self.set("nexus", new_nexus_list)
@@ -56,21 +56,21 @@ class TaxJarSettings(Document):
 
 	def calculate_taxes_validation_for_create_transactions(self):
 		if not self.taxjar_calculate_tax and (self.taxjar_create_transactions or self.is_sandbox):
-			frappe.throw(
-				frappe._(
+			capkpi.throw(
+				capkpi._(
 					"Before enabling <b>Create Transaction</b> or <b>Sandbox Mode</b>, you need to check the <b>Enable Tax Calculation</b> box"
 				)
 			)
 
 
 def toggle_tax_category_fields(hidden):
-	frappe.set_value(
+	capkpi.set_value(
 		"Custom Field",
 		{"dt": "Sales Invoice Item", "fieldname": "product_tax_category"},
 		"hidden",
 		hidden,
 	)
-	frappe.set_value(
+	capkpi.set_value(
 		"Custom Field", {"dt": "Item", "fieldname": "product_tax_category"}, "hidden", hidden
 	)
 
@@ -83,8 +83,8 @@ def add_product_tax_categories():
 
 def create_tax_categories(data):
 	for d in data:
-		if not frappe.db.exists("Product Tax Category", {"product_tax_code": d.get("product_tax_code")}):
-			tax_category = frappe.new_doc("Product Tax Category")
+		if not capkpi.db.exists("Product Tax Category", {"product_tax_code": d.get("product_tax_code")}):
+			tax_category = capkpi.new_doc("Product Tax Category")
 			tax_category.description = d.get("description")
 			tax_category.product_tax_code = d.get("product_tax_code")
 			tax_category.category_name = d.get("name")

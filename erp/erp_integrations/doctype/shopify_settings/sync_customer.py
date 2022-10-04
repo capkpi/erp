@@ -1,9 +1,9 @@
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def create_customer(shopify_customer, shopify_settings):
-	import frappe.utils.nestedset
+	import capkpi.utils.nestedset
 
 	cust_name = (
 		(
@@ -16,7 +16,7 @@ def create_customer(shopify_customer, shopify_settings):
 	)
 
 	try:
-		customer = frappe.get_doc(
+		customer = capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"name": shopify_customer.get("id"),
@@ -24,7 +24,7 @@ def create_customer(shopify_customer, shopify_settings):
 				"shopify_customer_id": shopify_customer.get("id"),
 				"sync_with_shopify": 1,
 				"customer_group": shopify_settings.customer_group,
-				"territory": frappe.utils.nestedset.get_root_of("Territory"),
+				"territory": capkpi.utils.nestedset.get_root_of("Territory"),
 				"customer_type": _("Individual"),
 			}
 		)
@@ -34,7 +34,7 @@ def create_customer(shopify_customer, shopify_settings):
 		if customer:
 			create_customer_address(customer, shopify_customer)
 
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	except Exception as e:
 		raise e
@@ -49,7 +49,7 @@ def create_customer_address(customer, shopify_customer):
 	for i, address in enumerate(addresses):
 		address_title, address_type = get_address_title_and_type(customer.customer_name, i)
 		try:
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Address",
 					"shopify_address_id": address.get("id"),
@@ -74,7 +74,7 @@ def create_customer_address(customer, shopify_customer):
 def get_address_title_and_type(customer_name, index):
 	address_type = _("Billing")
 	address_title = customer_name
-	if frappe.db.get_value("Address", "{0}-{1}".format(customer_name.strip(), address_type)):
+	if capkpi.db.get_value("Address", "{0}-{1}".format(customer_name.strip(), address_type)):
 		address_title = "{0}-{1}".format(customer_name.strip(), index)
 
 	return address_title, address_type

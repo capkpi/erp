@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Requested Items to Order and Receive"] = {
+capkpi.query_reports["Requested Items to Order and Receive"] = {
 	"filters": [
 		{
 			"fieldname": "company",
@@ -11,7 +11,7 @@ frappe.query_reports["Requested Items to Order and Receive"] = {
 			"width": "80",
 			"options": "Company",
 			"reqd": 1,
-			"default": frappe.defaults.get_default("company")
+			"default": capkpi.defaults.get_default("company")
 		},
 		{
 			"fieldname":"from_date",
@@ -19,7 +19,7 @@ frappe.query_reports["Requested Items to Order and Receive"] = {
 			"fieldtype": "Date",
 			"width": "80",
 			"reqd": 1,
-			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+			"default": capkpi.datetime.add_months(capkpi.datetime.get_today(), -1),
 		},
 		{
 			"fieldname":"to_date",
@@ -27,7 +27,7 @@ frappe.query_reports["Requested Items to Order and Receive"] = {
 			"fieldtype": "Date",
 			"width": "80",
 			"reqd": 1,
-			"default": frappe.datetime.get_today()
+			"default": capkpi.datetime.get_today()
 		},
 		{
 			"fieldname": "material_request",

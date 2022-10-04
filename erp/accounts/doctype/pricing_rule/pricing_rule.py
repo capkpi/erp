@@ -7,10 +7,10 @@ import copy
 import json
 import re
 
-import frappe
-from frappe import _, throw
-from frappe.model.document import Document
-from frappe.utils import cint, flt, getdate
+import capkpi
+from capkpi import _, throw
+from capkpi.model.document import Document
+from capkpi.utils import cint, flt, getdate
 from six import string_types
 
 apply_on_dict = {"Item Code": "items", "Item Group": "item_groups", "Brand": "brands"}
@@ -41,44 +41,44 @@ class PricingRule(Document):
 			if not apply_on_table:
 				return
 
-			apply_on_field = frappe.scrub(self.apply_on)
+			apply_on_field = capkpi.scrub(self.apply_on)
 			values = [d.get(apply_on_field) for d in self.get(apply_on_table) if d.get(apply_on_field)]
 			if len(values) != len(set(values)):
-				frappe.throw(_("Duplicate {0} found in the table").format(self.apply_on))
+				capkpi.throw(_("Duplicate {0} found in the table").format(self.apply_on))
 
 	def validate_mandatory(self):
 		for apply_on, field in apply_on_dict.items():
 			if self.apply_on == apply_on and len(self.get(field) or []) < 1:
-				throw(_("{0} is not added in the table").format(apply_on), frappe.MandatoryError)
+				throw(_("{0} is not added in the table").format(apply_on), capkpi.MandatoryError)
 
-		tocheck = frappe.scrub(self.get("applicable_for", ""))
+		tocheck = capkpi.scrub(self.get("applicable_for", ""))
 		if tocheck and not self.get(tocheck):
-			throw(_("{0} is required").format(self.meta.get_label(tocheck)), frappe.MandatoryError)
+			throw(_("{0} is required").format(self.meta.get_label(tocheck)), capkpi.MandatoryError)
 
 		if self.apply_rule_on_other:
-			o_field = "other_" + frappe.scrub(self.apply_rule_on_other)
+			o_field = "other_" + capkpi.scrub(self.apply_rule_on_other)
 			if not self.get(o_field) and o_field in other_fields:
-				frappe.throw(
+				capkpi.throw(
 					_("For the 'Apply Rule On Other' condition the field {0} is mandatory").format(
-						frappe.bold(self.apply_rule_on_other)
+						capkpi.bold(self.apply_rule_on_other)
 					)
 				)
 
 		if self.price_or_product_discount == "Price" and not self.rate_or_discount:
-			throw(_("Rate or Discount is required for the price discount."), frappe.MandatoryError)
+			throw(_("Rate or Discount is required for the price discount."), capkpi.MandatoryError)
 
 		if self.apply_discount_on_rate:
 			if not self.priority:
 				throw(
 					_("As the field {0} is enabled, the field {1} is mandatory.").format(
-						frappe.bold("Apply Discount on Discounted Rate"), frappe.bold("Priority")
+						capkpi.bold("Apply Discount on Discounted Rate"), capkpi.bold("Priority")
 					)
 				)
 
 			if self.priority and cint(self.priority) == 1:
 				throw(
 					_("As the field {0} is enabled, the value of the field {1} should be more than 1.").format(
-						frappe.bold("Apply Discount on Discounted Rate"), frappe.bold("Priority")
+						capkpi.bold("Apply Discount on Discounted Rate"), capkpi.bold("Priority")
 					)
 				)
 
@@ -112,7 +112,7 @@ class PricingRule(Document):
 
 	def cleanup_fields_value(self):
 		for logic_field in ["apply_on", "applicable_for", "rate_or_discount"]:
-			fieldname = frappe.scrub(self.get(logic_field) or "")
+			fieldname = capkpi.scrub(self.get(logic_field) or "")
 
 			# reset all values except for the logic field
 			options = (self.meta.get_options(logic_field) or "").split("\n")
@@ -120,7 +120,7 @@ class PricingRule(Document):
 				if not f:
 					continue
 
-				scrubbed_f = frappe.scrub(f)
+				scrubbed_f = capkpi.scrub(f)
 
 				if logic_field == "apply_on":
 					apply_on_f = apply_on_dict.get(f, f)
@@ -133,7 +133,7 @@ class PricingRule(Document):
 		if self.mixed_conditions and self.get("same_item"):
 			self.same_item = 0
 
-		apply_rule_on_other = frappe.scrub(self.apply_rule_on_other or "")
+		apply_rule_on_other = capkpi.scrub(self.apply_rule_on_other or "")
 
 		cleanup_other_fields = (
 			other_fields
@@ -146,34 +146,34 @@ class PricingRule(Document):
 
 	def validate_rate_or_discount(self):
 		for field in ["Rate"]:
-			if flt(self.get(frappe.scrub(field))) < 0:
+			if flt(self.get(capkpi.scrub(field))) < 0:
 				throw(_("{0} can not be negative").format(field))
 
 		if self.price_or_product_discount == "Product" and not self.free_item:
 			if self.mixed_conditions:
-				frappe.throw(_("Free item code is not selected"))
+				capkpi.throw(_("Free item code is not selected"))
 			else:
 				self.same_item = 1
 
 	def validate_max_discount(self):
 		if self.rate_or_discount == "Discount Percentage" and self.get("items"):
 			for d in self.items:
-				max_discount = frappe.get_cached_value("Item", d.item_code, "max_discount")
+				max_discount = capkpi.get_cached_value("Item", d.item_code, "max_discount")
 				if max_discount and flt(self.discount_percentage) > flt(max_discount):
 					throw(_("Max discount allowed for item: {0} is {1}%").format(d.item_code, max_discount))
 
 	def validate_price_list_with_currency(self):
 		if self.currency and self.for_price_list:
-			price_list_currency = frappe.db.get_value("Price List", self.for_price_list, "currency", True)
+			price_list_currency = capkpi.db.get_value("Price List", self.for_price_list, "currency", True)
 			if not self.currency == price_list_currency:
 				throw(_("Currency should be same as Price List Currency: {0}").format(price_list_currency))
 
 	def validate_dates(self):
 		if self.is_cumulative and not (self.valid_from and self.valid_upto):
-			frappe.throw(_("Valid from and valid upto fields are mandatory for the cumulative"))
+			capkpi.throw(_("Valid from and valid upto fields are mandatory for the cumulative"))
 
 		if self.valid_from and self.valid_upto and getdate(self.valid_from) > getdate(self.valid_upto):
-			frappe.throw(_("Valid from date must be less than valid upto date"))
+			capkpi.throw(_("Valid from date must be less than valid upto date"))
 
 	def validate_condition(self):
 		if (
@@ -181,13 +181,13 @@ class PricingRule(Document):
 			and ("=" in self.condition)
 			and re.match(r'[\w\.:_]+\s*={1}\s*[\w\.@\'"]+', self.condition)
 		):
-			frappe.throw(_("Invalid condition expression"))
+			capkpi.throw(_("Invalid condition expression"))
 
 
 # --------------------------------------------------------------------------------
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def apply_pricing_rule(args, doc=None):
 	"""
 	args = {
@@ -212,7 +212,7 @@ def apply_pricing_rule(args, doc=None):
 	if isinstance(args, string_types):
 		args = json.loads(args)
 
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
 	if not args.transaction_type:
 		set_transaction_type(args)
@@ -226,12 +226,12 @@ def apply_pricing_rule(args, doc=None):
 	item_list = args.get("items")
 	args.pop("items")
 
-	set_serial_nos_based_on_fifo = frappe.db.get_single_value(
+	set_serial_nos_based_on_fifo = capkpi.db.get_single_value(
 		"Stock Settings", "automatically_set_serial_nos_based_on_fifo"
 	)
 
 	item_code_list = tuple(item.get("item_code") for item in item_list)
-	query_items = frappe.get_all(
+	query_items = capkpi.get_all(
 		"Item",
 		fields=["item_code", "has_serial_no"],
 		filters=[["item_code", "in", item_code_list]],
@@ -261,7 +261,7 @@ def apply_pricing_rule(args, doc=None):
 def get_serial_no_for_item(args):
 	from erp.stock.get_item_details import get_serial_no
 
-	item_details = frappe._dict(
+	item_details = capkpi._dict(
 		{"doctype": args.doctype, "name": args.name, "serial_no": args.serial_no}
 	)
 	if args.get("parenttype") in ("Sales Invoice", "Delivery Note") and flt(args.stock_qty) > 0:
@@ -281,12 +281,12 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 		doc = json.loads(doc)
 
 	if doc:
-		doc = frappe.get_doc(doc)
+		doc = capkpi.get_doc(doc)
 
 	if args.get("is_free_item") or args.get("parenttype") == "Material Request":
 		return {}
 
-	item_details = frappe._dict(
+	item_details = capkpi._dict(
 		{
 			"doctype": args.doctype,
 			"has_margin": False,
@@ -299,7 +299,7 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 	)
 
 	if args.ignore_pricing_rule or not args.item_code:
-		if frappe.db.exists(args.doctype, args.name) and args.get("pricing_rules"):
+		if capkpi.db.exists(args.doctype, args.name) and args.get("pricing_rules"):
 			item_details = remove_pricing_rule_for_item(
 				args.get("pricing_rules"),
 				item_details,
@@ -324,7 +324,7 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 				continue
 
 			if isinstance(pricing_rule, string_types):
-				pricing_rule = frappe.get_cached_doc("Pricing Rule", pricing_rule)
+				pricing_rule = capkpi.get_cached_doc("Pricing Rule", pricing_rule)
 				pricing_rule.apply_rule_on_other_items = get_pricing_rule_items(pricing_rule)
 
 			if pricing_rule.get("suggestion"):
@@ -341,9 +341,9 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 						"apply_rule_on_other_items": json.dumps(pricing_rule.apply_rule_on_other_items),
 						"price_or_product_discount": pricing_rule.price_or_product_discount,
 						"apply_rule_on": (
-							frappe.scrub(pricing_rule.apply_rule_on_other)
+							capkpi.scrub(pricing_rule.apply_rule_on_other)
 							if pricing_rule.apply_rule_on_other
-							else frappe.scrub(pricing_rule.get("apply_on"))
+							else capkpi.scrub(pricing_rule.get("apply_on"))
 						),
 					}
 				)
@@ -363,7 +363,7 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 
 		item_details.has_pricing_rule = 1
 
-		item_details.pricing_rules = frappe.as_json([d.pricing_rule for d in rules])
+		item_details.pricing_rules = capkpi.as_json([d.pricing_rule for d in rules])
 
 		if not doc:
 			return item_details
@@ -382,21 +382,21 @@ def get_pricing_rule_for_item(args, price_list_rate=0, doc=None, for_validate=Fa
 def update_args_for_pricing_rule(args):
 	if not (args.item_group and args.brand):
 		try:
-			args.item_group, args.brand = frappe.get_cached_value(
+			args.item_group, args.brand = capkpi.get_cached_value(
 				"Item", args.item_code, ["item_group", "brand"]
 			)
-		except frappe.DoesNotExistError:
+		except capkpi.DoesNotExistError:
 			return
 		if not args.item_group:
-			frappe.throw(_("Item Group not mentioned in item master for item {0}").format(args.item_code))
+			capkpi.throw(_("Item Group not mentioned in item master for item {0}").format(args.item_code))
 
 	if args.transaction_type == "selling":
 		if args.customer and not (args.customer_group and args.territory):
 
 			if args.quotation_to and args.quotation_to != "Customer":
-				customer = frappe._dict()
+				customer = capkpi._dict()
 			else:
-				customer = frappe.get_cached_value("Customer", args.customer, ["customer_group", "territory"])
+				customer = capkpi.get_cached_value("Customer", args.customer, ["customer_group", "territory"])
 
 			if customer:
 				args.customer_group, args.territory = customer
@@ -404,12 +404,12 @@ def update_args_for_pricing_rule(args):
 		args.supplier = args.supplier_group = None
 
 	elif args.supplier and not args.supplier_group:
-		args.supplier_group = frappe.get_cached_value("Supplier", args.supplier, "supplier_group")
+		args.supplier_group = capkpi.get_cached_value("Supplier", args.supplier, "supplier_group")
 		args.customer = args.customer_group = args.territory = None
 
 
 def get_pricing_rule_details(args, pricing_rule):
-	return frappe._dict(
+	return capkpi._dict(
 		{
 			"pricing_rule": pricing_rule.name,
 			"rate_or_discount": pricing_rule.rate_or_discount,
@@ -453,7 +453,7 @@ def apply_price_discount_rule(pricing_rule, item_details, args):
 		if pricing_rule.rate_or_discount != apply_on:
 			continue
 
-		field = frappe.scrub(apply_on)
+		field = capkpi.scrub(apply_on)
 		if pricing_rule.apply_discount_on_rate and item_details.get("discount_percentage"):
 			# Apply discount on discounted rate
 			item_details[field] += (100 - item_details[field]) * (pricing_rule.get(field, 0) / 100)
@@ -471,9 +471,9 @@ def remove_pricing_rule_for_item(pricing_rules, item_details, item_code=None, ra
 	)
 
 	for d in get_applied_pricing_rules(pricing_rules):
-		if not d or not frappe.db.exists("Pricing Rule", d):
+		if not d or not capkpi.db.exists("Pricing Rule", d):
 			continue
-		pricing_rule = frappe.get_cached_doc("Pricing Rule", d)
+		pricing_rule = capkpi.get_cached_doc("Pricing Rule", d)
 
 		if pricing_rule.price_or_product_discount == "Price":
 			if pricing_rule.rate_or_discount == "Discount Percentage":
@@ -495,9 +495,9 @@ def remove_pricing_rule_for_item(pricing_rules, item_details, item_code=None, ra
 		if pricing_rule.get("mixed_conditions") or pricing_rule.get("apply_rule_on_other"):
 			items = get_pricing_rule_items(pricing_rule)
 			item_details.apply_on = (
-				frappe.scrub(pricing_rule.apply_rule_on_other)
+				capkpi.scrub(pricing_rule.apply_rule_on_other)
 				if pricing_rule.apply_rule_on_other
-				else frappe.scrub(pricing_rule.get("apply_on"))
+				else capkpi.scrub(pricing_rule.get("apply_on"))
 			)
 			item_details.applied_on_items = ",".join(items)
 
@@ -507,14 +507,14 @@ def remove_pricing_rule_for_item(pricing_rules, item_details, item_code=None, ra
 	return item_details
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def remove_pricing_rules(item_list):
 	if isinstance(item_list, string_types):
 		item_list = json.loads(item_list)
 
 	out = []
 	for item in item_list:
-		item = frappe._dict(item)
+		item = capkpi._dict(item)
 		if item.get("pricing_rules"):
 			out.append(
 				remove_pricing_rule_for_item(
@@ -544,26 +544,26 @@ def set_transaction_type(args):
 		args.transaction_type = "buying"
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_pricing_rule(doctype, docname):
-	doc = frappe.new_doc("Pricing Rule")
+	doc = capkpi.new_doc("Pricing Rule")
 	doc.applicable_for = doctype
-	doc.set(frappe.scrub(doctype), docname)
+	doc.set(capkpi.scrub(doctype), docname)
 	doc.selling = 1 if doctype == "Customer" else 0
 	doc.buying = 1 if doctype == "Supplier" else 0
 
 	return doc
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_item_uoms(doctype, txt, searchfield, start, page_len, filters):
 	items = [filters.get("value")]
 	if filters.get("apply_on") != "Item Code":
-		field = frappe.scrub(filters.get("apply_on"))
-		items = [d.name for d in frappe.db.get_all("Item", filters={field: filters.get("value")})]
+		field = capkpi.scrub(filters.get("apply_on"))
+		items = [d.name for d in capkpi.db.get_all("Item", filters={field: filters.get("value")})]
 
-	return frappe.get_all(
+	return capkpi.get_all(
 		"UOM Conversion Detail",
 		filters={"parent": ("in", items), "uom": ("like", "{0}%".format(txt))},
 		fields=["distinct uom"],

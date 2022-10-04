@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import flt
-from frappe.utils.csvutils import getlink
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import flt
+from capkpi.utils.csvutils import getlink
 
 import erp.education
 from erp.education.api import get_assessment_details, get_grade
@@ -28,7 +28,7 @@ class AssessmentResult(Document):
 		for d in self.details:
 			d.maximum_score = max_scores.get(d.assessment_criteria)
 			if d.score > d.maximum_score:
-				frappe.throw(_("Score cannot be greater than Maximum Score"))
+				capkpi.throw(_("Score cannot be greater than Maximum Score"))
 
 	def validate_grade(self):
 		self.total_score = 0.0
@@ -38,7 +38,7 @@ class AssessmentResult(Document):
 		self.grade = get_grade(self.grading_scale, (self.total_score / self.maximum_score) * 100)
 
 	def validate_duplicate(self):
-		assessment_result = frappe.get_list(
+		assessment_result = capkpi.get_list(
 			"Assessment Result",
 			filters={
 				"name": ("not in", [self.name]),
@@ -48,7 +48,7 @@ class AssessmentResult(Document):
 			},
 		)
 		if assessment_result:
-			frappe.throw(
+			capkpi.throw(
 				_("Assessment Result record {0} already exists.").format(
 					getlink("Assessment Result", assessment_result[0].name)
 				)

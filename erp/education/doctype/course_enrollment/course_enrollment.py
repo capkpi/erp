@@ -4,10 +4,10 @@
 
 from functools import reduce
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import get_link_to_form
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import get_link_to_form
 
 
 class CourseEnrollment(Document):
@@ -21,7 +21,7 @@ class CourseEnrollment(Document):
 		        :param self: Course Enrollment Object
 		        :param student: Student Object
 		"""
-		course = frappe.get_doc("Course", self.course)
+		course = capkpi.get_doc("Course", self.course)
 		topics = course.get_topics()
 		progress = []
 		for topic in topics:
@@ -32,7 +32,7 @@ class CourseEnrollment(Document):
 			return []
 
 	def validate_duplication(self):
-		enrollment = frappe.db.exists(
+		enrollment = capkpi.db.exists(
 			"Course Enrollment",
 			{
 				"student": self.student,
@@ -42,7 +42,7 @@ class CourseEnrollment(Document):
 			},
 		)
 		if enrollment:
-			frappe.throw(
+			capkpi.throw(
 				_("Student is already enrolled via Course Enrollment {0}").format(
 					get_link_to_form("Course Enrollment", enrollment)
 				),
@@ -61,20 +61,20 @@ class CourseEnrollment(Document):
 					item["selected_option"] = "Unattempted"
 				elif isinstance(quiz_response[key], list):
 					item["selected_option"] = ", ".join(
-						frappe.get_value("Options", res, "option") for res in quiz_response[key]
+						capkpi.get_value("Options", res, "option") for res in quiz_response[key]
 					)
 				else:
-					item["selected_option"] = frappe.get_value("Options", quiz_response[key], "option")
+					item["selected_option"] = capkpi.get_value("Options", quiz_response[key], "option")
 			except KeyError:
 				item["selected_option"] = "Unattempted"
 			result_data.append(item)
 
-		quiz_activity = frappe.get_doc(
+		quiz_activity = capkpi.get_doc(
 			{
 				"doctype": "Quiz Activity",
 				"enrollment": self.name,
 				"quiz": quiz_name,
-				"activity_date": frappe.utils.datetime.datetime.now(),
+				"activity_date": capkpi.utils.datetime.datetime.now(),
 				"result": result_data,
 				"score": score,
 				"status": status,
@@ -87,13 +87,13 @@ class CourseEnrollment(Document):
 		if activity:
 			return activity
 		else:
-			activity = frappe.get_doc(
+			activity = capkpi.get_doc(
 				{
 					"doctype": "Course Activity",
 					"enrollment": self.name,
 					"content_type": content_type,
 					"content": content,
-					"activity_date": frappe.utils.datetime.datetime.now(),
+					"activity_date": capkpi.utils.datetime.datetime.now(),
 				}
 			)
 
@@ -102,7 +102,7 @@ class CourseEnrollment(Document):
 
 
 def check_activity_exists(enrollment, content_type, content):
-	activity = frappe.get_all(
+	activity = capkpi.get_all(
 		"Course Activity",
 		filters={"enrollment": enrollment, "content_type": content_type, "content": content},
 	)

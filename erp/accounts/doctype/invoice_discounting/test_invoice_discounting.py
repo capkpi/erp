@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, flt, nowdate
+import capkpi
+from capkpi.utils import add_days, flt, nowdate
 
 from erp.accounts.doctype.account.test_account import create_account
 from erp.accounts.doctype.journal_entry.journal_entry import get_payment_entry_against_invoice
@@ -42,7 +42,7 @@ class TestInvoiceDiscounting(unittest.TestCase):
 			parent_account="Expenses - _TC",
 			company="_Test Company",
 		)
-		frappe.db.set_value("Company", "_Test Company", "default_bank_account", self.bank_account)
+		capkpi.db.set_value("Company", "_Test Company", "default_bank_account", self.bank_account)
 
 	def test_total_amount(self):
 		inv1 = create_sales_invoice(rate=200)
@@ -194,7 +194,7 @@ class TestInvoiceDiscounting(unittest.TestCase):
 		je1.posting_date = nowdate()
 		je1.submit()
 
-		je_on_payment = frappe.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
+		je_on_payment = capkpi.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
 		je_on_payment.posting_date = nowdate()
 		je_on_payment.cheque_no = "126981"
 		je_on_payment.cheque_date = nowdate()
@@ -254,7 +254,7 @@ class TestInvoiceDiscounting(unittest.TestCase):
 		je.posting_date = nowdate()
 		je.submit()
 
-		je_on_payment = frappe.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
+		je_on_payment = capkpi.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
 		je_on_payment.posting_date = nowdate()
 		je_on_payment.cheque_no = "126981"
 		je_on_payment.cheque_date = nowdate()
@@ -297,7 +297,7 @@ class TestInvoiceDiscounting(unittest.TestCase):
 		je.posting_date = nowdate()
 		je.submit()
 
-		je_on_payment = frappe.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
+		je_on_payment = capkpi.get_doc(get_payment_entry_against_invoice("Sales Invoice", inv.name))
 		je_on_payment.posting_date = nowdate()
 		je_on_payment.cheque_no = "126981"
 		je_on_payment.cheque_date = nowdate()
@@ -317,8 +317,8 @@ class TestInvoiceDiscounting(unittest.TestCase):
 
 
 def create_invoice_discounting(invoices, **args):
-	args = frappe._dict(args)
-	inv_disc = frappe.new_doc("Invoice Discounting")
+	args = capkpi._dict(args)
+	inv_disc = capkpi.new_doc("Invoice Discounting")
 	inv_disc.posting_date = args.posting_date or nowdate()
 	inv_disc.company = args.company or "_Test Company"
 	inv_disc.bank_account = args.bank_account

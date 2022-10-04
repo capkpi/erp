@@ -1,9 +1,9 @@
 # Copyright (c) 2022, CapKPI Technologies Pvt. Ltd. and Contributors
 # MIT License. See license.txt
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
-from frappe.utils import today
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
+from capkpi.utils import today
 
 from erp.accounts.report.general_ledger.general_ledger import execute
 
@@ -16,7 +16,7 @@ class TestGeneralLedger(CapKPITestCase):
 		# create a new account with USD currency
 		account_name = "Test USD Account for Revalutation"
 		company = "_Test Company"
-		account = frappe.get_doc(
+		account = capkpi.get_doc(
 			{
 				"account_name": account_name,
 				"is_group": 0,
@@ -32,7 +32,7 @@ class TestGeneralLedger(CapKPITestCase):
 		)
 		account.insert(ignore_if_duplicate=True)
 		# create a JV to debit 1000 USD at 75 exchange rate
-		jv = frappe.new_doc("Journal Entry")
+		jv = capkpi.new_doc("Journal Entry")
 		jv.posting_date = today()
 		jv.company = company
 		jv.multi_currency = 1
@@ -58,7 +58,7 @@ class TestGeneralLedger(CapKPITestCase):
 		jv.save()
 		jv.submit()
 		# create a JV to credit 900 USD at 100 exchange rate
-		jv = frappe.new_doc("Journal Entry")
+		jv = capkpi.new_doc("Journal Entry")
 		jv.posting_date = today()
 		jv.company = company
 		jv.multi_currency = 1
@@ -85,7 +85,7 @@ class TestGeneralLedger(CapKPITestCase):
 		jv.submit()
 
 		# create an exchange rate revaluation entry at 77 exchange rate
-		revaluation = frappe.new_doc("Exchange Rate Revaluation")
+		revaluation = capkpi.new_doc("Exchange Rate Revaluation")
 		revaluation.posting_date = today()
 		revaluation.company = company
 		revaluation.set(
@@ -106,11 +106,11 @@ class TestGeneralLedger(CapKPITestCase):
 		revaluation.submit()
 
 		# post journal entry to revaluate
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Company", company, "unrealized_exchange_gain_loss_account", "_Test Exchange Gain/Loss - _TC"
 		)
 		revaluation_jv = revaluation.make_jv_entry()
-		revaluation_jv = frappe.get_doc(revaluation_jv)
+		revaluation_jv = capkpi.get_doc(revaluation_jv)
 		revaluation_jv.cost_center = "_Test Cost Center - _TC"
 		for acc in revaluation_jv.get("accounts"):
 			acc.cost_center = "_Test Cost Center - _TC"
@@ -118,7 +118,7 @@ class TestGeneralLedger(CapKPITestCase):
 		revaluation_jv.submit()
 
 		# check the balance of the account
-		balance = frappe.db.sql(
+		balance = capkpi.db.sql(
 			"""
 				select sum(debit_in_account_currency) - sum(credit_in_account_currency)
 				from `tabGL Entry`
@@ -132,7 +132,7 @@ class TestGeneralLedger(CapKPITestCase):
 
 		# check if general ledger shows correct balance
 		columns, data = execute(
-			frappe._dict(
+			capkpi._dict(
 				{
 					"company": company,
 					"from_date": today(),

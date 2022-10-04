@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
@@ -25,35 +25,35 @@ class PeriodClosingVoucher(AccountsController):
 	def on_cancel(self):
 		self.db_set("gle_processing_status", "In Progress")
 		self.ignore_linked_doctypes = ("GL Entry", "Stock Ledger Entry")
-		gle_count = frappe.db.count(
+		gle_count = capkpi.db.count(
 			"GL Entry",
 			{"voucher_type": "Period Closing Voucher", "voucher_no": self.name, "is_cancelled": 0},
 		)
 		if gle_count > 5000:
-			frappe.enqueue(
+			capkpi.enqueue(
 				make_reverse_gl_entries,
 				voucher_type="Period Closing Voucher",
 				voucher_no=self.name,
 				queue="long",
 			)
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("The GL Entries will be cancelled in the background, it can take a few minutes."), alert=True
 			)
 		else:
 			make_reverse_gl_entries(voucher_type="Period Closing Voucher", voucher_no=self.name)
 
 	def validate_account_head(self):
-		closing_account_type = frappe.db.get_value("Account", self.closing_account_head, "root_type")
+		closing_account_type = capkpi.db.get_value("Account", self.closing_account_head, "root_type")
 
 		if closing_account_type not in ["Liability", "Equity"]:
-			frappe.throw(
+			capkpi.throw(
 				_("Closing Account {0} must be of type Liability / Equity").format(self.closing_account_head)
 			)
 
 		account_currency = get_account_currency(self.closing_account_head)
-		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		company_currency = capkpi.get_cached_value("Company", self.company, "default_currency")
 		if account_currency != company_currency:
-			frappe.throw(_("Currency of the Closing Account must be {0}").format(company_currency))
+			capkpi.throw(_("Currency of the Closing Account must be {0}").format(company_currency))
 
 	def validate_posting_date(self):
 		from erp.accounts.utils import get_fiscal_year, validate_fiscal_year
@@ -66,13 +66,13 @@ class PeriodClosingVoucher(AccountsController):
 			self.posting_date, self.fiscal_year, company=self.company
 		)[1]
 
-		pce = frappe.db.sql(
+		pce = capkpi.db.sql(
 			"""select name from `tabPeriod Closing Voucher`
 			where posting_date > %s and fiscal_year = %s and docstatus = 1 and company = %s""",
 			(self.posting_date, self.fiscal_year, self.company),
 		)
 		if pce and pce[0][0]:
-			frappe.throw(
+			capkpi.throw(
 				_("Another Period Closing Entry {0} has been made after {1}").format(
 					pce[0][0], self.posting_date
 				)
@@ -82,8 +82,8 @@ class PeriodClosingVoucher(AccountsController):
 		gl_entries = self.get_gl_entries()
 		if gl_entries:
 			if len(gl_entries) > 5000:
-				frappe.enqueue(process_gl_entries, gl_entries=gl_entries, queue="long")
-				frappe.msgprint(
+				capkpi.enqueue(process_gl_entries, gl_entries=gl_entries, queue="long")
+				capkpi.msgprint(
 					_("The GL Entries will be processed in the background, it can take a few minutes."),
 					alert=True,
 				)
@@ -166,7 +166,7 @@ class PeriodClosingVoucher(AccountsController):
 		if group_by_account:
 			dimension_fields.append("t1.account")
 
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""
 			select
 				t2.account_currency,
@@ -195,13 +195,13 @@ def process_gl_entries(gl_entries):
 
 	try:
 		make_gl_entries(gl_entries, merge_entries=False)
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Period Closing Voucher", gl_entries[0].get("voucher_no"), "gle_processing_status", "Completed"
 		)
 	except Exception as e:
-		frappe.db.rollback()
-		frappe.log_error(e)
-		frappe.db.set_value(
+		capkpi.db.rollback()
+		capkpi.log_error(e)
+		capkpi.db.set_value(
 			"Period Closing Voucher", gl_entries[0].get("voucher_no"), "gle_processing_status", "Failed"
 		)
 
@@ -211,8 +211,8 @@ def make_reverse_gl_entries(voucher_type, voucher_no):
 
 	try:
 		make_reverse_gl_entries(voucher_type=voucher_type, voucher_no=voucher_no)
-		frappe.db.set_value("Period Closing Voucher", voucher_no, "gle_processing_status", "Completed")
+		capkpi.db.set_value("Period Closing Voucher", voucher_no, "gle_processing_status", "Completed")
 	except Exception as e:
-		frappe.db.rollback()
-		frappe.log_error(e)
-		frappe.db.set_value("Period Closing Voucher", voucher_no, "gle_processing_status", "Failed")
+		capkpi.db.rollback()
+		capkpi.log_error(e)
+		capkpi.db.set_value("Period Closing Voucher", voucher_no, "gle_processing_status", "Failed")

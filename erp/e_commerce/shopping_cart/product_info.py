@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
+import capkpi
 
 from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import (
 	get_shopping_cart_settings,
@@ -16,16 +16,16 @@ from erp.utilities.product import (
 )
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def get_product_info_for_website(item_code, skip_quotation_creation=False):
 	"""get product price / stock info for website"""
 
 	cart_settings = get_shopping_cart_settings()
 	if not cart_settings.enabled:
 		# return settings even if cart is disabled
-		return frappe._dict({"product_info": {}, "cart_settings": cart_settings})
+		return capkpi._dict({"product_info": {}, "cart_settings": cart_settings})
 
-	cart_quotation = frappe._dict()
+	cart_quotation = capkpi._dict()
 	if not skip_quotation_creation:
 		cart_quotation = _get_cart_quotation()
 
@@ -37,7 +37,7 @@ def get_product_info_for_website(item_code, skip_quotation_creation=False):
 
 	price = {}
 	if cart_settings.show_price:
-		is_guest = frappe.session.user == "Guest"
+		is_guest = capkpi.session.user == "Guest"
 		# Show Price if logged in.
 		# If not logged in, check if price is hidden for guest.
 		if not is_guest or not cart_settings.hide_price_for_guest:
@@ -48,17 +48,17 @@ def get_product_info_for_website(item_code, skip_quotation_creation=False):
 	stock_status = None
 
 	if cart_settings.show_stock_availability:
-		on_backorder = frappe.get_cached_value("Website Item", {"item_code": item_code}, "on_backorder")
+		on_backorder = capkpi.get_cached_value("Website Item", {"item_code": item_code}, "on_backorder")
 		if on_backorder:
-			stock_status = frappe._dict({"on_backorder": True})
+			stock_status = capkpi._dict({"on_backorder": True})
 		else:
 			stock_status = get_web_item_qty_in_stock(item_code, "website_warehouse")
 
 	product_info = {
 		"price": price,
 		"qty": 0,
-		"uom": frappe.db.get_value("Item", item_code, "stock_uom"),
-		"sales_uom": frappe.db.get_value("Item", item_code, "sales_uom"),
+		"uom": capkpi.db.get_value("Item", item_code, "stock_uom"),
+		"sales_uom": capkpi.db.get_value("Item", item_code, "sales_uom"),
 	}
 
 	if stock_status:
@@ -74,12 +74,12 @@ def get_product_info_for_website(item_code, skip_quotation_creation=False):
 			product_info["show_stock_qty"] = show_quantity_in_website()
 
 	if product_info["price"]:
-		if frappe.session.user != "Guest":
+		if capkpi.session.user != "Guest":
 			item = cart_quotation.get({"item_code": item_code}) if cart_quotation else None
 			if item:
 				product_info["qty"] = item[0].qty
 
-	return frappe._dict({"product_info": product_info, "cart_settings": cart_settings})
+	return capkpi._dict({"product_info": product_info, "cart_settings": cart_settings})
 
 
 def set_product_info_for_website(item):

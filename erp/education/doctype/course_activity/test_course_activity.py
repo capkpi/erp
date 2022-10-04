@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestCourseActivity(unittest.TestCase):
@@ -11,20 +11,20 @@ class TestCourseActivity(unittest.TestCase):
 
 
 def make_course_activity(enrollment, content_type, content):
-	activity = frappe.get_all(
+	activity = capkpi.get_all(
 		"Course Activity",
 		filters={"enrollment": enrollment, "content_type": content_type, "content": content},
 	)
 	try:
-		activity = frappe.get_doc("Course Activity", activity[0]["name"])
-	except (IndexError, frappe.DoesNotExistError):
-		activity = frappe.get_doc(
+		activity = capkpi.get_doc("Course Activity", activity[0]["name"])
+	except (IndexError, capkpi.DoesNotExistError):
+		activity = capkpi.get_doc(
 			{
 				"doctype": "Course Activity",
 				"enrollment": enrollment,
 				"content_type": content_type,
 				"content": content,
-				"activity_date": frappe.utils.datetime.datetime.now(),
+				"activity_date": capkpi.utils.datetime.datetime.now(),
 			}
 		).insert()
 	return activity

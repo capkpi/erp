@@ -4,9 +4,9 @@
 
 import datetime
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class AppointmentBookingSettings(Document):
@@ -34,11 +34,11 @@ class AppointmentBookingSettings(Document):
 			err_msg = _("<b>From Time</b> cannot be later than <b>To Time</b> for {0}").format(
 				record.day_of_week
 			)
-			frappe.throw(_(err_msg))
+			capkpi.throw(_(err_msg))
 
 	def duration_is_divisible(self, from_time, to_time):
 		timedelta = to_time - from_time
 		if timedelta.total_seconds() % (self.appointment_duration * 60):
-			frappe.throw(
+			capkpi.throw(
 				_("The difference between from time and To Time must be a multiple of Appointment")
 			)

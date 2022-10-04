@@ -1,9 +1,9 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on('Asset Value Adjustment', {
+capkpi.ui.form.on('Asset Value Adjustment', {
 	setup: function(frm) {
 		frm.add_fetch('company', 'cost_center', 'cost_center');
 		frm.set_query('cost_center', function() {

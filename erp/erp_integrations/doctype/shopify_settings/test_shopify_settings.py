@@ -5,9 +5,9 @@ import json
 import os
 import unittest
 
-import frappe
-from frappe.core.doctype.data_import.data_import import import_doc
-from frappe.utils import cint, cstr
+import capkpi
+from capkpi.core.doctype.data_import.data_import import import_doc
+from capkpi.utils import cint, cstr
 
 from erp.erp_integrations.connectors.shopify_connection import create_order
 from erp.erp_integrations.doctype.shopify_settings.shopify_settings import (
@@ -20,31 +20,31 @@ from erp.erp_integrations.doctype.shopify_settings.sync_product import make_item
 class ShopifySettings(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 
 		cls.allow_negative_stock = cint(
-			frappe.db.get_value("Stock Settings", None, "allow_negative_stock")
+			capkpi.db.get_value("Stock Settings", None, "allow_negative_stock")
 		)
 		if not cls.allow_negative_stock:
-			frappe.db.set_value("Stock Settings", None, "allow_negative_stock", 1)
+			capkpi.db.set_value("Stock Settings", None, "allow_negative_stock", 1)
 
 		setup_custom_fields()
 
-		frappe.reload_doctype("Customer")
-		frappe.reload_doctype("Sales Order")
-		frappe.reload_doctype("Delivery Note")
-		frappe.reload_doctype("Sales Invoice")
+		capkpi.reload_doctype("Customer")
+		capkpi.reload_doctype("Sales Order")
+		capkpi.reload_doctype("Delivery Note")
+		capkpi.reload_doctype("Sales Invoice")
 
 		cls.setup_shopify()
 
 	@classmethod
 	def tearDownClass(cls):
 		if not cls.allow_negative_stock:
-			frappe.db.set_value("Stock Settings", None, "allow_negative_stock", 0)
+			capkpi.db.set_value("Stock Settings", None, "allow_negative_stock", 0)
 
 	@classmethod
 	def setup_shopify(cls):
-		shopify_settings = frappe.get_doc("Shopify Settings")
+		shopify_settings = capkpi.get_doc("Shopify Settings")
 		shopify_settings.taxes = []
 
 		shopify_settings.update(
@@ -96,7 +96,7 @@ class ShopifySettings(unittest.TestCase):
 
 		create_order(shopify_order.get("order"), self.shopify_settings, False, company="_Test Company")
 
-		sales_order = frappe.get_doc(
+		sales_order = capkpi.get_doc(
 			"Sales Order", {"shopify_order_id": cstr(shopify_order.get("order").get("id"))}
 		)
 
@@ -104,20 +104,20 @@ class ShopifySettings(unittest.TestCase):
 
 		# Check for customer
 		shopify_order_customer_id = cstr(shopify_order.get("order").get("customer").get("id"))
-		sales_order_customer_id = frappe.get_value(
+		sales_order_customer_id = capkpi.get_value(
 			"Customer", sales_order.customer, "shopify_customer_id"
 		)
 
 		self.assertEqual(shopify_order_customer_id, sales_order_customer_id)
 
 		# Check sales invoice
-		sales_invoice = frappe.get_doc(
+		sales_invoice = capkpi.get_doc(
 			"Sales Invoice", {"shopify_order_id": sales_order.shopify_order_id}
 		)
 		self.assertEqual(sales_invoice.rounded_total, sales_order.rounded_total)
 
 		# Check delivery note
-		delivery_note_count = frappe.db.sql(
+		delivery_note_count = capkpi.db.sql(
 			"""select count(*) from `tabDelivery Note`
 			where shopify_order_id = %s""",
 			sales_order.shopify_order_id,

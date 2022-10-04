@@ -1,10 +1,10 @@
 // Copyright (c) 2022, CapKPI Technologies Pvt. Ltd. and Contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts");
-erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend({
+capkpi.provide("erp.accounts");
+erp.accounts.PaymentReconciliationController = capkpi.ui.form.Controller.extend({
 	onload: function() {
-		const default_company = frappe.defaults.get_default('company');
+		const default_company = capkpi.defaults.get_default('company');
 		this.frm.set_value('company', default_company);
 
 		this.frm.set_value('party_type', '');
@@ -14,7 +14,7 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 		this.frm.set_query("party_type", () => {
 			return {
 				"filters": {
-					"name": ["in", Object.keys(frappe.boot.party_account_types)],
+					"name": ["in", Object.keys(capkpi.boot.party_account_types)],
 				}
 			}
 		});
@@ -24,7 +24,7 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 				filters: {
 					"company": this.frm.doc.company,
 					"is_group": 0,
-					"account_type": frappe.boot.party_account_types[this.frm.doc.party_type]
+					"account_type": capkpi.boot.party_account_types[this.frm.doc.party_type]
 				}
 			};
 		});
@@ -98,7 +98,7 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 		this.frm.trigger("clear_child_tables");
 
 		if (!this.frm.doc.receivable_payable_account && this.frm.doc.party_type && this.frm.doc.party) {
-			return frappe.call({
+			return capkpi.call({
 				method: "erp.accounts.party.get_party_account",
 				args: {
 					company: this.frm.doc.company,
@@ -135,11 +135,11 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 			method: 'get_unreconciled_entries',
 			callback: () => {
 				if (!(this.frm.doc.payments.length || this.frm.doc.invoices.length)) {
-					frappe.throw({message: __("No Unreconciled Invoices and Payments found for this party and account")});
+					capkpi.throw({message: __("No Unreconciled Invoices and Payments found for this party and account")});
 				} else if (!(this.frm.doc.invoices.length)) {
-					frappe.throw({message: __("No Outstanding Invoices found for this party")});
+					capkpi.throw({message: __("No Outstanding Invoices found for this party")});
 				} else if (!(this.frm.doc.payments.length)) {
-					frappe.throw({message: __("No Unreconciled Payments found for this party")});
+					capkpi.throw({message: __("No Unreconciled Payments found for this party")});
 				}
 				this.frm.refresh();
 			}
@@ -175,7 +175,7 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 		if (show_dialog && show_dialog.length) {
 
 			this.data = [];
-			const dialog = new frappe.ui.Dialog({
+			const dialog = new capkpi.ui.Dialog({
 				title: __("Select Difference Account"),
 				fields: [
 					{
@@ -223,7 +223,7 @@ erp.accounts.PaymentReconciliationController = frappe.ui.form.Controller.extend(
 					const args = dialog.get_values()["allocation"];
 
 					args.forEach(d => {
-						frappe.model.set_value("Payment Reconciliation Allocation", d.docname,
+						capkpi.model.set_value("Payment Reconciliation Allocation", d.docname,
 							"difference_account", d.difference_account);
 					});
 

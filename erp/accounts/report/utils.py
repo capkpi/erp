@@ -1,5 +1,5 @@
-import frappe
-from frappe.utils import flt, formatdate, get_datetime_str
+import capkpi
+from capkpi.utils import flt, formatdate, get_datetime_str
 
 from erp import get_company_currency, get_default_company
 from erp.accounts.doctype.fiscal_year.fiscal_year import get_from_and_to_date
@@ -131,15 +131,15 @@ def get_appropriate_company(filters):
 	return company
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_invoiced_item_gross_margin(
 	sales_invoice=None, item_code=None, company=None, with_item_data=False
 ):
 	from erp.accounts.report.gross_profit.gross_profit import GrossProfitGenerator
 
-	sales_invoice = sales_invoice or frappe.form_dict.get("sales_invoice")
-	item_code = item_code or frappe.form_dict.get("item_code")
-	company = company or frappe.get_cached_value("Sales Invoice", sales_invoice, "company")
+	sales_invoice = sales_invoice or capkpi.form_dict.get("sales_invoice")
+	item_code = item_code or capkpi.form_dict.get("item_code")
+	company = company or capkpi.get_cached_value("Sales Invoice", sales_invoice, "company")
 
 	filters = {
 		"sales_invoice": sales_invoice,

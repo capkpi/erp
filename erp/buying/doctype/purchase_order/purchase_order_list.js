@@ -1,4 +1,4 @@
-frappe.listview_settings['Purchase Order'] = {
+capkpi.listview_settings['Purchase Order'] = {
 	add_fields: ["base_grand_total", "company", "currency", "supplier",
 		"supplier_name", "per_received", "per_billed", "status"],
 	get_indicator: function (doc) {

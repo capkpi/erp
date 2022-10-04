@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 
 def execute(filters=None):
@@ -16,7 +16,7 @@ def execute(filters=None):
 
 def get_columns(based_on):
 	return [
-		{"fieldname": frappe.scrub(based_on), "label": _(based_on), "fieldtype": "Data", "width": 150},
+		{"fieldname": capkpi.scrub(based_on), "label": _(based_on), "fieldtype": "Data", "width": 150},
 		{"fieldname": "lead_count", "label": _("Lead Count"), "fieldtype": "Int", "width": 80},
 		{"fieldname": "opp_count", "label": _("Opp Count"), "fieldtype": "Int", "width": 80},
 		{"fieldname": "quot_count", "label": _("Quot Count"), "fieldtype": "Int", "width": 80},
@@ -29,10 +29,10 @@ def get_columns(based_on):
 
 
 def get_lead_data(filters, based_on):
-	based_on_field = frappe.scrub(based_on)
+	based_on_field = capkpi.scrub(based_on)
 	conditions = get_filter_conditions(filters)
 
-	lead_details = frappe.db.sql(
+	lead_details = capkpi.db.sql(
 		"""
 		select {based_on_field}, name
 		from `tabLead`
@@ -44,7 +44,7 @@ def get_lead_data(filters, based_on):
 		as_dict=1,
 	)
 
-	lead_map = frappe._dict()
+	lead_map = capkpi._dict()
 	for d in lead_details:
 		lead_map.setdefault(d.get(based_on_field), []).append(d.name)
 
@@ -77,7 +77,7 @@ def get_filter_conditions(filters):
 
 
 def get_lead_quotation_count(leads):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select count(name) from `tabQuotation`
 		where quotation_to = 'Lead' and party_name in (%s)"""
 		% ", ".join(["%s"] * len(leads)),
@@ -88,7 +88,7 @@ def get_lead_quotation_count(leads):
 
 
 def get_lead_opp_count(leads):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select count(name) from `tabOpportunity`
 	where opportunity_from = 'Lead' and party_name in (%s)"""
 		% ", ".join(["%s"] * len(leads)),
@@ -97,7 +97,7 @@ def get_lead_opp_count(leads):
 
 
 def get_quotation_ordered_count(leads):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select count(name)
 		from `tabQuotation` where status = 'Ordered' and quotation_to = 'Lead'
 		and party_name in (%s)"""
@@ -107,7 +107,7 @@ def get_quotation_ordered_count(leads):
 
 
 def get_order_amount(leads):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select sum(base_net_amount)
 		from `tabSales Order Item`
 		where prevdoc_docname in (

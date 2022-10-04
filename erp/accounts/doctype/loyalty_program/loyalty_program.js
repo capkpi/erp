@@ -1,9 +1,9 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on('Loyalty Program', {
+capkpi.ui.form.on('Loyalty Program', {
 	setup: function(frm) {
 		var help_content =
 			`<table class="table table-bordered" style="background-color: var(--scrollbar-track-color);">
@@ -48,13 +48,13 @@ frappe.ui.form.on('Loyalty Program', {
 			};
 		});
 
-		frm.set_value("company", frappe.defaults.get_user_default("Company"));
+		frm.set_value("company", capkpi.defaults.get_user_default("Company"));
 		erp.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
 	},
 
 	refresh: function(frm) {
 		if (frm.doc.loyalty_program_type === "Single Tier Program" && frm.doc.collection_rules.length > 1) {
-			frappe.throw(__("Please select the Multiple Tier Program type for more than one collection rules."));
+			capkpi.throw(__("Please select the Multiple Tier Program type for more than one collection rules."));
 		}
 	},
 

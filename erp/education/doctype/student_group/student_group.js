@@ -1,6 +1,6 @@
 cur_frm.add_fetch('student', 'title', 'student_name');
 
-frappe.ui.form.on('Student Group', {
+capkpi.ui.form.on('Student Group', {
 	onload: function(frm) {
 		frm.set_query('academic_term', function() {
 			return {
@@ -32,7 +32,7 @@ frappe.ui.form.on('Student Group', {
 		if (!frm.doc.__islocal) {
 
 			frm.add_custom_button(__('Add Guardians to Email Group'), function() {
-				frappe.call({
+				capkpi.call({
 					method: 'erp.education.api.update_email_group',
 					args: {
 						'doctype': 'Student Group',
@@ -42,25 +42,25 @@ frappe.ui.form.on('Student Group', {
 			}, __('Actions'));
 
 			frm.add_custom_button(__('Student Attendance Tool'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					based_on: 'Student Group',
 					student_group: frm.doc.name
 				}
-				frappe.set_route('Form', 'Student Attendance Tool', 'Student Attendance Tool');
+				capkpi.set_route('Form', 'Student Attendance Tool', 'Student Attendance Tool');
 			}, __('Tools'));
 
 			frm.add_custom_button(__('Course Scheduling Tool'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					student_group: frm.doc.name
 				}
-				frappe.set_route('Form', 'Course Scheduling Tool', 'Course Scheduling Tool');
+				capkpi.set_route('Form', 'Course Scheduling Tool', 'Course Scheduling Tool');
 			}, __('Tools'));
 
 			frm.add_custom_button(__('Newsletter'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					'Newsletter Email Group.email_group': frm.doc.name
 				}
-				frappe.set_route('List', 'Newsletter');
+				capkpi.set_route('List', 'Newsletter');
 			}, __('View'));
 
 		}
@@ -94,7 +94,7 @@ frappe.ui.form.on('Student Group', {
 			});
 
 			if (frm.doc.academic_year) {
-				frappe.call({
+				capkpi.call({
 					method: 'erp.education.doctype.student_group.student_group.get_students',
 					args: {
 						'academic_year': frm.doc.academic_year,
@@ -121,18 +121,18 @@ frappe.ui.form.on('Student Group', {
 							refresh_field('students');
 							frm.save();
 						} else {
-							frappe.msgprint(__('Student Group is already updated.'))
+							capkpi.msgprint(__('Student Group is already updated.'))
 						}
 					}
 				})
 			}
 		} else {
-			frappe.msgprint(__('Select students manually for the Activity based Group'));
+			capkpi.msgprint(__('Select students manually for the Activity based Group'));
 		}
 	}
 });
 
-frappe.ui.form.on('Student Group Instructor', {
+capkpi.ui.form.on('Student Group Instructor', {
 	instructors_add: function(frm){
 		frm.fields_dict['instructors'].grid.get_field('instructor').get_query = function(doc){
 			let instructor_list = [];

@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.query_builder.functions import Sum
-from frappe.utils import add_to_date, flt, get_date_str
+import capkpi
+from capkpi import _
+from capkpi.query_builder.functions import Sum
+from capkpi.utils import add_to_date, flt, get_date_str
 
 from erp.accounts.report.financial_statements import get_columns, get_data, get_period_list
 from erp.accounts.report.profit_and_loss_statement.profit_and_loss_statement import (
@@ -19,7 +19,7 @@ def get_mapper_for(mappers, position):
 
 
 def get_mappers_from_db():
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Cash Flow Mapper",
 		fields=[
 			"section_name",
@@ -35,10 +35,10 @@ def get_mappers_from_db():
 
 
 def get_accounts_in_mappers(mapping_names):
-	cfm = frappe.qb.DocType("Cash Flow Mapping")
-	cfma = frappe.qb.DocType("Cash Flow Mapping Accounts")
+	cfm = capkpi.qb.DocType("Cash Flow Mapping")
+	cfma = capkpi.qb.DocType("Cash Flow Mapping Accounts")
 	result = (
-		frappe.qb.select(
+		capkpi.qb.select(
 			cfma.name,
 			cfm.label,
 			cfm.is_working_capital,
@@ -66,7 +66,7 @@ def setup_mappers(mappers):
 		mapping["tax_expenses"] = []
 		mapping["finance_costs"] = []
 		mapping["finance_costs_adjustments"] = []
-		doc = frappe.get_doc("Cash Flow Mapper", mapping["name"])
+		doc = capkpi.get_doc("Cash Flow Mapper", mapping["name"])
 		mapping_names = [item.name for item in doc.accounts]
 
 		if not mapping_names:
@@ -463,7 +463,7 @@ def execute(filters=None):
 
 	net_profit_loss = get_net_profit_loss(income, expense, period_list, filters.company)
 
-	company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.company, "default_currency")
 
 	data = compute_data(
 		filters, company_currency, net_profit_loss, period_list, mappers, cash_flow_accounts
@@ -489,14 +489,14 @@ def _get_account_type_based_data(
 	company = filters.company
 	data = {}
 	total = 0
-	GLEntry = frappe.qb.DocType("GL Entry")
-	Account = frappe.qb.DocType("Account")
+	GLEntry = capkpi.qb.DocType("GL Entry")
+	Account = capkpi.qb.DocType("Account")
 
 	for period in period_list:
 		start_date = get_start_date(period, accumulated_values, company)
 
 		account_subquery = (
-			frappe.qb.from_(Account)
+			capkpi.qb.from_(Account)
 			.where((Account.name.isin(account_names)) | (Account.parent_account.isin(account_names)))
 			.select(Account.name)
 			.as_("account_subquery")
@@ -524,7 +524,7 @@ def _get_account_type_based_data(
 			start, end = get_date_str(start), get_date_str(end)
 
 		result = (
-			frappe.qb.from_(GLEntry)
+			capkpi.qb.from_(GLEntry)
 			.select(Sum(GLEntry.credit) - Sum(GLEntry.debit))
 			.where(
 				(GLEntry.company == company)

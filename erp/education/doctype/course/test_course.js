@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('test course', function(assert) {
 	assert.expect(8);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Course', [
+			return capkpi.tests.make('Course', [
 				{course_name: 'Test_Subject'},
 				{course_code: 'Test_Sub'},
 				{department: 'Test Department'},

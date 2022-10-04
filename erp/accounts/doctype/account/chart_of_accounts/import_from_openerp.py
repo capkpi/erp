@@ -10,8 +10,8 @@ import json
 import os
 from xml.etree import ElementTree as ET
 
-import frappe
-from frappe.utils.csvutils import read_csv_content
+import capkpi
+from capkpi.utils.csvutils import read_csv_content
 from six import iteritems
 
 path = "/Users/nabinhait/projects/odoo/addons"
@@ -68,7 +68,7 @@ def get_default_account_types():
 
 
 def get_xml_roots(files_path):
-	xml_roots = frappe._dict()
+	xml_roots = capkpi._dict()
 	for filepath in files_path:
 		fname = os.path.basename(filepath)
 		if fname.endswith(".xml"):

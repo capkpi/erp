@@ -2,19 +2,19 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import comma_or, flt, getdate, now, nowdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import comma_or, flt, getdate, now, nowdate
 
 
-class OverAllowanceError(frappe.ValidationError):
+class OverAllowanceError(capkpi.ValidationError):
 	pass
 
 
 def validate_status(status, options):
 	if status not in options:
-		frappe.throw(_("Status must be one of {0}").format(comma_or(options)))
+		capkpi.throw(_("Status must be one of {0}").format(comma_or(options)))
 
 
 status_map = {
@@ -186,14 +186,14 @@ class StatusUpdater(Document):
 					self.status = s[0]
 					break
 				elif s[1].startswith("eval:"):
-					if frappe.safe_eval(
+					if capkpi.safe_eval(
 						s[1][5:],
 						None,
 						{
 							"self": self.as_dict(),
 							"getdate": getdate,
 							"nowdate": nowdate,
-							"get_value": frappe.db.get_value,
+							"get_value": capkpi.db.get_value,
 						},
 					):
 						self.status = s[0]
@@ -228,16 +228,16 @@ class StatusUpdater(Document):
 			# get unique transactions to update
 			for d in self.get_all_children():
 				if hasattr(d, "qty") and d.qty < 0 and not self.get("is_return"):
-					frappe.throw(_("For an item {0}, quantity must be positive number").format(d.item_code))
+					capkpi.throw(_("For an item {0}, quantity must be positive number").format(d.item_code))
 
 				if hasattr(d, "qty") and d.qty > 0 and self.get("is_return"):
-					frappe.throw(_("For an item {0}, quantity must be negative number").format(d.item_code))
+					capkpi.throw(_("For an item {0}, quantity must be negative number").format(d.item_code))
 
 				if d.doctype == args["source_dt"] and d.get(args["join_field"]):
 					args["name"] = d.get(args["join_field"])
 
 					# get all qty where qty > target_field
-					item = frappe.db.sql(
+					item = capkpi.db.sql(
 						"""select item_code, `{target_ref_field}`,
 						`{target_field}`, parenttype, parent from `tab{target_dt}`
 						where `{target_ref_field}` < `{target_field}`
@@ -282,10 +282,10 @@ class StatusUpdater(Document):
 			qty_or_amount,
 		)
 
-		role_allowed_to_over_deliver_receive = frappe.db.get_single_value(
+		role_allowed_to_over_deliver_receive = capkpi.db.get_single_value(
 			"Stock Settings", "role_allowed_to_over_deliver_receive"
 		)
-		role_allowed_to_over_bill = frappe.db.get_single_value(
+		role_allowed_to_over_bill = capkpi.db.get_single_value(
 			"Accounts Settings", "role_allowed_to_over_bill"
 		)
 		role = (
@@ -300,7 +300,7 @@ class StatusUpdater(Document):
 			item["max_allowed"] = flt(item[args["target_ref_field"]] * (100 + allowance) / 100)
 			item["reduce_by"] = item[args["target_field"]] - item["max_allowed"]
 
-			if role not in frappe.get_roles():
+			if role not in capkpi.get_roles():
 				self.limits_crossed_error(args, item, qty_or_amount)
 			else:
 				self.warn_about_bypassing_with_role(item, qty_or_amount, role)
@@ -316,15 +316,15 @@ class StatusUpdater(Document):
 				'To allow over billing, update "Over Billing Allowance" in Accounts Settings or the Item.'
 			)
 
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"This document is over limit by {0} {1} for item {4}. Are you making another {3} against the same {2}?"
 			).format(
-				frappe.bold(_(item["target_ref_field"].title())),
-				frappe.bold(item["reduce_by"]),
-				frappe.bold(_(args.get("target_dt"))),
-				frappe.bold(_(self.doctype)),
-				frappe.bold(item.get("item_code")),
+				capkpi.bold(_(item["target_ref_field"].title())),
+				capkpi.bold(item["reduce_by"]),
+				capkpi.bold(_(args.get("target_dt"))),
+				capkpi.bold(_(self.doctype)),
+				capkpi.bold(item.get("item_code")),
 			)
 			+ "<br><br>"
 			+ action_msg,
@@ -338,11 +338,11 @@ class StatusUpdater(Document):
 		msg = _("{} of {} {} ignored for item {} because you have {} role.").format(
 			action,
 			_(item["target_ref_field"].title()),
-			frappe.bold(item["reduce_by"]),
-			frappe.bold(item.get("item_code")),
+			capkpi.bold(item["reduce_by"]),
+			capkpi.bold(item.get("item_code")),
 			role,
 		)
-		frappe.msgprint(msg, indicator="orange", alert=True)
+		capkpi.msgprint(msg, indicator="orange", alert=True)
 
 	def update_qty(self, update_modified=True):
 		"""Updates qty or amount at row level
@@ -381,7 +381,7 @@ class StatusUpdater(Document):
 				if not args.get("second_source_extra_cond"):
 					args["second_source_extra_cond"] = ""
 
-				args["second_source_condition"] = frappe.db.sql(
+				args["second_source_condition"] = capkpi.db.sql(
 					""" select ifnull((select sum(%(second_source_field)s)
 					from `tab%(second_source_dt)s`
 					where `%(second_join_field)s`="%(detail_id)s"
@@ -395,7 +395,7 @@ class StatusUpdater(Document):
 					args["extra_cond"] = ""
 
 				args["source_dt_value"] = (
-					frappe.db.sql(
+					capkpi.db.sql(
 						"""
 						(select ifnull(sum(%(source_field)s), 0)
 							from `tab%(source_dt)s` where `%(join_field)s`="%(detail_id)s"
@@ -409,7 +409,7 @@ class StatusUpdater(Document):
 				if args["second_source_condition"]:
 					args["source_dt_value"] += flt(args["second_source_condition"])
 
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""update `tab%(target_dt)s`
 					set %(target_field)s = %(source_dt_value)s %(update_modified)s
 					where name='%(detail_id)s'"""
@@ -439,7 +439,7 @@ class StatusUpdater(Document):
 		self._update_modified(args, update_modified)
 
 		if args.get("target_parent_field"):
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""update `tab%(target_parent_dt)s`
 				set %(target_parent_field)s = round(
 					ifnull((select
@@ -453,7 +453,7 @@ class StatusUpdater(Document):
 
 			# update field
 			if args.get("status_field"):
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""update `tab%(target_parent_dt)s`
 					set %(status_field)s = if(%(target_parent_field)s<0.001,
 						'Not %(keyword)s', if(%(target_parent_field)s>=99.999999,
@@ -463,7 +463,7 @@ class StatusUpdater(Document):
 				)
 
 			if update_modified:
-				target = frappe.get_doc(args["target_parent_dt"], args["name"])
+				target = capkpi.get_doc(args["target_parent_dt"], args["name"])
 				target.set_status(update=True)
 				target.notify_update()
 
@@ -473,11 +473,11 @@ class StatusUpdater(Document):
 			return
 
 		args["update_modified"] = ", modified = {0}, modified_by = {1}".format(
-			frappe.db.escape(now()), frappe.db.escape(frappe.session.user)
+			capkpi.db.escape(now()), capkpi.db.escape(capkpi.session.user)
 		)
 
 	def update_billing_status_for_zero_amount_refdoc(self, ref_dt):
-		ref_fieldname = frappe.scrub(ref_dt)
+		ref_fieldname = capkpi.scrub(ref_dt)
 
 		ref_docs = [
 			item.get(ref_fieldname) for item in (self.get("items") or []) if item.get(ref_fieldname)
@@ -485,7 +485,7 @@ class StatusUpdater(Document):
 		if not ref_docs:
 			return
 
-		zero_amount_refdocs = frappe.db.sql_list(
+		zero_amount_refdocs = capkpi.db.sql_list(
 			"""
 			SELECT
 				name
@@ -507,7 +507,7 @@ class StatusUpdater(Document):
 	def update_billing_status(self, zero_amount_refdoc, ref_dt, ref_fieldname):
 		for ref_dn in zero_amount_refdoc:
 			ref_doc_qty = flt(
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""select ifnull(sum(qty), 0) from `tab%s Item`
 				where parent=%s"""
 					% (ref_dt, "%s"),
@@ -516,7 +516,7 @@ class StatusUpdater(Document):
 			)
 
 			billed_qty = flt(
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""select ifnull(sum(qty), 0)
 				from `tab%s Item` where %s=%s and docstatus=1"""
 					% (self.doctype, ref_fieldname, "%s"),
@@ -526,7 +526,7 @@ class StatusUpdater(Document):
 
 			per_billed = (min(ref_doc_qty, billed_qty) / ref_doc_qty) * 100
 
-			ref_doc = frappe.get_doc(ref_dt, ref_dn)
+			ref_doc = capkpi.get_doc(ref_dt, ref_dn)
 
 			ref_doc.db_set("per_billed", per_billed)
 
@@ -555,7 +555,7 @@ def get_allowance_for(
 	if item_allowance is None:
 		item_allowance = {}
 	if qty_or_amount == "qty":
-		if item_allowance.get(item_code, frappe._dict()).get("qty"):
+		if item_allowance.get(item_code, capkpi._dict()).get("qty"):
 			return (
 				item_allowance[item_code].qty,
 				item_allowance,
@@ -563,7 +563,7 @@ def get_allowance_for(
 				global_amount_allowance,
 			)
 	else:
-		if item_allowance.get(item_code, frappe._dict()).get("amount"):
+		if item_allowance.get(item_code, capkpi._dict()).get("amount"):
 			return (
 				item_allowance[item_code].amount,
 				item_allowance,
@@ -571,28 +571,28 @@ def get_allowance_for(
 				global_amount_allowance,
 			)
 
-	qty_allowance, over_billing_allowance = frappe.db.get_value(
+	qty_allowance, over_billing_allowance = capkpi.db.get_value(
 		"Item", item_code, ["over_delivery_receipt_allowance", "over_billing_allowance"]
 	)
 
 	if qty_or_amount == "qty" and not qty_allowance:
 		if global_qty_allowance == None:
 			global_qty_allowance = flt(
-				frappe.db.get_single_value("Stock Settings", "over_delivery_receipt_allowance")
+				capkpi.db.get_single_value("Stock Settings", "over_delivery_receipt_allowance")
 			)
 		qty_allowance = global_qty_allowance
 	elif qty_or_amount == "amount" and not over_billing_allowance:
 		if global_amount_allowance == None:
 			global_amount_allowance = flt(
-				frappe.db.get_single_value("Accounts Settings", "over_billing_allowance")
+				capkpi.db.get_single_value("Accounts Settings", "over_billing_allowance")
 			)
 		over_billing_allowance = global_amount_allowance
 
 	if qty_or_amount == "qty":
 		allowance = qty_allowance
-		item_allowance.setdefault(item_code, frappe._dict()).setdefault("qty", qty_allowance)
+		item_allowance.setdefault(item_code, capkpi._dict()).setdefault("qty", qty_allowance)
 	else:
 		allowance = over_billing_allowance
-		item_allowance.setdefault(item_code, frappe._dict()).setdefault("amount", over_billing_allowance)
+		item_allowance.setdefault(item_code, capkpi._dict()).setdefault("amount", over_billing_allowance)
 
 	return allowance, item_allowance, global_qty_allowance, global_amount_allowance

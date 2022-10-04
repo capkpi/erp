@@ -1,19 +1,19 @@
 # Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import frappe
+import capkpi
 import plaid
 import requests
-from frappe import _
+from capkpi import _
 from plaid.errors import APIError, InvalidRequestError, ItemError
 
 
 class PlaidConnector:
 	def __init__(self, access_token=None):
 		self.access_token = access_token
-		self.settings = frappe.get_single("Plaid Settings")
+		self.settings = capkpi.get_single("Plaid Settings")
 		self.products = ["auth", "transactions"]
-		self.client_name = frappe.local.site
+		self.client_name = capkpi.local.site
 		self.client = plaid.Client(
 			client_id=self.settings.plaid_client_id,
 			secret=self.settings.get_password("plaid_secret"),
@@ -23,7 +23,7 @@ class PlaidConnector:
 
 	def get_access_token(self, public_token):
 		if public_token is None:
-			frappe.log_error(_("Public token is missing for this bank"), _("Plaid public token error"))
+			capkpi.log_error(_("Public token is missing for this bank"), _("Plaid public token error"))
 		response = self.client.Item.public_token.exchange(public_token)
 		access_token = response["access_token"]
 		return access_token
@@ -37,9 +37,9 @@ class PlaidConnector:
 		args = {
 			"client_name": self.client_name,
 			# only allow Plaid-supported languages and countries (LAST: Sep-19-2020)
-			"language": frappe.local.lang if frappe.local.lang in ["en", "fr", "es", "nl"] else "en",
+			"language": capkpi.local.lang if capkpi.local.lang in ["en", "fr", "es", "nl"] else "en",
 			"country_codes": country_codes,
-			"user": {"client_user_id": frappe.generate_hash(frappe.session.user, length=32)},
+			"user": {"client_user_id": capkpi.generate_hash(capkpi.session.user, length=32)},
 		}
 
 		if update_mode:
@@ -61,11 +61,11 @@ class PlaidConnector:
 		try:
 			response = self.client.LinkToken.create(token_request)
 		except InvalidRequestError:
-			frappe.log_error(frappe.get_traceback(), _("Plaid invalid request error"))
-			frappe.msgprint(_("Please check your Plaid client ID and secret values"))
+			capkpi.log_error(capkpi.get_traceback(), _("Plaid invalid request error"))
+			capkpi.msgprint(_("Please check your Plaid client ID and secret values"))
 		except APIError as e:
-			frappe.log_error(frappe.get_traceback(), _("Plaid authentication error"))
-			frappe.throw(_(str(e)), title=_("Authentication Failed"))
+			capkpi.log_error(capkpi.get_traceback(), _("Plaid authentication error"))
+			capkpi.throw(_(str(e)), title=_("Authentication Failed"))
 		else:
 			return response["link_token"]
 
@@ -81,8 +81,8 @@ class PlaidConnector:
 		except requests.Timeout:
 			pass
 		except Exception as e:
-			frappe.log_error(frappe.get_traceback(), _("Plaid authentication error"))
-			frappe.throw(_(str(e)), title=_("Authentication Failed"))
+			capkpi.log_error(capkpi.get_traceback(), _("Plaid authentication error"))
+			capkpi.throw(_(str(e)), title=_("Authentication Failed"))
 
 	def get_transactions(self, start_date, end_date, account_id=None):
 		self.auth()
@@ -102,4 +102,4 @@ class PlaidConnector:
 		except ItemError as e:
 			raise e
 		except Exception:
-			frappe.log_error(frappe.get_traceback(), _("Plaid transactions sync error"))
+			capkpi.log_error(capkpi.get_traceback(), _("Plaid transactions sync error"))

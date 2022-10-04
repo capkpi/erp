@@ -4,9 +4,9 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.utils import add_days, flt, getdate, nowdate
+import capkpi
+from capkpi import _
+from capkpi.utils import add_days, flt, getdate, nowdate
 
 import erp
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -30,33 +30,33 @@ class InvoiceDiscounting(AccountsController):
 
 	def validate_mandatory(self):
 		if self.docstatus == 1 and not (self.loan_start_date and self.loan_period):
-			frappe.throw(_("Loan Start Date and Loan Period are mandatory to save the Invoice Discounting"))
+			capkpi.throw(_("Loan Start Date and Loan Period are mandatory to save the Invoice Discounting"))
 
 	def validate_invoices(self):
 		discounted_invoices = [
 			record.sales_invoice
-			for record in frappe.get_all(
+			for record in capkpi.get_all(
 				"Discounted Invoice", fields=["sales_invoice"], filters={"docstatus": 1}
 			)
 		]
 
 		for record in self.invoices:
 			if record.sales_invoice in discounted_invoices:
-				frappe.throw(
+				capkpi.throw(
 					_("Row({0}): {1} is already discounted in {2}").format(
-						record.idx, frappe.bold(record.sales_invoice), frappe.bold(record.parent)
+						record.idx, capkpi.bold(record.sales_invoice), capkpi.bold(record.parent)
 					)
 				)
 
-			actual_outstanding = frappe.db.get_value(
+			actual_outstanding = capkpi.db.get_value(
 				"Sales Invoice", record.sales_invoice, "outstanding_amount"
 			)
 			if record.outstanding_amount > actual_outstanding:
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Row({0}): Outstanding Amount cannot be greater than actual Outstanding Amount {1} in {2}"
 					).format(
-						record.idx, frappe.bold(actual_outstanding), frappe.bold(record.sales_invoice)
+						record.idx, capkpi.bold(actual_outstanding), capkpi.bold(record.sales_invoice)
 					)
 				)
 
@@ -77,7 +77,7 @@ class InvoiceDiscounting(AccountsController):
 			self.status = status
 			self.db_set("status", status)
 			for d in self.invoices:
-				frappe.get_doc("Sales Invoice", d.sales_invoice).set_status(update=True, update_modified=False)
+				capkpi.get_doc("Sales Invoice", d.sales_invoice).set_status(update=True, update_modified=False)
 		else:
 			self.status = "Draft"
 			if self.docstatus == 1:
@@ -93,14 +93,14 @@ class InvoiceDiscounting(AccountsController):
 			if self.docstatus == 1:
 				is_discounted = 1
 			else:
-				discounted_invoice = frappe.db.exists(
+				discounted_invoice = capkpi.db.exists(
 					{"doctype": "Discounted Invoice", "sales_invoice": d.sales_invoice, "docstatus": 1}
 				)
 				is_discounted = 1 if discounted_invoice else 0
-			frappe.db.set_value("Sales Invoice", d.sales_invoice, "is_discounted", is_discounted)
+			capkpi.db.set_value("Sales Invoice", d.sales_invoice, "is_discounted", is_discounted)
 
 	def make_gl_entries(self):
-		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+		company_currency = capkpi.get_cached_value("Company", self.company, "default_currency")
 
 		gl_entries = []
 		invoice_fields = ["debit_to", "party_account_currency", "conversion_rate", "cost_center"]
@@ -109,13 +109,13 @@ class InvoiceDiscounting(AccountsController):
 		invoice_fields.extend(accounting_dimensions)
 
 		for d in self.invoices:
-			inv = frappe.db.get_value("Sales Invoice", d.sales_invoice, invoice_fields, as_dict=1)
+			inv = capkpi.db.get_value("Sales Invoice", d.sales_invoice, invoice_fields, as_dict=1)
 
 			if d.outstanding_amount:
 				outstanding_in_company_currency = flt(
 					d.outstanding_amount * inv.conversion_rate, d.precision("outstanding_amount")
 				)
-				ar_credit_account_currency = frappe.get_cached_value(
+				ar_credit_account_currency = capkpi.get_cached_value(
 					"Account", self.accounts_receivable_credit, "currency"
 				)
 
@@ -161,9 +161,9 @@ class InvoiceDiscounting(AccountsController):
 
 		make_gl_entries(gl_entries, cancel=(self.docstatus == 2), update_outstanding="No")
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def create_disbursement_entry(self):
-		je = frappe.new_doc("Journal Entry")
+		je = capkpi.new_doc("Journal Entry")
 		je.voucher_type = "Journal Entry"
 		je.company = self.company
 		je.remark = "Loan Disbursement entry against Invoice Discounting: " + self.name
@@ -226,9 +226,9 @@ class InvoiceDiscounting(AccountsController):
 
 		return je
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def close_loan(self):
-		je = frappe.new_doc("Journal Entry")
+		je = capkpi.new_doc("Journal Entry")
 		je.voucher_type = "Journal Entry"
 		je.company = self.company
 		je.remark = "Loan Settlement entry against Invoice Discounting: " + self.name
@@ -255,7 +255,7 @@ class InvoiceDiscounting(AccountsController):
 
 		if getdate(self.loan_end_date) > getdate(nowdate()):
 			for d in self.invoices:
-				outstanding_amount = frappe.db.get_value(
+				outstanding_amount = capkpi.db.get_value(
 					"Sales Invoice", d.sales_invoice, "outstanding_amount"
 				)
 				if flt(outstanding_amount) > 0:
@@ -288,9 +288,9 @@ class InvoiceDiscounting(AccountsController):
 		return je
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_invoices(filters):
-	filters = frappe._dict(json.loads(filters))
+	filters = capkpi._dict(json.loads(filters))
 	cond = []
 	if filters.customer:
 		cond.append("customer=%(customer)s")
@@ -307,7 +307,7 @@ def get_invoices(filters):
 	if cond:
 		where_condition += " and " + " and ".join(cond)
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			name as sales_invoice,
@@ -331,7 +331,7 @@ def get_invoices(filters):
 
 def get_party_account_based_on_invoice_discounting(sales_invoice):
 	party_account = None
-	invoice_discounting = frappe.db.sql(
+	invoice_discounting = capkpi.db.sql(
 		"""
 		select par.accounts_receivable_discounted, par.accounts_receivable_unpaid, par.status
 		from `tabInvoice Discounting` par, `tabDiscounted Invoice` ch

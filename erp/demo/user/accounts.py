@@ -4,10 +4,10 @@
 
 import random
 
-import frappe
-from frappe.desk import query_report
-from frappe.utils import random_string
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.desk import query_report
+from capkpi.utils import random_string
+from capkpi.utils.make_random import get_random
 
 import erp
 from erp.accounts.doctype.journal_entry.journal_entry import get_payment_entry_against_invoice
@@ -22,7 +22,7 @@ from erp.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_in
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_accounts_user"))
+	capkpi.set_user(capkpi.db.get_global("demo_accounts_user"))
 
 	if random.random() <= 0.6:
 		report = "Ordered Items to be Billed"
@@ -30,17 +30,17 @@ def work():
 			: random.randint(1, 5)
 		]:
 			try:
-				si = frappe.get_doc(make_sales_invoice(so))
-				si.posting_date = frappe.flags.current_date
+				si = capkpi.get_doc(make_sales_invoice(so))
+				si.posting_date = capkpi.flags.current_date
 				for d in si.get("items"):
 					if not d.income_account:
 						d.income_account = "Sales - {}".format(
-							frappe.get_cached_value("Company", si.company, "abbr")
+							capkpi.get_cached_value("Company", si.company, "abbr")
 						)
 				si.insert()
 				si.submit()
-				frappe.db.commit()
-			except frappe.ValidationError:
+				capkpi.db.commit()
+			except capkpi.ValidationError:
 				pass
 
 	if random.random() <= 0.6:
@@ -49,13 +49,13 @@ def work():
 			: random.randint(1, 5)
 		]:
 			try:
-				pi = frappe.get_doc(make_purchase_invoice(pr))
-				pi.posting_date = frappe.flags.current_date
+				pi = capkpi.get_doc(make_purchase_invoice(pr))
+				pi.posting_date = capkpi.flags.current_date
 				pi.bill_no = random_string(6)
 				pi.insert()
 				pi.submit()
-				frappe.db.commit()
-			except frappe.ValidationError:
+				capkpi.db.commit()
+			except capkpi.ValidationError:
 				pass
 
 	if random.random() < 0.5:
@@ -68,7 +68,7 @@ def work():
 		# make payment request against sales invoice
 		sales_invoice_name = get_random("Sales Invoice", filters={"docstatus": 1})
 		if sales_invoice_name:
-			si = frappe.get_doc("Sales Invoice", sales_invoice_name)
+			si = capkpi.get_doc("Sales Invoice", sales_invoice_name)
 			if si.outstanding_amount > 0:
 				payment_request = make_payment_request(
 					dt="Sales Invoice",
@@ -79,8 +79,8 @@ def work():
 					use_dummy_message=True,
 				)
 
-				payment_entry = frappe.get_doc(make_payment_entry(payment_request.name))
-				payment_entry.posting_date = frappe.flags.current_date
+				payment_entry = capkpi.get_doc(make_payment_entry(payment_request.name))
+				payment_entry.posting_date = capkpi.flags.current_date
 				payment_entry.submit()
 
 	make_pos_invoice()
@@ -88,7 +88,7 @@ def work():
 
 def make_payment_entries(ref_doctype, report):
 
-	outstanding_invoices = frappe.get_all(
+	outstanding_invoices = capkpi.get_all(
 		ref_doctype,
 		fields=["name"],
 		filters={"company": erp.get_default_company(), "outstanding_amount": (">", 0.0)},
@@ -97,35 +97,35 @@ def make_payment_entries(ref_doctype, report):
 	# make Payment Entry
 	for inv in outstanding_invoices[: random.randint(1, 2)]:
 		pe = get_payment_entry(ref_doctype, inv.name)
-		pe.posting_date = frappe.flags.current_date
+		pe.posting_date = capkpi.flags.current_date
 		pe.reference_no = random_string(6)
-		pe.reference_date = frappe.flags.current_date
+		pe.reference_date = capkpi.flags.current_date
 		pe.insert()
 		pe.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 		outstanding_invoices.remove(inv)
 
 	# make payment via JV
 	for inv in outstanding_invoices[:1]:
-		jv = frappe.get_doc(get_payment_entry_against_invoice(ref_doctype, inv.name))
-		jv.posting_date = frappe.flags.current_date
+		jv = capkpi.get_doc(get_payment_entry_against_invoice(ref_doctype, inv.name))
+		jv.posting_date = capkpi.flags.current_date
 		jv.cheque_no = random_string(6)
-		jv.cheque_date = frappe.flags.current_date
+		jv.cheque_date = capkpi.flags.current_date
 		jv.insert()
 		jv.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def make_pos_invoice():
 	make_sales_order()
 
-	for data in frappe.get_all("Sales Order", fields=["name"], filters=[["per_billed", "<", "100"]]):
-		si = frappe.get_doc(make_sales_invoice(data.name))
+	for data in capkpi.get_all("Sales Order", fields=["name"], filters=[["per_billed", "<", "100"]]):
+		si = capkpi.get_doc(make_sales_invoice(data.name))
 		si.is_pos = 1
-		si.posting_date = frappe.flags.current_date
+		si.posting_date = capkpi.flags.current_date
 		for d in si.get("items"):
 			if not d.income_account:
-				d.income_account = "Sales - {}".format(frappe.get_cached_value("Company", si.company, "abbr"))
+				d.income_account = "Sales - {}".format(capkpi.get_cached_value("Company", si.company, "abbr"))
 		si.set_missing_values()
 		make_payment_entries_for_pos_invoice(si)
 		si.insert()

@@ -2,7 +2,7 @@
 // License: GNU General Public License v3. See license.txt
 
 // render
-frappe.listview_settings["Purchase Invoice"] = {
+capkpi.listview_settings["Purchase Invoice"] = {
 	add_fields: [
 		"supplier",
 		"supplier_name",
@@ -30,9 +30,9 @@ frappe.listview_settings["Purchase Invoice"] = {
 			if (!doc.release_date) {
 				return [__("On Hold"), "darkgrey"];
 			} else if (
-				frappe.datetime.get_diff(
+				capkpi.datetime.get_diff(
 					doc.release_date,
-					frappe.datetime.nowdate()
+					capkpi.datetime.nowdate()
 				) > 0
 			) {
 				return [__("Temporarily on Hold"), "darkgrey"];

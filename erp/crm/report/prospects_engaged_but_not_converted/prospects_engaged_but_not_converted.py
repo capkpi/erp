@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import add_days, now
+import capkpi
+from capkpi import _
+from capkpi.utils import add_days, now
 
 
 def execute(filters=None):
@@ -62,10 +62,10 @@ def get_data(filters):
 	lead_details = []
 	lead_filters = get_lead_filters(filters)
 
-	for lead in frappe.get_all(
+	for lead in capkpi.get_all(
 		"Lead", fields=["name", "lead_name", "company_name"], filters=lead_filters
 	):
-		data = frappe.db.sql(
+		data = capkpi.db.sql(
 			"""
 			select
 				`tabCommunication`.reference_doctype, `tabCommunication`.reference_name,

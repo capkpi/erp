@@ -4,13 +4,13 @@
 
 import sys
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import getdate
 
 
-class VariablePathNotFound(frappe.ValidationError):
+class VariablePathNotFound(capkpi.ValidationError):
 	pass
 
 
@@ -27,11 +27,11 @@ class SupplierScorecardVariable(Document):
 
 				import_string_path(self.path)
 			except AttributeError:
-				frappe.throw(_("Could not find path for " + self.path), VariablePathNotFound)
+				capkpi.throw(_("Could not find path for " + self.path), VariablePathNotFound)
 
 		else:
 			if not hasattr(sys.modules[__name__], self.path):
-				frappe.throw(_("Could not find path for " + self.path), VariablePathNotFound)
+				capkpi.throw(_("Could not find path for " + self.path), VariablePathNotFound)
 
 
 def get_total_workdays(scorecard):
@@ -42,8 +42,8 @@ def get_total_workdays(scorecard):
 
 def get_item_workdays(scorecard):
 	"""Gets the number of days in this period"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
-	total_item_days = frappe.db.sql(
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
+	total_item_days = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(DATEDIFF( %(end_date)s, po_item.schedule_date) * (po_item.qty))
@@ -66,10 +66,10 @@ def get_item_workdays(scorecard):
 
 def get_total_cost_of_shipments(scorecard):
 	"""Gets the total cost of all shipments in the period (based on Purchase Orders)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(po_item.base_amount)
@@ -98,11 +98,11 @@ def get_cost_of_delayed_shipments(scorecard):
 
 def get_cost_of_on_time_shipments(scorecard):
 	"""Gets the total cost of all on_time shipments in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
 
-	total_delivered_on_time_costs = frappe.db.sql(
+	total_delivered_on_time_costs = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.base_amount)
@@ -131,8 +131,8 @@ def get_cost_of_on_time_shipments(scorecard):
 
 def get_total_days_late(scorecard):
 	"""Gets the number of item days late in the period (based on Purchase Receipts vs POs)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
-	total_delivered_late_days = frappe.db.sql(
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
+	total_delivered_late_days = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(DATEDIFF(pr.posting_date,po_item.schedule_date)* pr_item.qty)
@@ -155,7 +155,7 @@ def get_total_days_late(scorecard):
 	if not total_delivered_late_days:
 		total_delivered_late_days = 0
 
-	total_missed_late_days = frappe.db.sql(
+	total_missed_late_days = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(DATEDIFF( %(end_date)s, po_item.schedule_date) * (po_item.qty - po_item.received_qty))
@@ -179,10 +179,10 @@ def get_total_days_late(scorecard):
 def get_on_time_shipments(scorecard):
 	"""Gets the number of late shipments (counting each item) in the period (based on Purchase Receipts vs POs)"""
 
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	total_items_delivered_on_time = frappe.db.sql(
+	total_items_delivered_on_time = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(pr_item.qty)
@@ -216,10 +216,10 @@ def get_late_shipments(scorecard):
 
 def get_total_received(scorecard):
 	"""Gets the total number of received shipments in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(pr_item.base_amount)
@@ -242,10 +242,10 @@ def get_total_received(scorecard):
 
 def get_total_received_amount(scorecard):
 	"""Gets the total amount (in company currency) received in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.received_qty * pr_item.base_rate)
@@ -268,10 +268,10 @@ def get_total_received_amount(scorecard):
 
 def get_total_received_items(scorecard):
 	"""Gets the total number of received shipments in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.received_qty)
@@ -294,10 +294,10 @@ def get_total_received_items(scorecard):
 
 def get_total_rejected_amount(scorecard):
 	"""Gets the total amount (in company currency) rejected in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.rejected_qty * pr_item.base_rate)
@@ -320,10 +320,10 @@ def get_total_rejected_amount(scorecard):
 
 def get_total_rejected_items(scorecard):
 	"""Gets the total number of rejected items in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.rejected_qty)
@@ -346,10 +346,10 @@ def get_total_rejected_items(scorecard):
 
 def get_total_accepted_amount(scorecard):
 	"""Gets the total amount (in company currency) accepted in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.qty * pr_item.base_rate)
@@ -372,10 +372,10 @@ def get_total_accepted_amount(scorecard):
 
 def get_total_accepted_items(scorecard):
 	"""Gets the total number of rejected items in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(pr_item.qty)
@@ -398,10 +398,10 @@ def get_total_accepted_items(scorecard):
 
 def get_total_shipments(scorecard):
 	"""Gets the total number of ordered shipments to arrive in the period (based on Purchase Receipts)"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(po_item.base_amount)
@@ -424,10 +424,10 @@ def get_total_shipments(scorecard):
 
 def get_rfq_total_number(scorecard):
 	"""Gets the total number of RFQs sent to supplier"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(rfq.name) as total_rfqs
@@ -452,10 +452,10 @@ def get_rfq_total_number(scorecard):
 
 def get_rfq_total_items(scorecard):
 	"""Gets the total number of RFQ items sent to supplier"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(rfq_item.name) as total_rfqs
@@ -479,10 +479,10 @@ def get_rfq_total_items(scorecard):
 
 def get_sq_total_number(scorecard):
 	"""Gets the total number of RFQ items sent to supplier"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(sq.name) as total_sqs
@@ -512,10 +512,10 @@ def get_sq_total_number(scorecard):
 
 def get_sq_total_items(scorecard):
 	"""Gets the total number of RFQ items sent to supplier"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
 
 	# Look up all PO Items with delivery dates between our dates
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 			SELECT
 				COUNT(sq_item.name) as total_sqs
@@ -545,8 +545,8 @@ def get_sq_total_items(scorecard):
 
 def get_rfq_response_days(scorecard):
 	"""Gets the total number of days it has taken a supplier to respond to rfqs in the period"""
-	supplier = frappe.get_doc("Supplier", scorecard.supplier)
-	total_sq_days = frappe.db.sql(
+	supplier = capkpi.get_doc("Supplier", scorecard.supplier)
+	total_sq_days = capkpi.db.sql(
 		"""
 			SELECT
 				SUM(DATEDIFF(sq.transaction_date, rfq.transaction_date))

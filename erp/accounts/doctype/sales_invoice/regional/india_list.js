@@ -1,5 +1,5 @@
-var globalOnload = frappe.listview_settings['Sales Invoice'].onload;
-frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
+var globalOnload = capkpi.listview_settings['Sales Invoice'].onload;
+capkpi.listview_settings['Sales Invoice'].onload = function (list_view) {
 
 	// Provision in case onload event is added to sales_invoice.js in future
 	if (globalOnload) {
@@ -12,11 +12,11 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 
 		for (let doc of selected_docs) {
 			if (doc.docstatus !== 1) {
-				frappe.throw(__("E-Way Bill JSON can only be generated from a submitted document"));
+				capkpi.throw(__("E-Way Bill JSON can only be generated from a submitted document"));
 			}
 		}
 
-		frappe.call({
+		capkpi.call({
 			method: 'erp.regional.india.utils.generate_ewb_json',
 			args: {
 				'dt': list_view.doctype,
@@ -29,7 +29,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 						data: r.message,
 						docname: docnames
 					};
-					open_url_post(frappe.request.url, args);
+					open_url_post(capkpi.request.url, args);
 				}
 			}
 		});
@@ -40,14 +40,14 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 	const generate_irns = () => {
 		const docnames = list_view.get_checked_items(true);
 		if (docnames && docnames.length) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.regional.india.e_invoice.utils.generate_einvoices',
 				args: { docnames },
 				freeze: true,
 				freeze_message: __('Generating E-Invoices...')
 			});
 		} else {
-			frappe.msgprint({
+			capkpi.msgprint({
 				message: __('Please select at least one sales invoice to generate IRN'),
 				title: __('No Invoice Selected'),
 				indicator: 'red'
@@ -75,12 +75,12 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 			}
 		];
 
-		const d = new frappe.ui.Dialog({
+		const d = new capkpi.ui.Dialog({
 			title: __("Cancel IRN"),
 			fields: fields,
 			primary_action: function() {
 				const data = d.get_values();
-				frappe.call({
+				capkpi.call({
 					method: 'erp.regional.india.e_invoice.utils.cancel_irns',
 					args: {
 						doctype: list_view.doctype,
@@ -99,7 +99,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 	};
 
 	let einvoicing_enabled = false;
-	frappe.db.get_single_value("E Invoice Settings", "enable").then(enabled => {
+	capkpi.db.get_single_value("E Invoice Settings", "enable").then(enabled => {
 		einvoicing_enabled = enabled;
 	});
 
@@ -120,25 +120,25 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		}
 	});
 
-	frappe.realtime.on("bulk_einvoice_generation_complete", (data) => {
+	capkpi.realtime.on("bulk_einvoice_generation_complete", (data) => {
 		const { failures, user, invoices } = data;
 
 		if (invoices.length != failures.length) {
-			frappe.msgprint({
+			capkpi.msgprint({
 				message: __('{0} e-invoices generated successfully', [invoices.length]),
 				title: __('Bulk E-Invoice Generation Complete'),
 				indicator: 'orange'
 			});
 		}
 
-		if (failures && failures.length && user == frappe.session.user) {
+		if (failures && failures.length && user == capkpi.session.user) {
 			let message = `
 				Failed to generate IRNs for following ${failures.length} sales invoices:
 				<ul style="padding-left: 20px; padding-top: 5px;">
 					${failures.map(d => `<li>${d.docname}</li>`).join('')}
 				</ul>
 			`;
-			frappe.msgprint({
+			capkpi.msgprint({
 				message: message,
 				title: __('Bulk E-Invoice Generation Complete'),
 				indicator: 'orange'
@@ -146,25 +146,25 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		}
 	});
 
-	frappe.realtime.on("bulk_einvoice_cancellation_complete", (data) => {
+	capkpi.realtime.on("bulk_einvoice_cancellation_complete", (data) => {
 		const { failures, user, invoices } = data;
 
 		if (invoices.length != failures.length) {
-			frappe.msgprint({
+			capkpi.msgprint({
 				message: __('{0} e-invoices cancelled successfully', [invoices.length]),
 				title: __('Bulk E-Invoice Cancellation Complete'),
 				indicator: 'orange'
 			});
 		}
 
-		if (failures && failures.length && user == frappe.session.user) {
+		if (failures && failures.length && user == capkpi.session.user) {
 			let message = `
 				Failed to cancel IRNs for following ${failures.length} sales invoices:
 				<ul style="padding-left: 20px; padding-top: 5px;">
 					${failures.map(d => `<li>${d.docname}</li>`).join('')}
 				</ul>
 			`;
-			frappe.msgprint({
+			capkpi.msgprint({
 				message: message,
 				title: __('Bulk E-Invoice Cancellation Complete'),
 				indicator: 'orange'

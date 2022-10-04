@@ -5,9 +5,9 @@ import json
 from collections import defaultdict
 from typing import List, Tuple
 
-import frappe
-from frappe import _
-from frappe.utils import cint, cstr, flt, get_link_to_form, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, cstr, flt, get_link_to_form, getdate
 
 import erp
 from erp.accounts.general_ledger import (
@@ -21,19 +21,19 @@ from erp.stock import get_warehouse_account_map
 from erp.stock.stock_ledger import get_items_to_be_repost
 
 
-class QualityInspectionRequiredError(frappe.ValidationError):
+class QualityInspectionRequiredError(capkpi.ValidationError):
 	pass
 
 
-class QualityInspectionRejectedError(frappe.ValidationError):
+class QualityInspectionRejectedError(capkpi.ValidationError):
 	pass
 
 
-class QualityInspectionNotSubmittedError(frappe.ValidationError):
+class QualityInspectionNotSubmittedError(capkpi.ValidationError):
 	pass
 
 
-class BatchExpiredError(frappe.ValidationError):
+class BatchExpiredError(capkpi.ValidationError):
 	pass
 
 
@@ -54,7 +54,7 @@ class StockController(AccountsController):
 			make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 
 		provisional_accounting_for_non_stock_items = cint(
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"Company", self.company, "enable_provisional_accounting_for_non_stock_items"
 			)
 		)
@@ -84,7 +84,7 @@ class StockController(AccountsController):
 
 		for d in self.get("items"):
 			if hasattr(d, "serial_no") and hasattr(d, "batch_no") and d.serial_no and d.batch_no:
-				serial_nos = frappe.get_all(
+				serial_nos = capkpi.get_all(
 					"Serial No",
 					fields=["batch_no", "name", "warehouse"],
 					filters={"name": ("in", get_serial_nos(d.serial_no))},
@@ -92,7 +92,7 @@ class StockController(AccountsController):
 
 				for row in serial_nos:
 					if row.warehouse and row.batch_no != d.batch_no:
-						frappe.throw(
+						capkpi.throw(
 							_("Row #{0}: Serial No {1} does not belong to Batch {2}").format(
 								d.idx, row.name, d.batch_no
 							)
@@ -102,10 +102,10 @@ class StockController(AccountsController):
 				continue
 
 			if flt(d.qty) > 0.0 and d.get("batch_no") and self.get("posting_date") and self.docstatus < 2:
-				expiry_date = frappe.get_cached_value("Batch", d.get("batch_no"), "expiry_date")
+				expiry_date = capkpi.get_cached_value("Batch", d.get("batch_no"), "expiry_date")
 
 				if expiry_date and getdate(expiry_date) < getdate(self.posting_date):
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: The batch {1} has already expired.").format(
 							d.idx, get_link_to_form("Batch", d.get("batch_no"))
 						),
@@ -190,8 +190,8 @@ class StockController(AccountsController):
 
 		if warehouse_with_no_account:
 			for wh in warehouse_with_no_account:
-				if frappe.db.get_value("Warehouse", wh, "company"):
-					frappe.throw(
+				if capkpi.db.get_value("Warehouse", wh, "company"):
+					capkpi.throw(
 						_(
 							"Warehouse {0} is not linked to any account, please mention the account in the warehouse record or set default inventory account in company {1}."
 						).format(wh, self.company)
@@ -200,21 +200,21 @@ class StockController(AccountsController):
 		return process_gl_map(gl_list, precision=precision)
 
 	def get_debit_field_precision(self):
-		if not frappe.flags.debit_field_precision:
-			frappe.flags.debit_field_precision = frappe.get_precision(
+		if not capkpi.flags.debit_field_precision:
+			capkpi.flags.debit_field_precision = capkpi.get_precision(
 				"GL Entry", "debit_in_account_currency"
 			)
 
-		return frappe.flags.debit_field_precision
+		return capkpi.flags.debit_field_precision
 
 	def get_voucher_details(self, default_expense_account, default_cost_center, sle_map):
 		if self.doctype == "Stock Reconciliation":
-			reconciliation_purpose = frappe.db.get_value(self.doctype, self.name, "purpose")
+			reconciliation_purpose = capkpi.db.get_value(self.doctype, self.name, "purpose")
 			is_opening = "Yes" if reconciliation_purpose == "Opening Stock" else "No"
 			details = []
 			for voucher_detail_no in sle_map:
 				details.append(
-					frappe._dict(
+					capkpi._dict(
 						{
 							"name": voucher_detail_no,
 							"expense_account": default_expense_account,
@@ -261,7 +261,7 @@ class StockController(AccountsController):
 
 	def get_stock_ledger_details(self):
 		stock_ledger = {}
-		stock_ledger_entries = frappe.db.sql(
+		stock_ledger_entries = capkpi.db.sql(
 			"""
 			select
 				name, warehouse, stock_value_difference, valuation_rate,
@@ -284,12 +284,12 @@ class StockController(AccountsController):
 		"""Create batches if required. Called before submit"""
 		for d in self.items:
 			if d.get(warehouse_field) and not d.batch_no:
-				has_batch_no, create_new_batch = frappe.db.get_value(
+				has_batch_no, create_new_batch = capkpi.db.get_value(
 					"Item", d.item_code, ["has_batch_no", "create_new_batch"]
 				)
 				if has_batch_no and create_new_batch:
 					d.batch_no = (
-						frappe.get_doc(
+						capkpi.get_doc(
 							dict(
 								doctype="Batch",
 								item=d.item_code,
@@ -305,16 +305,16 @@ class StockController(AccountsController):
 	def check_expense_account(self, item):
 		if not item.get("expense_account"):
 			msg = _("Please set an Expense Account in the Items table")
-			frappe.throw(
+			capkpi.throw(
 				_("Row #{0}: Expense Account not set for the Item {1}. {2}").format(
-					item.idx, frappe.bold(item.item_code), msg
+					item.idx, capkpi.bold(item.item_code), msg
 				),
 				title=_("Expense Account Missing"),
 			)
 
 		else:
 			is_expense_account = (
-				frappe.get_cached_value("Account", item.get("expense_account"), "report_type")
+				capkpi.get_cached_value("Account", item.get("expense_account"), "report_type")
 				== "Profit and Loss"
 			)
 			if (
@@ -322,13 +322,13 @@ class StockController(AccountsController):
 				not in ("Purchase Receipt", "Purchase Invoice", "Stock Reconciliation", "Stock Entry")
 				and not is_expense_account
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("Expense / Difference account ({0}) must be a 'Profit or Loss' account").format(
 						item.get("expense_account")
 					)
 				)
 			if is_expense_account and not item.get("cost_center"):
-				frappe.throw(
+				capkpi.throw(
 					_("{0} {1}: Cost Center is mandatory for Item {2}").format(
 						_(self.doctype), self.name, item.get("item_code")
 					)
@@ -339,20 +339,20 @@ class StockController(AccountsController):
 			if not d.batch_no:
 				continue
 
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Serial No", {"batch_no": d.batch_no, "status": "Inactive"}, "batch_no", None
 			)
 
 			d.batch_no = None
 			d.db_set("batch_no", None)
 
-		for data in frappe.get_all(
+		for data in capkpi.get_all(
 			"Batch", {"reference_name": self.name, "reference_doctype": self.doctype}
 		):
-			frappe.delete_doc("Batch", data.name)
+			capkpi.delete_doc("Batch", data.name)
 
 	def get_sl_entries(self, d, args):
-		sl_dict = frappe._dict(
+		sl_dict = capkpi._dict(
 			{
 				"item_code": d.get("item_code", None),
 				"warehouse": d.get("warehouse", None),
@@ -363,7 +363,7 @@ class StockController(AccountsController):
 				"voucher_no": self.name,
 				"voucher_detail_no": d.name,
 				"actual_qty": (self.docstatus == 1 and 1 or -1) * flt(d.get("stock_qty")),
-				"stock_uom": frappe.db.get_value(
+				"stock_uom": capkpi.db.get_value(
 					"Item", args.get("item_code") or d.get("item_code"), "stock_uom"
 				),
 				"incoming_rate": 0,
@@ -384,7 +384,7 @@ class StockController(AccountsController):
 		make_sl_entries(sl_entries, allow_negative_stock, via_landed_cost_voucher)
 
 	def make_gl_entries_on_cancel(self):
-		if frappe.db.sql(
+		if capkpi.db.sql(
 			"""select name from `tabGL Entry` where voucher_type=%s
 			and voucher_no=%s""",
 			(self.doctype, self.name),
@@ -395,7 +395,7 @@ class StockController(AccountsController):
 		serialized_items = []
 		item_codes = list(set(d.item_code for d in self.get("items")))
 		if item_codes:
-			serialized_items = frappe.db.sql_list(
+			serialized_items = capkpi.db.sql_list(
 				"""select name from `tabItem`
 				where has_serial_no=1 and name in ({})""".format(
 					", ".join(["%s"] * len(item_codes))
@@ -463,7 +463,7 @@ class StockController(AccountsController):
 
 		for row in self.get("items"):
 			qi_required = False
-			if inspection_required_fieldname and frappe.db.get_value(
+			if inspection_required_fieldname and capkpi.db.get_value(
 				"Item", row.item_code, inspection_required_fieldname
 			):
 				qi_required = True
@@ -479,51 +479,51 @@ class StockController(AccountsController):
 	def validate_qi_presence(self, row):
 		"""Check if QI is present on row level. Warn on save and stop on submit if missing."""
 		if not row.quality_inspection:
-			msg = f"Row #{row.idx}: Quality Inspection is required for Item {frappe.bold(row.item_code)}"
+			msg = f"Row #{row.idx}: Quality Inspection is required for Item {capkpi.bold(row.item_code)}"
 			if self.docstatus == 1:
-				frappe.throw(_(msg), title=_("Inspection Required"), exc=QualityInspectionRequiredError)
+				capkpi.throw(_(msg), title=_("Inspection Required"), exc=QualityInspectionRequiredError)
 			else:
-				frappe.msgprint(_(msg), title=_("Inspection Required"), indicator="blue")
+				capkpi.msgprint(_(msg), title=_("Inspection Required"), indicator="blue")
 
 	def validate_qi_submission(self, row):
 		"""Check if QI is submitted on row level, during submission"""
-		action = frappe.db.get_single_value(
+		action = capkpi.db.get_single_value(
 			"Stock Settings", "action_if_quality_inspection_is_not_submitted"
 		)
-		qa_docstatus = frappe.db.get_value("Quality Inspection", row.quality_inspection, "docstatus")
+		qa_docstatus = capkpi.db.get_value("Quality Inspection", row.quality_inspection, "docstatus")
 
 		if not qa_docstatus == 1:
-			link = frappe.utils.get_link_to_form("Quality Inspection", row.quality_inspection)
+			link = capkpi.utils.get_link_to_form("Quality Inspection", row.quality_inspection)
 			msg = (
 				f"Row #{row.idx}: Quality Inspection {link} is not submitted for the item: {row.item_code}"
 			)
 			if action == "Stop":
-				frappe.throw(_(msg), title=_("Inspection Submission"), exc=QualityInspectionNotSubmittedError)
+				capkpi.throw(_(msg), title=_("Inspection Submission"), exc=QualityInspectionNotSubmittedError)
 			else:
-				frappe.msgprint(_(msg), alert=True, indicator="orange")
+				capkpi.msgprint(_(msg), alert=True, indicator="orange")
 
 	def validate_qi_rejection(self, row):
 		"""Check if QI is rejected on row level, during submission"""
-		action = frappe.db.get_single_value("Stock Settings", "action_if_quality_inspection_is_rejected")
-		qa_status = frappe.db.get_value("Quality Inspection", row.quality_inspection, "status")
+		action = capkpi.db.get_single_value("Stock Settings", "action_if_quality_inspection_is_rejected")
+		qa_status = capkpi.db.get_value("Quality Inspection", row.quality_inspection, "status")
 
 		if qa_status == "Rejected":
-			link = frappe.utils.get_link_to_form("Quality Inspection", row.quality_inspection)
+			link = capkpi.utils.get_link_to_form("Quality Inspection", row.quality_inspection)
 			msg = f"Row #{row.idx}: Quality Inspection {link} was rejected for item {row.item_code}"
 			if action == "Stop":
-				frappe.throw(_(msg), title=_("Inspection Rejected"), exc=QualityInspectionRejectedError)
+				capkpi.throw(_(msg), title=_("Inspection Rejected"), exc=QualityInspectionRejectedError)
 			else:
-				frappe.msgprint(_(msg), alert=True, indicator="orange")
+				capkpi.msgprint(_(msg), alert=True, indicator="orange")
 
 	def update_blanket_order(self):
 		blanket_orders = list(set([d.blanket_order for d in self.items if d.blanket_order]))
 		for blanket_order in blanket_orders:
-			frappe.get_doc("Blanket Order", blanket_order).update_ordered_qty()
+			capkpi.get_doc("Blanket Order", blanket_order).update_ordered_qty()
 
 	def validate_customer_provided_item(self):
 		for d in self.get("items"):
 			# Customer Provided parts will have zero valuation rate
-			if frappe.db.get_value("Item", d.item_code, "is_customer_provided_item"):
+			if capkpi.db.get_value("Item", d.item_code, "is_customer_provided_item"):
 				d.allow_zero_valuation_rate = 1
 
 	def set_rate_of_stock_uom(self):
@@ -554,7 +554,7 @@ class StockController(AccountsController):
 		) or self.doctype == "Delivery Note":
 			for item in self.get("items"):
 				if not item.target_warehouse:
-					frappe.throw(
+					capkpi.throw(
 						_("Row {0}: Target Warehouse is mandatory for internal transfers").format(item.idx)
 					)
 
@@ -563,17 +563,17 @@ class StockController(AccountsController):
 		) or self.doctype == "Purchase Receipt":
 			for item in self.get("items"):
 				if not item.from_warehouse:
-					frappe.throw(
+					capkpi.throw(
 						_("Row {0}: From Warehouse is mandatory for internal transfers").format(item.idx)
 					)
 
 	def validate_multi_currency(self):
 		if self.currency != self.company_currency:
-			frappe.throw(_("Internal transfers can only be done in company's default currency"))
+			capkpi.throw(_("Internal transfers can only be done in company's default currency"))
 
 	def validate_packed_items(self):
 		if self.doctype in ("Sales Invoice", "Delivery Note Item") and self.get("packed_items"):
-			frappe.throw(_("Packed Items cannot be transferred internally"))
+			capkpi.throw(_("Packed Items cannot be transferred internally"))
 
 	def validate_putaway_capacity(self):
 		# if over receipt is attempted while 'apply putaway rule' is disabled
@@ -594,7 +594,7 @@ class StockController(AccountsController):
 			rule_map = defaultdict(dict)
 			for item in self.get("items"):
 				warehouse_field = "t_warehouse" if self.doctype == "Stock Entry" else "warehouse"
-				rule = frappe.db.get_value(
+				rule = capkpi.db.get_value(
 					"Putaway Rule",
 					{"item_code": item.get("item_code"), "warehouse": item.get(warehouse_field)},
 					["name", "disable"],
@@ -620,24 +620,24 @@ class StockController(AccountsController):
 			for rule, values in rule_map.items():
 				if flt(values["qty_put"]) > flt(values["capacity"]):
 					message = self.prepare_over_receipt_message(rule, values)
-					frappe.throw(msg=message, title=_("Over Receipt"))
+					capkpi.throw(msg=message, title=_("Over Receipt"))
 
 	def prepare_over_receipt_message(self, rule, values):
 		message = _(
 			"{0} qty of Item {1} is being received into Warehouse {2} with capacity {3}."
 		).format(
-			frappe.bold(values["qty_put"]),
-			frappe.bold(values["item"]),
-			frappe.bold(values["warehouse"]),
-			frappe.bold(values["capacity"]),
+			capkpi.bold(values["qty_put"]),
+			capkpi.bold(values["item"]),
+			capkpi.bold(values["warehouse"]),
+			capkpi.bold(values["capacity"]),
 		)
 		message += "<br><br>"
-		rule_link = frappe.utils.get_link_to_form("Putaway Rule", rule)
+		rule_link = capkpi.utils.get_link_to_form("Putaway Rule", rule)
 		message += _("Please adjust the qty or edit {0} to proceed.").format(rule_link)
 		return message
 
 	def repost_future_sle_and_gle(self):
-		args = frappe._dict(
+		args = capkpi._dict(
 			{
 				"posting_date": self.posting_date,
 				"posting_time": self.posting_time,
@@ -649,7 +649,7 @@ class StockController(AccountsController):
 
 		if future_sle_exists(args) or repost_required_for_queue(self):
 			item_based_reposting = cint(
-				frappe.db.get_single_value("Stock Reposting Settings", "item_based_reposting")
+				capkpi.db.get_single_value("Stock Reposting Settings", "item_based_reposting")
 			)
 			if item_based_reposting:
 				create_item_wise_repost_entries(voucher_type=self.doctype, voucher_no=self.name)
@@ -663,7 +663,7 @@ def repost_required_for_queue(doc: StockController) -> bool:
 	if queue exists for repeated items then SLEs need to reprocessed in background again.
 	"""
 
-	consuming_sles = frappe.db.get_all(
+	consuming_sles = capkpi.db.get_all(
 		"Stock Ledger Entry",
 		filters={
 			"voucher_type": doc.doctype,
@@ -686,7 +686,7 @@ def repost_required_for_queue(doc: StockController) -> bool:
 	return False
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_quality_inspections(doctype, docname, items):
 	if isinstance(items, str):
 		items = json.loads(items)
@@ -694,7 +694,7 @@ def make_quality_inspections(doctype, docname, items):
 	inspections = []
 	for item in items:
 		if flt(item.get("sample_size")) > flt(item.get("qty")):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"{item_name}'s Sample Size ({sample_size}) cannot be greater than the Accepted Quantity ({accepted_quantity})"
 				).format(
@@ -704,11 +704,11 @@ def make_quality_inspections(doctype, docname, items):
 				)
 			)
 
-		quality_inspection = frappe.get_doc(
+		quality_inspection = capkpi.get_doc(
 			{
 				"doctype": "Quality Inspection",
 				"inspection_type": "Incoming",
-				"inspected_by": frappe.session.user,
+				"inspected_by": capkpi.session.user,
 				"reference_type": doctype,
 				"reference_name": docname,
 				"item_code": item.get("item_code"),
@@ -725,7 +725,7 @@ def make_quality_inspections(doctype, docname, items):
 
 
 def is_reposting_pending():
-	return frappe.db.exists(
+	return capkpi.db.exists(
 		"Repost Item Valuation", {"docstatus": 1, "status": ["in", ["Queued", "In Progress"]]}
 	)
 
@@ -745,7 +745,7 @@ def future_sle_exists(args, sl_entries=None):
 
 	or_conditions = get_conditions_to_validate_future_sle(sl_entries)
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		select item_code, warehouse, count(name) as total_row
 		from `tabStock Ledger Entry` force index (item_warehouse)
@@ -765,7 +765,7 @@ def future_sle_exists(args, sl_entries=None):
 	)
 
 	for d in data:
-		frappe.local.future_sle[key][(d.item_code, d.warehouse)] = d.total_row
+		capkpi.local.future_sle[key][(d.item_code, d.warehouse)] = d.total_row
 
 	return len(data)
 
@@ -775,31 +775,31 @@ def validate_future_sle_not_exists(args, key, sl_entries=None):
 	if args.get("item_code"):
 		item_key = (args.get("item_code"), args.get("warehouse"))
 
-	if not sl_entries and hasattr(frappe.local, "future_sle"):
-		if not frappe.local.future_sle.get(key) or (
-			item_key and item_key not in frappe.local.future_sle.get(key)
+	if not sl_entries and hasattr(capkpi.local, "future_sle"):
+		if not capkpi.local.future_sle.get(key) or (
+			item_key and item_key not in capkpi.local.future_sle.get(key)
 		):
 			return True
 
 
 def get_cached_data(args, key):
-	if not hasattr(frappe.local, "future_sle"):
-		frappe.local.future_sle = {}
+	if not hasattr(capkpi.local, "future_sle"):
+		capkpi.local.future_sle = {}
 
-	if key not in frappe.local.future_sle:
-		frappe.local.future_sle[key] = frappe._dict({})
+	if key not in capkpi.local.future_sle:
+		capkpi.local.future_sle[key] = capkpi._dict({})
 
 	if args.get("item_code"):
 		item_key = (args.get("item_code"), args.get("warehouse"))
-		count = frappe.local.future_sle[key].get(item_key)
+		count = capkpi.local.future_sle[key].get(item_key)
 
 		return True if (count or count == 0) else False
 	else:
-		return frappe.local.future_sle[key]
+		return capkpi.local.future_sle[key]
 
 
 def get_sle_entries_against_voucher(args):
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Stock Ledger Entry",
 		filters={"voucher_type": args.voucher_type, "voucher_no": args.voucher_no},
 		fields=["item_code", "warehouse"],
@@ -818,16 +818,16 @@ def get_conditions_to_validate_future_sle(sl_entries):
 	or_conditions = []
 	for warehouse, items in warehouse_items_map.items():
 		or_conditions.append(
-			f"""warehouse = {frappe.db.escape(warehouse)}
-				and item_code in ({', '.join(frappe.db.escape(item) for item in items)})"""
+			f"""warehouse = {capkpi.db.escape(warehouse)}
+				and item_code in ({', '.join(capkpi.db.escape(item) for item in items)})"""
 		)
 
 	return or_conditions
 
 
 def create_repost_item_valuation_entry(args):
-	args = frappe._dict(args)
-	repost_entry = frappe.new_doc("Repost Item Valuation")
+	args = capkpi._dict(args)
+	repost_entry = capkpi.new_doc("Repost Item Valuation")
 	repost_entry.based_on = args.based_on
 	if not args.based_on:
 		repost_entry.based_on = "Transaction" if args.voucher_no else "Item and Warehouse"
@@ -859,7 +859,7 @@ def create_item_wise_repost_entries(voucher_type, voucher_no, allow_zero_rate=Fa
 			continue
 		distinct_item_warehouses.add(item_wh)
 
-		repost_entry = frappe.new_doc("Repost Item Valuation")
+		repost_entry = capkpi.new_doc("Repost Item Valuation")
 		repost_entry.based_on = "Item and Warehouse"
 		repost_entry.voucher_type = voucher_type
 		repost_entry.voucher_no = voucher_no

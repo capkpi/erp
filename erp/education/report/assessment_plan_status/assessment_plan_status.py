@@ -4,9 +4,9 @@
 
 from itertools import groupby
 
-import frappe
-from frappe import _
-from frappe.utils import cint
+import capkpi
+from capkpi import _
+from capkpi.utils import cint
 
 DOCSTATUS = {
 	0: "saved",
@@ -17,7 +17,7 @@ DOCSTATUS = {
 def execute(filters=None):
 	columns, data = [], []
 
-	args = frappe._dict()
+	args = capkpi._dict()
 	args["assessment_group"] = filters.get("assessment_group")
 	args["schedule_date"] = filters.get("schedule_date")
 
@@ -39,7 +39,7 @@ def get_assessment_data(args=None):
 	if args["schedule_date"]:
 		condition += "and schedule_date <= %(schedule_date)s"
 
-	assessment_plan = frappe.db.sql(
+	assessment_plan = capkpi.db.sql(
 		"""
 			SELECT
 				ap.name as assessment_plan,
@@ -68,7 +68,7 @@ def get_assessment_data(args=None):
 
 		assessment_plan_details = assessment_result.get(d.assessment_plan)
 		assessment_plan_details = (
-			frappe._dict() if not assessment_plan_details else frappe._dict(assessment_plan_details)
+			capkpi._dict() if not assessment_plan_details else capkpi._dict(assessment_plan_details)
 		)
 		if "saved" not in assessment_plan_details:
 			assessment_plan_details.update({"saved": 0})
@@ -95,9 +95,9 @@ def get_assessment_data(args=None):
 
 
 def get_assessment_result(assessment_plan_list):
-	assessment_result_dict = frappe._dict()
+	assessment_result_dict = capkpi._dict()
 
-	assessment_result = frappe.db.sql(
+	assessment_result = capkpi.db.sql(
 		"""
 		SELECT
 			assessment_plan, docstatus, count(*) as count

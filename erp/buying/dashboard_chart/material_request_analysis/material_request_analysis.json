@@ -6,7 +6,7 @@
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Material Request",
- "dynamic_filters_json": "[[\"Material Request\",\"company\",\"=\",\"frappe.defaults.get_user_default(\\\"Company\\\")\"]]",
+ "dynamic_filters_json": "[[\"Material Request\",\"company\",\"=\",\"capkpi.defaults.get_user_default(\\\"Company\\\")\"]]",
  "filters_json": "[[\"Material Request\",\"status\",\"not in\",[\"Draft\",\"Cancelled\",\"Stopped\",null],false],[\"Material Request\",\"material_request_type\",\"=\",\"Purchase\",false],[\"Material Request\",\"docstatus\",\"=\",\"1\",false],[\"Material Request\",\"transaction_date\",\"Timespan\",\"last quarter\",false]]",
  "group_by_based_on": "status",
  "group_by_type": "Count",

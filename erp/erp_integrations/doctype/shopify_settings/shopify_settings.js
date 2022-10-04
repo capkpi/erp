@@ -1,10 +1,10 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp_integrations.shopify_settings");
+capkpi.provide("erp_integrations.shopify_settings");
 
-frappe.ui.form.on("Shopify Settings", "onload", function(frm){
-	frappe.call({
+capkpi.ui.form.on("Shopify Settings", "onload", function(frm){
+	capkpi.call({
 		method:"erp.erp_integrations.doctype.shopify_settings.shopify_settings.get_series",
 		callback:function(r){
 			$.each(r.message, function(key, value){
@@ -15,12 +15,12 @@ frappe.ui.form.on("Shopify Settings", "onload", function(frm){
 	erp_integrations.shopify_settings.setup_queries(frm);
 })
 
-frappe.ui.form.on("Shopify Settings", "app_type", function(frm) {
+capkpi.ui.form.on("Shopify Settings", "app_type", function(frm) {
 	frm.toggle_reqd("api_key", (frm.doc.app_type == "Private"));
 	frm.toggle_reqd("password", (frm.doc.app_type == "Private"));
 })
 
-frappe.ui.form.on("Shopify Settings", "refresh", function(frm){
+capkpi.ui.form.on("Shopify Settings", "refresh", function(frm){
 	if(!frm.doc.__islocal && frm.doc.enable_shopify === 1){
 		frm.toggle_reqd("price_list", true);
 		frm.toggle_reqd("warehouse", true);
@@ -37,7 +37,7 @@ frappe.ui.form.on("Shopify Settings", "refresh", function(frm){
 
 	}
 
-	let app_link = "<a href='https://frappecloud.com/marketplace/apps/ecommerce_integrations' target='_blank'>Ecommerce Integrations</a>"
+	let app_link = "<a href='https://capkpicloud.com/marketplace/apps/ecommerce_integrations' target='_blank'>Ecommerce Integrations</a>"
 	frm.dashboard.add_comment(__("Shopify Integration will be removed from ERP in Version 14. Please install {0} app to continue using it.", [app_link]), "yellow", true);
 
 })

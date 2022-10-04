@@ -1,4 +1,4 @@
-frappe.listview_settings['Contract'] = {
+capkpi.listview_settings['Contract'] = {
 	add_fields: ["status"],
 	get_indicator: function (doc) {
 		if (doc.status == "Unsigned") {

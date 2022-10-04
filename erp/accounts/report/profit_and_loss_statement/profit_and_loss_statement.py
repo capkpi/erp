@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 from erp.accounts.report.financial_statements import (
 	get_columns,
@@ -63,7 +63,7 @@ def execute(filters=None):
 
 	chart = get_chart_data(filters, columns, income, expense, net_profit_loss)
 
-	currency = filters.presentation_currency or frappe.get_cached_value(
+	currency = filters.presentation_currency or capkpi.get_cached_value(
 		"Company", filters.company, "default_currency"
 	)
 	report_summary = get_report_summary(
@@ -121,7 +121,7 @@ def get_net_profit_loss(income, expense, period_list, company, currency=None, co
 		"account_name": "'" + _("Profit for the year") + "'",
 		"account": "'" + _("Profit for the year") + "'",
 		"warn_if_negative": True,
-		"currency": currency or frappe.get_cached_value("Company", company, "default_currency"),
+		"currency": currency or capkpi.get_cached_value("Company", company, "default_currency"),
 	}
 
 	has_value = False

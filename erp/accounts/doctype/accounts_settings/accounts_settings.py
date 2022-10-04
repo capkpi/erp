@@ -4,25 +4,25 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.custom.doctype.property_setter.property_setter import make_property_setter
-from frappe.model.document import Document
-from frappe.utils import cint
+import capkpi
+from capkpi import _
+from capkpi.custom.doctype.property_setter.property_setter import make_property_setter
+from capkpi.model.document import Document
+from capkpi.utils import cint
 
 from erp.stock.utils import check_pending_reposting
 
 
 class AccountsSettings(Document):
 	def on_update(self):
-		frappe.clear_cache()
+		capkpi.clear_cache()
 
 	def validate(self):
-		frappe.db.set_default(
+		capkpi.db.set_default(
 			"add_taxes_from_item_tax_template", self.get("add_taxes_from_item_tax_template", 0)
 		)
 
-		frappe.db.set_default(
+		capkpi.db.set_default(
 			"enable_common_party_accounting", self.get("enable_common_party_accounting", 0)
 		)
 
@@ -33,7 +33,7 @@ class AccountsSettings(Document):
 
 	def validate_stale_days(self):
 		if not self.allow_stale and cint(self.stale_days) <= 0:
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Stale Days should start from 1."), title="Error", indicator="red", raise_exception=1
 			)
 

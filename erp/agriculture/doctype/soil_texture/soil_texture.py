@@ -2,19 +2,19 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint, flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint, flt
 
 
 class SoilTexture(Document):
 	soil_edit_order = [2, 1, 0]
 	soil_types = ["clay_composition", "sand_composition", "silt_composition"]
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def load_contents(self):
-		docs = frappe.get_all(
+		docs = capkpi.get_all(
 			"Agriculture Analysis Criteria", filters={"linked_doctype": "Soil Texture"}
 		)
 		for doc in docs:
@@ -24,11 +24,11 @@ class SoilTexture(Document):
 		self.update_soil_edit("sand_composition")
 		for soil_type in self.soil_types:
 			if self.get(soil_type) > 100 or self.get(soil_type) < 0:
-				frappe.throw(_("{0} should be a value between 0 and 100").format(soil_type))
+				capkpi.throw(_("{0} should be a value between 0 and 100").format(soil_type))
 		if sum(self.get(soil_type) for soil_type in self.soil_types) != 100:
-			frappe.throw(_("Soil compositions do not add up to 100"))
+			capkpi.throw(_("Soil compositions do not add up to 100"))
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def update_soil_edit(self, soil_type):
 		self.soil_edit_order[self.soil_types.index(soil_type)] = max(self.soil_edit_order) + 1
 		self.soil_type = self.get_soil_type()

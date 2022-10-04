@@ -3,9 +3,9 @@
 
 import unittest
 
-import frappe
+import capkpi
 
-test_records = frappe.get_test_records("Sales Taxes and Charges Template")
+test_records = capkpi.get_test_records("Sales Taxes and Charges Template")
 
 
 class TestSalesTaxesandChargesTemplate(unittest.TestCase):

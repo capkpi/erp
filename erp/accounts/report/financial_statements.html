@@ -3,7 +3,7 @@
 	report_columns = report_columns.filter(col => !col.hidden);
 
 	if (report_columns.length > 8) {
-		frappe.throw(__("Too many columns. Export the report and print it using a spreadsheet application."));
+		capkpi.throw(__("Too many columns. Export the report and print it using a spreadsheet application."));
 	}
 %}
 
@@ -30,7 +30,7 @@
 </h5>
 {% if (filters.from_date) { %}
 	<h5 class="text-center">
-		{%= frappe.datetime.str_to_user(filters.from_date) %} - {%= frappe.datetime.str_to_user(filters.to_date) %}
+		{%= capkpi.datetime.str_to_user(filters.from_date) %} - {%= capkpi.datetime.str_to_user(filters.to_date) %}
 	</h5>
 {% } %}
 <hr>
@@ -58,7 +58,7 @@
 					<td class="text-right">
 						{% const fieldname = report_columns[i].fieldname; %}
 						{% if (!is_null(row[fieldname])) { %}
-							{%= frappe.format(row[fieldname], report_columns[i], {}, row) %}
+							{%= capkpi.format(row[fieldname], report_columns[i], {}, row) %}
 						{% } %}
 					</td>
 				{% } %}
@@ -67,5 +67,5 @@
 	</tbody>
 </table>
 <p class="text-right text-muted">
-	Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
+	Printed On {%= capkpi.datetime.str_to_user(capkpi.datetime.get_datetime_as_string()) %}
 </p>

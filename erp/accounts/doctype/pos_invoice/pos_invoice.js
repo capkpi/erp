@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 {% include 'erp/selling/sales_common.js' %};
-frappe.provide("erp.accounts");
+capkpi.provide("erp.accounts");
 
 erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 	setup(doc) {
@@ -17,7 +17,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 	onload(doc) {
 		this._super();
 		this.frm.ignore_doctypes_on_cancel_all = ['POS Invoice Merge Log'];
-		if(doc.__islocal && doc.is_pos && frappe.get_route_str() !== 'point-of-sale') {
+		if(doc.__islocal && doc.is_pos && capkpi.get_route_str() !== 'point-of-sale') {
 			this.frm.script_manager.trigger("is_pos");
 			this.frm.refresh_fields();
 		}
@@ -47,7 +47,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 			this.frm.set_value("allocate_advances_automatically", 0);
 			if(!this.frm.doc.company) {
 				this.frm.set_value("is_pos", 0);
-				frappe.msgprint(__("Please specify Company to proceed"));
+				capkpi.msgprint(__("Please specify Company to proceed"));
 			} else {
 				const r = await this.frm.call({
 					doc: this.frm.doc,
@@ -64,7 +64,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 					this.frm.script_manager.trigger("update_stock");
 					this.calculate_taxes_and_totals();
 					this.frm.doc.taxes_and_charges && this.frm.script_manager.trigger("taxes_and_charges");
-					frappe.model.set_default_values(this.frm.doc);
+					capkpi.model.set_default_values(this.frm.doc);
 					this.set_dynamic_labels();
 				}
 			}
@@ -112,7 +112,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 
 	write_off_outstanding_amount_automatically() {
 		if (cint(this.frm.doc.write_off_outstanding_amount_automatically)) {
-			frappe.model.round_floats_in(this.frm.doc, ["grand_total", "paid_amount"]);
+			capkpi.model.round_floats_in(this.frm.doc, ["grand_total", "paid_amount"]);
 			// this will make outstanding amount 0
 			this.frm.set_value("write_off_amount",
 				flt(this.frm.doc.grand_total - this.frm.doc.paid_amount - this.frm.doc.total_advance, precision("write_off_amount"))
@@ -124,7 +124,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 	},
 
 	make_sales_return: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.pos_invoice.pos_invoice.make_sales_return",
 			frm: cur_frm
 		})
@@ -133,7 +133,7 @@ erp.selling.POSInvoiceController = erp.selling.SellingController.extend({
 
 $.extend(cur_frm.cscript, new erp.selling.POSInvoiceController({ frm: cur_frm }))
 
-frappe.ui.form.on('POS Invoice', {
+capkpi.ui.form.on('POS Invoice', {
 	redeem_loyalty_points: function(frm) {
 		frm.events.get_loyalty_details(frm);
 	},
@@ -142,7 +142,7 @@ frappe.ui.form.on('POS Invoice', {
 		if (frm.redemption_conversion_factor) {
 			frm.events.set_loyalty_points(frm);
 		} else {
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.loyalty_program.loyalty_program.get_redeemption_factor",
 				args: {
 					"loyalty_program": frm.doc.loyalty_program
@@ -159,7 +159,7 @@ frappe.ui.form.on('POS Invoice', {
 
 	get_loyalty_details: function(frm) {
 		if (frm.doc.customer && frm.doc.redeem_loyalty_points) {
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.loyalty_program.loyalty_program.get_loyalty_program_details",
 				args: {
 					"customer": frm.doc.customer,
@@ -184,7 +184,7 @@ frappe.ui.form.on('POS Invoice', {
 			var remaining_amount = flt(frm.doc.grand_total) - flt(frm.doc.total_advance) - flt(frm.doc.write_off_amount);
 			if (frm.doc.grand_total && (remaining_amount < loyalty_amount)) {
 				let redeemable_points = parseInt(remaining_amount/frm.redemption_conversion_factor);
-				frappe.throw(__("You can only redeem max {0} points in this order.",[redeemable_points]));
+				capkpi.throw(__("You can only redeem max {0} points in this order.",[redeemable_points]));
 			}
 			frm.set_value("loyalty_amount", loyalty_amount);
 		}
@@ -192,36 +192,36 @@ frappe.ui.form.on('POS Invoice', {
 
 	request_for_payment: function (frm) {
 		if (!frm.doc.contact_mobile) {
-			frappe.throw(__('Please enter mobile number first.'));
+			capkpi.throw(__('Please enter mobile number first.'));
 		}
 		frm.dirty();
 		frm.save().then(() => {
-			frappe.dom.freeze(__('Waiting for payment...'));
-			frappe
+			capkpi.dom.freeze(__('Waiting for payment...'));
+			capkpi
 				.call({
 					method: 'create_payment_request',
 					doc: frm.doc
 				})
 				.fail(() => {
-					frappe.dom.unfreeze();
-					frappe.msgprint(__('Payment request failed'));
+					capkpi.dom.unfreeze();
+					capkpi.msgprint(__('Payment request failed'));
 				})
 				.then(({ message }) => {
 					const payment_request_name = message.name;
 					setTimeout(() => {
-						frappe.db.get_value('Payment Request', payment_request_name, ['status', 'grand_total']).then(({ message }) => {
+						capkpi.db.get_value('Payment Request', payment_request_name, ['status', 'grand_total']).then(({ message }) => {
 							if (message.status != 'Paid') {
-								frappe.dom.unfreeze();
-								frappe.msgprint({
+								capkpi.dom.unfreeze();
+								capkpi.msgprint({
 									message: __('Payment Request took too long to respond. Please try requesting for payment again.'),
 									title: __('Request Timeout')
 								});
-							} else if (frappe.dom.freeze_count != 0) {
-								frappe.dom.unfreeze();
+							} else if (capkpi.dom.freeze_count != 0) {
+								capkpi.dom.unfreeze();
 								cur_frm.reload_doc();
 								cur_pos.payment.events.submit_invoice();
 
-								frappe.show_alert({
+								capkpi.show_alert({
 									message: __("Payment of {0} received successfully.", [format_currency(message.grand_total, frm.doc.currency, 0)]),
 									indicator: 'green'
 								});

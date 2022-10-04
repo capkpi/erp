@@ -2,14 +2,14 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.accounts.utils import get_balance_on
 
 
 def execute(filters=None):
-	filters = frappe._dict(filters or {})
+	filters = capkpi._dict(filters or {})
 	columns = get_columns(filters)
 	data = get_data(filters)
 	return columns, data
@@ -64,7 +64,7 @@ def get_data(filters):
 
 	data = []
 	conditions = get_conditions(filters)
-	accounts = frappe.db.get_all(
+	accounts = capkpi.db.get_all(
 		"Account", fields=["name", "account_currency"], filters=conditions, order_by="name"
 	)
 

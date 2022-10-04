@@ -2,7 +2,7 @@
 // License: GNU General Public License v3. See license.txt
 
 // render
-frappe.listview_settings['POS Closing Entry'] = {
+capkpi.listview_settings['POS Closing Entry'] = {
 	get_indicator: function(doc) {
 		var status_color = {
 			"Draft": "red",

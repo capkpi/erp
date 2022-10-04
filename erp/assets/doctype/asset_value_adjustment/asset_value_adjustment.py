@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint, date_diff, flt, formatdate, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint, date_diff, flt, formatdate, getdate
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_checks_for_pl_and_bs_accounts,
@@ -31,9 +31,9 @@ class AssetValueAdjustment(Document):
 		self.reschedule_depreciations(self.current_asset_value)
 
 	def validate_date(self):
-		asset_purchase_date = frappe.db.get_value("Asset", self.asset, "purchase_date")
+		asset_purchase_date = capkpi.db.get_value("Asset", self.asset, "purchase_date")
 		if getdate(self.date) < getdate(asset_purchase_date):
-			frappe.throw(
+			capkpi.throw(
 				_("Asset Value Adjustment cannot be posted before Asset's purchase date <b>{0}</b>.").format(
 					formatdate(asset_purchase_date)
 				),
@@ -48,18 +48,18 @@ class AssetValueAdjustment(Document):
 			self.current_asset_value = get_current_asset_value(self.asset, self.finance_book)
 
 	def make_depreciation_entry(self):
-		asset = frappe.get_doc("Asset", self.asset)
+		asset = capkpi.get_doc("Asset", self.asset)
 		(
 			fixed_asset_account,
 			accumulated_depreciation_account,
 			depreciation_expense_account,
 		) = get_depreciation_accounts(asset)
 
-		depreciation_cost_center, depreciation_series = frappe.get_cached_value(
+		depreciation_cost_center, depreciation_series = capkpi.get_cached_value(
 			"Company", asset.company, ["depreciation_cost_center", "series_for_depreciation_entry"]
 		)
 
-		je = frappe.new_doc("Journal Entry")
+		je = capkpi.new_doc("Journal Entry")
 		je.voucher_type = "Depreciation Entry"
 		je.naming_series = depreciation_series
 		je.posting_date = self.date
@@ -107,8 +107,8 @@ class AssetValueAdjustment(Document):
 		self.db_set("journal_entry", je.name)
 
 	def reschedule_depreciations(self, asset_value):
-		asset = frappe.get_doc("Asset", self.asset)
-		country = frappe.get_value("Company", self.company, "country")
+		asset = capkpi.get_doc("Asset", self.asset)
+		country = capkpi.get_value("Company", self.company, "country")
 
 		for d in asset.finance_books:
 			d.value_after_depreciation = asset_value
@@ -150,10 +150,10 @@ class AssetValueAdjustment(Document):
 				asset_data.db_update()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_current_asset_value(asset, finance_book=None):
 	cond = {"parent": asset, "parenttype": "Asset"}
 	if finance_book:
 		cond.update({"finance_book": finance_book})
 
-	return frappe.db.get_value("Asset Finance Book", cond, "value_after_depreciation")
+	return capkpi.db.get_value("Asset Finance Book", cond, "value_after_depreciation")

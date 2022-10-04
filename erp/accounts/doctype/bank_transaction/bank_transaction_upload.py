@@ -4,28 +4,28 @@
 
 import json
 
-import frappe
-from frappe.utils import getdate
-from frappe.utils.dateutils import parse_date
+import capkpi
+from capkpi.utils import getdate
+from capkpi.utils.dateutils import parse_date
 from six import iteritems
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def upload_bank_statement():
-	if getattr(frappe, "uploaded_file", None):
-		with open(frappe.uploaded_file, "rb") as upfile:
+	if getattr(capkpi, "uploaded_file", None):
+		with open(capkpi.uploaded_file, "rb") as upfile:
 			fcontent = upfile.read()
 	else:
-		fcontent = frappe.local.uploaded_file
-		fname = frappe.local.uploaded_filename
+		fcontent = capkpi.local.uploaded_file
+		fname = capkpi.local.uploaded_filename
 
-	if frappe.safe_encode(fname).lower().endswith("csv".encode("utf-8")):
-		from frappe.utils.csvutils import read_csv_content
+	if capkpi.safe_encode(fname).lower().endswith("csv".encode("utf-8")):
+		from capkpi.utils.csvutils import read_csv_content
 
 		rows = read_csv_content(fcontent, False)
 
-	elif frappe.safe_encode(fname).lower().endswith("xlsx".encode("utf-8")):
-		from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file
+	elif capkpi.safe_encode(fname).lower().endswith("xlsx".encode("utf-8")):
+		from capkpi.utils.xlsxutils import read_xlsx_file_from_attached_file
 
 		rows = read_xlsx_file_from_attached_file(fcontent=fcontent)
 
@@ -35,7 +35,7 @@ def upload_bank_statement():
 	return {"columns": columns, "data": data}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_bank_entries(columns, data, bank_account):
 	header_map = get_header_mapping(columns, bank_account)
 
@@ -49,7 +49,7 @@ def create_bank_entries(columns, data, bank_account):
 			fields.update({key: d[int(value) - 1]})
 
 		try:
-			bank_transaction = frappe.get_doc({"doctype": "Bank Transaction"})
+			bank_transaction = capkpi.get_doc({"doctype": "Bank Transaction"})
 			bank_transaction.update(fields)
 			bank_transaction.date = getdate(parse_date(bank_transaction.date))
 			bank_transaction.bank_account = bank_account
@@ -57,7 +57,7 @@ def create_bank_entries(columns, data, bank_account):
 			bank_transaction.submit()
 			success += 1
 		except Exception:
-			frappe.log_error(frappe.get_traceback())
+			capkpi.log_error(capkpi.get_traceback())
 			errors += 1
 
 	return {"success": success, "errors": errors}
@@ -75,8 +75,8 @@ def get_header_mapping(columns, bank_account):
 
 
 def get_bank_mapping(bank_account):
-	bank_name = frappe.db.get_value("Bank Account", bank_account, "bank")
-	bank = frappe.get_doc("Bank", bank_name)
+	bank_name = capkpi.db.get_value("Bank Account", bank_account, "bank")
+	bank = capkpi.get_doc("Bank", bank_name)
 
 	mapping = {row.file_field: row.bank_transaction_field for row in bank.bank_transaction_mapping}
 

@@ -301,7 +301,7 @@
 						<label>{{ _("Course: ") }}</label>
 					</div>
 					<div class="col-xs-11">
-						{{ course }} ({{ frappe.db.get_value("Course", course, "course_name") }})
+						{{ course }} ({{ capkpi.db.get_value("Course", course, "course_name") }})
 					</div>
 				</div>
 			</caption>

@@ -3,13 +3,13 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, now_datetime, random_string, today
+import capkpi
+from capkpi.utils import add_days, now_datetime, random_string, today
 
 from erp.crm.doctype.lead.lead import make_customer
 from erp.crm.doctype.opportunity.opportunity import make_quotation
 
-test_records = frappe.get_test_records("Opportunity")
+test_records = capkpi.get_test_records("Opportunity")
 
 
 class TestOpportunity(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestOpportunity(unittest.TestCase):
 		quotation.run_method("calculate_taxes_and_totals")
 		quotation.submit()
 
-		doc = frappe.get_doc("Opportunity", doc.name)
+		doc = capkpi.get_doc("Opportunity", doc.name)
 		self.assertEqual(doc.status, "Quotation")
 
 	def test_make_new_lead_if_required(self):
@@ -35,15 +35,15 @@ class TestOpportunity(unittest.TestCase):
 			"transaction_date": today(),
 		}
 		# new lead should be created against the new.opportunity@example.com
-		opp_doc = frappe.get_doc(args).insert(ignore_permissions=True)
+		opp_doc = capkpi.get_doc(args).insert(ignore_permissions=True)
 
 		self.assertTrue(opp_doc.party_name)
 		self.assertEqual(opp_doc.opportunity_from, "Lead")
-		self.assertEqual(frappe.db.get_value("Lead", opp_doc.party_name, "email_id"), new_lead_email_id)
+		self.assertEqual(capkpi.db.get_value("Lead", opp_doc.party_name, "email_id"), new_lead_email_id)
 
 		# create new customer and create new contact against 'new.opportunity@example.com'
 		customer = make_customer(opp_doc.party_name).insert(ignore_permissions=True)
-		contact = frappe.get_doc(
+		contact = capkpi.get_doc(
 			{
 				"doctype": "Contact",
 				"first_name": "_Test Opportunity Customer",
@@ -53,7 +53,7 @@ class TestOpportunity(unittest.TestCase):
 		contact.add_email(new_lead_email_id, is_primary=True)
 		contact.insert(ignore_permissions=True)
 
-		opp_doc = frappe.get_doc(args).insert(ignore_permissions=True)
+		opp_doc = capkpi.get_doc(args).insert(ignore_permissions=True)
 		self.assertTrue(opp_doc.party_name)
 		self.assertEqual(opp_doc.opportunity_from, "Customer")
 		self.assertEqual(opp_doc.party_name, customer.name)
@@ -65,20 +65,20 @@ class TestOpportunity(unittest.TestCase):
 		doc.to_discuss = "{{ doc.name }} test data"
 		doc.save()
 
-		event = frappe.get_all(
+		event = capkpi.get_all(
 			"Event Participants",
 			fields=["parent"],
 			filters={"reference_doctype": doc.doctype, "reference_docname": doc.name},
 		)
 
-		event_description = frappe.db.get_value("Event", event[0].parent, "description")
+		event_description = capkpi.db.get_value("Event", event[0].parent, "description")
 		self.assertTrue(doc.name in event_description)
 
 
 def make_opportunity(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	opp_doc = frappe.get_doc(
+	opp_doc = capkpi.get_doc(
 		{
 			"doctype": "Opportunity",
 			"company": args.company or "_Test Company",

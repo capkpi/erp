@@ -4,9 +4,9 @@
 
 import copy
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 from erp.accounts.report.financial_statements import get_columns, get_data, get_period_list
 
@@ -178,7 +178,7 @@ def get_profit(
 		"account_name": "'" + _(profit_type) + "'",
 		"account": "'" + _(profit_type) + "'",
 		"warn_if_negative": True,
-		"currency": currency or frappe.get_cached_value("Company", company, "default_currency"),
+		"currency": currency or capkpi.get_cached_value("Company", company, "default_currency"),
 	}
 
 	has_value = False
@@ -210,7 +210,7 @@ def get_net_profit(
 		"account_name": "'" + _("Net Profit") + "'",
 		"account": "'" + _("Net Profit") + "'",
 		"warn_if_negative": True,
-		"currency": currency or frappe.get_cached_value("Company", company, "default_currency"),
+		"currency": currency or capkpi.get_cached_value("Company", company, "default_currency"),
 	}
 
 	has_value = False

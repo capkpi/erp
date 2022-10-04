@@ -6,7 +6,7 @@
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Employee",
- "dynamic_filters_json": "[[\"Employee\",\"company\",\"=\",\"frappe.defaults.get_user_default(\\\"Company\\\")\"]]",
+ "dynamic_filters_json": "[[\"Employee\",\"company\",\"=\",\"capkpi.defaults.get_user_default(\\\"Company\\\")\"]]",
  "filters_json": "[[\"Employee\",\"status\",\"=\",\"Active\",false]]",
  "group_by_based_on": "designation",
  "group_by_type": "Count",

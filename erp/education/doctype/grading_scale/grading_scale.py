@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint
 
 
 class GradingScale(Document):
@@ -13,8 +13,8 @@ class GradingScale(Document):
 		thresholds = []
 		for d in self.intervals:
 			if d.threshold in thresholds:
-				frappe.throw(_("Treshold {0}% appears more than once").format(d.threshold))
+				capkpi.throw(_("Treshold {0}% appears more than once").format(d.threshold))
 			else:
 				thresholds.append(cint(d.threshold))
 		if 0 not in thresholds:
-			frappe.throw(_("Please define grade for Threshold 0%"))
+			capkpi.throw(_("Please define grade for Threshold 0%"))

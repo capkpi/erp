@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.accounting_dimension.test_accounting_dimension import (
 	create_dimension,
@@ -55,10 +55,10 @@ class TestAccountingDimensionFilter(unittest.TestCase):
 
 
 def create_accounting_dimension_filter():
-	if not frappe.db.get_value(
+	if not capkpi.db.get_value(
 		"Accounting Dimension Filter", {"accounting_dimension": "Cost Center"}
 	):
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Accounting Dimension Filter",
 				"accounting_dimension": "Cost Center",
@@ -75,12 +75,12 @@ def create_accounting_dimension_filter():
 			}
 		).insert()
 	else:
-		doc = frappe.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Cost Center"})
+		doc = capkpi.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Cost Center"})
 		doc.disabled = 0
 		doc.save()
 
-	if not frappe.db.get_value("Accounting Dimension Filter", {"accounting_dimension": "Department"}):
-		frappe.get_doc(
+	if not capkpi.db.get_value("Accounting Dimension Filter", {"accounting_dimension": "Department"}):
+		capkpi.get_doc(
 			{
 				"doctype": "Accounting Dimension Filter",
 				"accounting_dimension": "Department",
@@ -91,16 +91,16 @@ def create_accounting_dimension_filter():
 			}
 		).insert()
 	else:
-		doc = frappe.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Department"})
+		doc = capkpi.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Department"})
 		doc.disabled = 0
 		doc.save()
 
 
 def disable_dimension_filter():
-	doc = frappe.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Cost Center"})
+	doc = capkpi.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Cost Center"})
 	doc.disabled = 1
 	doc.save()
 
-	doc = frappe.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Department"})
+	doc = capkpi.get_doc("Accounting Dimension Filter", {"accounting_dimension": "Department"})
 	doc.disabled = 1
 	doc.save()

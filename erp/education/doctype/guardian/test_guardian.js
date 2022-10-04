@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Guardian', function(assert){
 	assert.expect(9);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Guardian', [
+			return capkpi.tests.make('Guardian', [
 				{guardian_name: 'Test Guardian'},
 				{email_address: 'guardian@testmail.com'},
 				{mobile_number: 9898980000},

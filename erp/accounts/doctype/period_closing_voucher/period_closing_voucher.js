@@ -1,9 +1,9 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.ui.form.on('Period Closing Voucher', {
+capkpi.ui.form.on('Period Closing Voucher', {
 	onload: function(frm) {
-		if (!frm.doc.transaction_date) frm.doc.transaction_date = frappe.datetime.obj_to_str(new Date());
+		if (!frm.doc.transaction_date) frm.doc.transaction_date = capkpi.datetime.obj_to_str(new Date());
 	},
 
 	setup: function(frm) {
@@ -22,7 +22,7 @@ frappe.ui.form.on('Period Closing Voucher', {
 	refresh: function(frm) {
 		if(frm.doc.docstatus > 0) {
 			frm.add_custom_button(__('Ledger'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					"voucher_no": frm.doc.name,
 					"from_date": frm.doc.posting_date,
 					"to_date": moment(frm.doc.modified).format('YYYY-MM-DD'),
@@ -30,7 +30,7 @@ frappe.ui.form.on('Period Closing Voucher', {
 					"group_by": "",
 					"show_cancelled_entries": frm.doc.docstatus === 2
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			}, "fa fa-table");
 		}
 	}

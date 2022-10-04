@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 
-from frappe import _
+from capkpi import _
 
 from erp.crm.report.campaign_efficiency.campaign_efficiency import get_lead_data
 

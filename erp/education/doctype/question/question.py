@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class Question(Document):
@@ -15,7 +15,7 @@ class Question(Document):
 
 	def check_at_least_one_option(self):
 		if len(self.options) <= 1:
-			frappe.throw(_("A question must have more than one options"))
+			capkpi.throw(_("A question must have more than one options"))
 		else:
 			pass
 
@@ -24,7 +24,7 @@ class Question(Document):
 		if bool(sum(correct_options)):
 			pass
 		else:
-			frappe.throw(_("A qustion must have at least one correct options"))
+			capkpi.throw(_("A qustion must have at least one correct options"))
 
 	def set_question_type(self):
 		correct_options = [option for option in self.options if option.is_correct]
@@ -37,7 +37,7 @@ class Question(Document):
 		options = self.options
 		answers = [item.name for item in options if item.is_correct == True]
 		if len(answers) == 0:
-			frappe.throw(_("No correct answer is set for {0}").format(self.name))
+			capkpi.throw(_("No correct answer is set for {0}").format(self.name))
 			return None
 		elif len(answers) == 1:
 			return answers[0]

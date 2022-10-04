@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import nowdate
-from frappe.website.website_generator import WebsiteGenerator
+import capkpi
+from capkpi import _
+from capkpi.utils import nowdate
+from capkpi.website.website_generator import WebsiteGenerator
 
 
 class StudentAdmission(WebsiteGenerator):
@@ -19,7 +19,7 @@ class StudentAdmission(WebsiteGenerator):
 			self.route = "admissions/" + "-".join(self.title.split(" "))
 
 		if self.enable_admission_application and not self.program_details:
-			frappe.throw(_("Please add programs to enable admission application."))
+			capkpi.throw(_("Please add programs to enable admission application."))
 
 	def get_context(self, context):
 		context.no_cache = 1
@@ -47,7 +47,7 @@ def get_list_context(context=None):
 def get_admission_list(
 	doctype, txt, filters, limit_start, limit_page_length=20, order_by="modified"
 ):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select name, title, academic_year, modified, admission_start_date, route,
 		admission_end_date from `tabStudent Admission` where published=1 and admission_end_date >= %s
 		order by admission_end_date asc limit {0}, {1}

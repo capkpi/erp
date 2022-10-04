@@ -1,7 +1,7 @@
 import unittest
 
-import frappe
-from frappe.utils import add_days, getdate, today
+import capkpi
+from capkpi.utils import add_days, getdate, today
 
 from erp.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
@@ -10,8 +10,8 @@ from erp.accounts.report.accounts_receivable.accounts_receivable import execute
 
 class TestAccountsReceivable(unittest.TestCase):
 	def test_accounts_receivable(self):
-		frappe.db.sql("delete from `tabSales Invoice` where company='_Test Company 2'")
-		frappe.db.sql("delete from `tabGL Entry` where company='_Test Company 2'")
+		capkpi.db.sql("delete from `tabSales Invoice` where company='_Test Company 2'")
+		capkpi.db.sql("delete from `tabGL Entry` where company='_Test Company 2'")
 
 		filters = {
 			"company": "_Test Company 2",
@@ -67,7 +67,7 @@ class TestAccountsReceivable(unittest.TestCase):
 
 
 def make_sales_invoice():
-	frappe.set_user("Administrator")
+	capkpi.set_user("Administrator")
 
 	si = create_sales_invoice(
 		company="_Test Company 2",

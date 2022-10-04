@@ -1,14 +1,14 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Woocommerce Settings', {
+capkpi.ui.form.on('Woocommerce Settings', {
 	refresh (frm) {
 		frm.trigger("add_button_generate_secret");
 		frm.trigger("check_enabled");
 		frm.set_query("tax_account", ()=>{
 			return {
 				"filters": {
-					"company": frappe.defaults.get_default("company"),
+					"company": capkpi.defaults.get_default("company"),
 					"is_group": 0
 				}
 			};
@@ -21,16 +21,16 @@ frappe.ui.form.on('Woocommerce Settings', {
 
 	add_button_generate_secret(frm) {
 		frm.add_custom_button(__('Generate Secret'), () => {
-			frappe.confirm(
+			capkpi.confirm(
 				__("Apps using current key won't be able to access, are you sure?"),
 				() => {
-					frappe.call({
+					capkpi.call({
 						type:"POST",
 						method:"erp.erp_integrations.doctype.woocommerce_settings.woocommerce_settings.generate_secret",
 					}).done(() => {
 						frm.reload_doc();
 					}).fail(() => {
-						frappe.msgprint(__("Could not generate Secret"));
+						capkpi.msgprint(__("Could not generate Secret"));
 					});
 				}
 			);
@@ -44,8 +44,8 @@ frappe.ui.form.on('Woocommerce Settings', {
 	}
 });
 
-frappe.ui.form.on("Woocommerce Settings", "onload", function () {
-	frappe.call({
+capkpi.ui.form.on("Woocommerce Settings", "onload", function () {
+	capkpi.call({
 		method: "erp.erp_integrations.doctype.woocommerce_settings.woocommerce_settings.get_series",
 		callback: function (r) {
 			$.each(r.message, function (key, value) {

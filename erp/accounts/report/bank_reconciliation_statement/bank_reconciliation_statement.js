@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["Bank Reconciliation Statement"] = {
+capkpi.query_reports["Bank Reconciliation Statement"] = {
 	"filters": [
 		{
 			"fieldname":"company",
@@ -9,18 +9,18 @@ frappe.query_reports["Bank Reconciliation Statement"] = {
 			"fieldtype": "Link",
 			"options": "Company",
 			"reqd": 1,
-			"default": frappe.defaults.get_user_default("Company")
+			"default": capkpi.defaults.get_user_default("Company")
 		},
 		{
 			"fieldname":"account",
 			"label": __("Bank Account"),
 			"fieldtype": "Link",
 			"options": "Account",
-			"default": frappe.defaults.get_user_default("Company")?
-				locals[":Company"][frappe.defaults.get_user_default("Company")]["default_bank_account"]: "",
+			"default": capkpi.defaults.get_user_default("Company")?
+				locals[":Company"][capkpi.defaults.get_user_default("Company")]["default_bank_account"]: "",
 			"reqd": 1,
 			"get_query": function() {
-				var company = frappe.query_report.get_filter_value('company')
+				var company = capkpi.query_report.get_filter_value('company')
 				return {
 					"query": "erp.controllers.queries.get_account_list",
 					"filters": [
@@ -36,7 +36,7 @@ frappe.query_reports["Bank Reconciliation Statement"] = {
 			"fieldname":"report_date",
 			"label": __("Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today(),
+			"default": capkpi.datetime.get_today(),
 			"reqd": 1
 		},
 		{

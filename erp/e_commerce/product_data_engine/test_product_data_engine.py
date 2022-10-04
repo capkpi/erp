@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.e_commerce.doctype.e_commerce_settings.test_e_commerce_settings import (
 	setup_e_commerce_settings,
@@ -33,7 +33,7 @@ class TestProductDataEngine(unittest.TestCase):
 			item_code = item[0]
 			item_args = {"item_group": item[1]}
 			web_args = {"ranking": index}
-			if not frappe.db.exists("Website Item", {"item_code": item_code}):
+			if not capkpi.db.exists("Website Item", {"item_code": item_code}):
 				create_regular_web_item(item_code, item_args=item_args, web_args=web_args)
 
 		setup_e_commerce_settings(
@@ -49,11 +49,11 @@ class TestProductDataEngine(unittest.TestCase):
 				"price_list": "_Test Price List India",
 			}
 		)
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 	@classmethod
 	def tearDownClass(cls):
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def test_product_list_ordering_and_paging(self):
 		"Test if website items appear by ranking on different pages."
@@ -83,13 +83,13 @@ class TestProductDataEngine(unittest.TestCase):
 	def test_change_product_ranking(self):
 		"Test if item on second page appear on first if ranking is changed."
 		item_code = "Test 12I Laptop"
-		old_ranking = frappe.db.get_value("Website Item", {"item_code": item_code}, "ranking")
+		old_ranking = capkpi.db.get_value("Website Item", {"item_code": item_code}, "ranking")
 
 		# low rank, appears on second page
 		self.assertEqual(old_ranking, 2)
 
 		# set ranking as highest rank
-		frappe.db.set_value("Website Item", {"item_code": item_code}, "ranking", 10)
+		capkpi.db.set_value("Website Item", {"item_code": item_code}, "ranking", 10)
 
 		engine = ProductQuery()
 		result = engine.query(attributes={}, fields={}, search_term=None, start=0, item_group=None)
@@ -100,11 +100,11 @@ class TestProductDataEngine(unittest.TestCase):
 		self.assertEqual(items[1].get("item_code"), "Test 17I Laptop")
 
 		# tear down
-		frappe.db.set_value("Website Item", {"item_code": item_code}, "ranking", old_ranking)
+		capkpi.db.set_value("Website Item", {"item_code": item_code}, "ranking", old_ranking)
 
 	def test_product_list_field_filter_builder(self):
 		"Test if field filters are fetched correctly."
-		frappe.db.set_value("Item Group", "Raw Material", "show_in_website", 0)
+		capkpi.db.set_value("Item Group", "Raw Material", "show_in_website", 0)
 
 		filter_engine = ProductFiltersBuilder()
 		field_filters = filter_engine.get_field_filters()
@@ -119,7 +119,7 @@ class TestProductDataEngine(unittest.TestCase):
 		self.assertIn("Products", valid_item_groups)
 		self.assertNotIn("Raw Material", valid_item_groups)
 
-		frappe.db.set_value("Item Group", "Raw Material", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "Raw Material", "show_in_website", 1)
 		field_filters = filter_engine.get_field_filters()
 
 		#'Products' and 'Raw Materials' both have 'show_in_website' enabled
@@ -189,7 +189,7 @@ class TestProductDataEngine(unittest.TestCase):
 		make_web_pricing_rule(title=f"Test Pricing Rule for {item_code}", item_code=item_code, selling=1)
 
 		setup_e_commerce_settings({"show_price": 1})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 		engine = ProductQuery()
 		result = engine.query(attributes={}, fields={}, search_term=None, start=4, item_group=None)
@@ -226,7 +226,7 @@ class TestProductDataEngine(unittest.TestCase):
 		)
 
 		setup_e_commerce_settings({"show_price": 1})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 		engine = ProductQuery()
 		result = engine.query(
@@ -262,7 +262,7 @@ class TestProductDataEngine(unittest.TestCase):
 		create_variant_web_item()
 
 		setup_e_commerce_settings({"enable_attribute_filters": 0, "hide_variants": 1})
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 		attribute_filters = {"Test Size": ["Large"]}
 		engine = ProductQuery()
@@ -279,7 +279,7 @@ class TestProductDataEngine(unittest.TestCase):
 
 	def test_custom_field_as_filter(self):
 		"Test if custom field functions as filter correctly."
-		from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+		from capkpi.custom.doctype.custom_field.custom_field import create_custom_field
 
 		create_custom_field(
 			"Website Item",
@@ -293,14 +293,14 @@ class TestProductDataEngine(unittest.TestCase):
 			),
 		)
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Website Item", {"item_code": "Test 11I Laptop"}, "supplier", "_Test Supplier"
 		)
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Website Item", {"item_code": "Test 12I Laptop"}, "supplier", "_Test Supplier 1"
 		)
 
-		settings = frappe.get_doc("E Commerce Settings")
+		settings = capkpi.get_doc("E Commerce Settings")
 		settings.append("filter_fields", {"fieldname": "supplier"})
 		settings.save()
 
@@ -340,9 +340,9 @@ def create_variant_web_item():
 			"attributes": [{"attribute": "Test Size"}],
 		},
 	)
-	if not frappe.db.exists("Item", "Test Web Item-L"):
+	if not capkpi.db.exists("Item", "Test Web Item-L"):
 		variant = create_variant("Test Web Item", {"Test Size": "Large"})
 		variant.save()
 
-	if not frappe.db.exists("Website Item", {"variant_of": "Test Web Item"}):
+	if not capkpi.db.exists("Website Item", {"variant_of": "Test Web Item"}):
 		make_website_item(variant, save=True)

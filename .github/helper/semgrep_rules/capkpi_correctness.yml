@@ -1,7 +1,7 @@
-# This file specifies rules for correctness according to how frappe doctype data model works.
+# This file specifies rules for correctness according to how capkpi doctype data model works.
 
 rules:
-- id: frappe-modifying-but-not-comitting
+- id: capkpi-modifying-but-not-comitting
   patterns:
     - pattern: |
         def $METHOD(self, ...):
@@ -37,7 +37,7 @@ rules:
   languages: [python]
   severity: ERROR
 
-- id: frappe-modifying-but-not-comitting-other-method
+- id: capkpi-modifying-but-not-comitting-other-method
   patterns:
   - pattern: |
       class $DOCTYPE(...):
@@ -91,7 +91,7 @@ rules:
   languages: [python]
   severity: ERROR
 
-- id: frappe-print-function-in-doctypes
+- id: capkpi-print-function-in-doctypes
   pattern: print(...)
   message: |
       Did you mean to leave this print statement in? Consider using msgprint or logger instead of print statement.
@@ -101,7 +101,7 @@ rules:
       include:
         - "*/**/doctype/*"
 
-- id: frappe-modifying-child-tables-while-iterating
+- id: capkpi-modifying-child-tables-while-iterating
   pattern-either:
     - pattern: |
         for $ROW in self.$TABLE:
@@ -119,7 +119,7 @@ rules:
       include:
         - "*/**/doctype/*"
 
-- id: frappe-same-key-assigned-twice
+- id: capkpi-same-key-assigned-twice
   pattern-either:
     - pattern: |
         {..., $X: $A, ..., $X: $B, ...}
@@ -133,16 +133,16 @@ rules:
   severity: ERROR
 
 
-- id: frappe-manual-commit
+- id: capkpi-manual-commit
   patterns:
-    - pattern: frappe.db.commit()
+    - pattern: capkpi.db.commit()
     - pattern-not-inside: |
         try:
           ...
         except ...:
           ...
   message: |
-    Manually commiting a transaction is highly discouraged. Read about the transaction model implemented by CapKPI Framework before adding manual commits: https://frappeframework.com/docs/user/en/api/database#database-transaction-model If you think manual commit is required then add a comment explaining why and `// nosemgrep` on the same line.
+    Manually commiting a transaction is highly discouraged. Read about the transaction model implemented by CapKPI Framework before adding manual commits: https://capkpiframework.com/docs/user/en/api/database#database-transaction-model If you think manual commit is required then add a comment explaining why and `// nosemgrep` on the same line.
   paths:
       exclude:
         - "**/patches/**"

@@ -1,9 +1,9 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.share_transfer");
+capkpi.provide("erp.share_transfer");
 
-frappe.ui.form.on('Share Transfer', {
+capkpi.ui.form.on('Share Transfer', {
 	refresh: function(frm) {
 		// Don't show Parties which are a Company
 		let shareholders = ['from_shareholder', 'to_shareholder'];
@@ -36,7 +36,7 @@ frappe.ui.form.on('Share Transfer', {
 	},
 	company: async function(frm) {
 		if (frm.doc.company) {
-			let currency = (await frappe.db.get_value("Company", frm.doc.company, "default_currency")).message.default_currency;
+			let currency = (await capkpi.db.get_value("Company", frm.doc.company, "default_currency")).message.default_currency;
 			frm.set_query("equity_or_liability_account", function() {
 				return {
 					filters: {
@@ -98,7 +98,7 @@ erp.share_transfer.make_jv = function (frm) {
 		debit_applicant_type = "Shareholder";
 		debit_applicant = frm.doc.from_shareholder;
 	}
-	frappe.call({
+	capkpi.call({
 		args: {
 			"company": frm.doc.company,
 			"account": account,
@@ -111,8 +111,8 @@ erp.share_transfer.make_jv = function (frm) {
 		},
 		method: "erp.accounts.doctype.share_transfer.share_transfer.make_jv_entry",
 		callback: function (r) {
-			var doc = frappe.model.sync(r.message)[0];
-			frappe.set_route("Form", doc.doctype, doc.name);
+			var doc = capkpi.model.sync(r.message)[0];
+			capkpi.set_route("Form", doc.doctype, doc.name);
 		}
 	});
 };

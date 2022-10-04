@@ -2,19 +2,19 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class ChequePrintTemplate(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_or_update_cheque_print_format(template_name):
-	if not frappe.db.exists("Print Format", template_name):
-		cheque_print = frappe.new_doc("Print Format")
+	if not capkpi.db.exists("Print Format", template_name):
+		cheque_print = capkpi.new_doc("Print Format")
 		cheque_print.update(
 			{
 				"doc_type": "Payment Entry",
@@ -25,9 +25,9 @@ def create_or_update_cheque_print_format(template_name):
 			}
 		)
 	else:
-		cheque_print = frappe.get_doc("Print Format", template_name)
+		cheque_print = capkpi.get_doc("Print Format", template_name)
 
-	doc = frappe.get_doc("Cheque Print Template", template_name)
+	doc = capkpi.get_doc("Cheque Print Template", template_name)
 
 	cheque_print.html = """
 <style>
@@ -48,7 +48,7 @@ def create_or_update_cheque_print_format(template_name):
 		</span>
 		<span style="top:%(date_dist_from_top_edge)scm; left:%(date_dist_from_left_edge)scm;
 			position: absolute;">
-			{{ frappe.utils.formatdate(doc.reference_date) or '' }}
+			{{ capkpi.utils.formatdate(doc.reference_date) or '' }}
 		</span>
 		<span style="top:%(acc_no_dist_from_top_edge)scm;left:%(acc_no_dist_from_left_edge)scm;
 			position: absolute;  min-width: 6cm;">
@@ -61,7 +61,7 @@ def create_or_update_cheque_print_format(template_name):
 		<span style="top:%(amt_in_words_from_top_edge)scm; left:%(amt_in_words_from_left_edge)scm;
 			position: absolute; display: block; width: %(amt_in_word_width)scm;
 			line-height:%(amt_in_words_line_spacing)scm; word-wrap: break-word;">
-				{{frappe.utils.money_in_words(doc.base_paid_amount or doc.base_received_amount)}}
+				{{capkpi.utils.money_in_words(doc.base_paid_amount or doc.base_received_amount)}}
 		</span>
 		<span style="top:%(amt_in_figures_from_top_edge)scm;left: %(amt_in_figures_from_left_edge)scm;
 			position: absolute; min-width: 4cm;">
@@ -99,6 +99,6 @@ def create_or_update_cheque_print_format(template_name):
 
 	cheque_print.save(ignore_permissions=True)
 
-	frappe.db.set_value("Cheque Print Template", template_name, "has_print_format", 1)
+	capkpi.db.set_value("Cheque Print Template", template_name, "has_print_format", 1)
 
 	return cheque_print

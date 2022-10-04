@@ -2,19 +2,19 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, throw
-from frappe.utils import cint, cstr
-from frappe.utils.nestedset import NestedSet, get_ancestors_of, get_descendants_of
+import capkpi
+from capkpi import _, throw
+from capkpi.utils import cint, cstr
+from capkpi.utils.nestedset import NestedSet, get_ancestors_of, get_descendants_of
 
 import erp
 
 
-class RootNotEditable(frappe.ValidationError):
+class RootNotEditable(capkpi.ValidationError):
 	pass
 
 
-class BalanceMismatchError(frappe.ValidationError):
+class BalanceMismatchError(capkpi.ValidationError):
 	pass
 
 
@@ -22,16 +22,16 @@ class Account(NestedSet):
 	nsm_parent_field = "parent_account"
 
 	def on_update(self):
-		if frappe.local.flags.ignore_update_nsm:
+		if capkpi.local.flags.ignore_update_nsm:
 			return
 		else:
 			super(Account, self).on_update()
 
 	def onload(self):
-		frozen_accounts_modifier = frappe.db.get_value(
+		frozen_accounts_modifier = capkpi.db.get_value(
 			"Accounts Settings", "Accounts Settings", "frozen_accounts_modifier"
 		)
-		if not frozen_accounts_modifier or frozen_accounts_modifier in frappe.get_roles():
+		if not frozen_accounts_modifier or frozen_accounts_modifier in capkpi.get_roles():
 			self.set_onload("can_freeze_account", True)
 
 	def autoname(self):
@@ -42,7 +42,7 @@ class Account(NestedSet):
 	def validate(self):
 		from erp.accounts.utils import validate_field_number
 
-		if frappe.local.flags.allow_unverified_charts:
+		if capkpi.local.flags.allow_unverified_charts:
 			return
 		self.validate_parent()
 		self.validate_root_details()
@@ -58,7 +58,7 @@ class Account(NestedSet):
 	def validate_parent(self):
 		"""Fetch Parent Details and validate parent account"""
 		if self.parent_account:
-			par = frappe.db.get_value(
+			par = capkpi.db.get_value(
 				"Account", self.parent_account, ["name", "is_group", "company"], as_dict=1
 			)
 			if not par:
@@ -82,7 +82,7 @@ class Account(NestedSet):
 
 	def set_root_and_report_type(self):
 		if self.parent_account:
-			par = frappe.db.get_value(
+			par = capkpi.db.get_value(
 				"Account", self.parent_account, ["report_type", "root_type"], as_dict=1
 			)
 
@@ -92,15 +92,15 @@ class Account(NestedSet):
 				self.root_type = par.root_type
 
 		if self.is_group:
-			db_value = frappe.db.get_value("Account", self.name, ["report_type", "root_type"], as_dict=1)
+			db_value = capkpi.db.get_value("Account", self.name, ["report_type", "root_type"], as_dict=1)
 			if db_value:
 				if self.report_type != db_value.report_type:
-					frappe.db.sql(
+					capkpi.db.sql(
 						"update `tabAccount` set report_type=%s where lft > %s and rgt < %s",
 						(self.report_type, self.lft, self.rgt),
 					)
 				if self.root_type != db_value.root_type:
-					frappe.db.sql(
+					capkpi.db.sql(
 						"update `tabAccount` set root_type=%s where lft > %s and rgt < %s",
 						(self.root_type, self.lft, self.rgt),
 					)
@@ -112,33 +112,33 @@ class Account(NestedSet):
 
 	def validate_root_details(self):
 		# does not exists parent
-		if frappe.db.exists("Account", self.name):
-			if not frappe.db.get_value("Account", self.name, "parent_account"):
+		if capkpi.db.exists("Account", self.name):
+			if not capkpi.db.get_value("Account", self.name, "parent_account"):
 				throw(_("Root cannot be edited."), RootNotEditable)
 
 		if not self.parent_account and not self.is_group:
-			frappe.throw(_("The root account {0} must be a group").format(frappe.bold(self.name)))
+			capkpi.throw(_("The root account {0} must be a group").format(capkpi.bold(self.name)))
 
 	def validate_root_company_and_sync_account_to_children(self):
 		# ignore validation while creating new compnay or while syncing to child companies
 		if (
-			frappe.local.flags.ignore_root_company_validation or self.flags.ignore_root_company_validation
+			capkpi.local.flags.ignore_root_company_validation or self.flags.ignore_root_company_validation
 		):
 			return
 		ancestors = get_root_company(self.company)
 		if ancestors:
-			if frappe.get_value("Company", self.company, "allow_account_creation_against_child_company"):
+			if capkpi.get_value("Company", self.company, "allow_account_creation_against_child_company"):
 				return
-			if not frappe.db.get_value(
+			if not capkpi.db.get_value(
 				"Account", {"account_name": self.account_name, "company": ancestors[0]}, "name"
 			):
-				frappe.throw(_("Please add the account to root level Company - {}").format(ancestors[0]))
+				capkpi.throw(_("Please add the account to root level Company - {}").format(ancestors[0]))
 		elif self.parent_account:
 			descendants = get_descendants_of("Company", self.company)
 			if not descendants:
 				return
 			parent_acc_name_map = {}
-			parent_acc_name, parent_acc_number = frappe.db.get_value(
+			parent_acc_name, parent_acc_number = capkpi.db.get_value(
 				"Account", self.parent_account, ["account_name", "account_number"]
 			)
 			filters = {
@@ -148,7 +148,7 @@ class Account(NestedSet):
 			if parent_acc_number:
 				filters["account_number"] = parent_acc_number
 
-			for d in frappe.db.get_values(
+			for d in capkpi.db.get_values(
 				"Account", filters=filters, fieldname=["company", "name"], as_dict=True
 			):
 				parent_acc_name_map[d["company"]] = d["name"]
@@ -162,7 +162,7 @@ class Account(NestedSet):
 		if self.get("__islocal"):
 			return
 
-		existing_is_group = frappe.db.get_value("Account", self.name, "is_group")
+		existing_is_group = capkpi.db.get_value("Account", self.name, "is_group")
 		if cint(self.is_group) != cint(existing_is_group):
 			if self.check_gle_exists():
 				throw(_("Account with existing transaction cannot be converted to ledger"))
@@ -173,12 +173,12 @@ class Account(NestedSet):
 				throw(_("Account with child nodes cannot be set as ledger"))
 
 	def validate_frozen_accounts_modifier(self):
-		old_value = frappe.db.get_value("Account", self.name, "freeze_account")
+		old_value = capkpi.db.get_value("Account", self.name, "freeze_account")
 		if old_value and old_value != self.freeze_account:
-			frozen_accounts_modifier = frappe.db.get_value(
+			frozen_accounts_modifier = capkpi.db.get_value(
 				"Accounts Settings", None, "frozen_accounts_modifier"
 			)
-			if not frozen_accounts_modifier or frozen_accounts_modifier not in frappe.get_roles():
+			if not frozen_accounts_modifier or frozen_accounts_modifier not in capkpi.get_roles():
 				throw(_("You are not authorized to set Frozen value"))
 
 	def validate_balance_must_be_debit_or_credit(self):
@@ -188,13 +188,13 @@ class Account(NestedSet):
 			account_balance = get_balance_on(self.name)
 
 			if account_balance > 0 and self.balance_must_be == "Credit":
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Account balance already in Debit, you are not allowed to set 'Balance Must Be' as 'Credit'"
 					)
 				)
 			elif account_balance < 0 and self.balance_must_be == "Debit":
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Account balance already in Credit, you are not allowed to set 'Balance Must Be' as 'Debit'"
 					)
@@ -202,20 +202,20 @@ class Account(NestedSet):
 
 	def validate_account_currency(self):
 		if not self.account_currency:
-			self.account_currency = frappe.get_cached_value("Company", self.company, "default_currency")
+			self.account_currency = capkpi.get_cached_value("Company", self.company, "default_currency")
 
-		gl_currency = frappe.db.get_value("GL Entry", {"account": self.name}, "account_currency")
+		gl_currency = capkpi.db.get_value("GL Entry", {"account": self.name}, "account_currency")
 
 		if gl_currency and self.account_currency != gl_currency:
-			if frappe.db.get_value("GL Entry", {"account": self.name}):
-				frappe.throw(_("Currency can not be changed after making entries using some other currency"))
+			if capkpi.db.get_value("GL Entry", {"account": self.name}):
+				capkpi.throw(_("Currency can not be changed after making entries using some other currency"))
 
 	def create_account_for_child_company(self, parent_acc_name_map, descendants, parent_acc_name):
 		for company in descendants:
-			company_bold = frappe.bold(company)
-			parent_acc_name_bold = frappe.bold(parent_acc_name)
+			company_bold = capkpi.bold(company)
+			parent_acc_name_bold = capkpi.bold(parent_acc_name)
 			if not parent_acc_name_map.get(company):
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"While creating account for Child Company {0}, parent account {1} not found. Please create the parent account in corresponding COA"
 					).format(company_bold, parent_acc_name_bold),
@@ -223,7 +223,7 @@ class Account(NestedSet):
 				)
 
 			# validate if parent of child company account to be added is a group
-			if frappe.db.get_value("Account", self.parent_account, "is_group") and not frappe.db.get_value(
+			if capkpi.db.get_value("Account", self.parent_account, "is_group") and not capkpi.db.get_value(
 				"Account", parent_acc_name_map[company], "is_group"
 			):
 				msg = _(
@@ -233,16 +233,16 @@ class Account(NestedSet):
 				msg += _(
 					"Please convert the parent account in corresponding child company to a group account."
 				)
-				frappe.throw(msg, title=_("Invalid Parent Account"))
+				capkpi.throw(msg, title=_("Invalid Parent Account"))
 
 			filters = {"account_name": self.account_name, "company": company}
 
 			if self.account_number:
 				filters["account_number"] = self.account_number
 
-			child_account = frappe.db.get_value("Account", filters, "name")
+			child_account = capkpi.db.get_value("Account", filters, "name")
 			if not child_account:
-				doc = frappe.copy_doc(self)
+				doc = capkpi.copy_doc(self)
 				doc.flags.ignore_root_company_validation = True
 				doc.update(
 					{
@@ -255,10 +255,10 @@ class Account(NestedSet):
 				)
 
 				doc.save()
-				frappe.msgprint(_("Account {0} is added in the child company {1}").format(doc.name, company))
+				capkpi.msgprint(_("Account {0} is added in the child company {1}").format(doc.name, company))
 			elif child_account:
 				# update the parent company's value in child companies
-				doc = frappe.get_doc("Account", child_account)
+				doc = capkpi.get_doc("Account", child_account)
 				parent_value_changed = False
 				for field in ["account_type", "freeze_account", "balance_must_be"]:
 					if doc.get(field) != self.get(field):
@@ -268,7 +268,7 @@ class Account(NestedSet):
 				if parent_value_changed:
 					doc.save()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def convert_group_to_ledger(self):
 		if self.check_if_child_exists():
 			throw(_("Account with child nodes cannot be converted to ledger"))
@@ -279,7 +279,7 @@ class Account(NestedSet):
 			self.save()
 			return 1
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def convert_ledger_to_group(self):
 		if self.check_gle_exists():
 			throw(_("Account with existing transaction can not be converted to group."))
@@ -292,10 +292,10 @@ class Account(NestedSet):
 
 	# Check if any previous balance exists
 	def check_gle_exists(self):
-		return frappe.db.get_value("GL Entry", {"account": self.name})
+		return capkpi.db.get_value("GL Entry", {"account": self.name})
 
 	def check_if_child_exists(self):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name from `tabAccount` where parent_account = %s
 			and docstatus != 2""",
 			self.name,
@@ -316,10 +316,10 @@ class Account(NestedSet):
 		super(Account, self).on_trash(True)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_parent_account(doctype, txt, searchfield, start, page_len, filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select name from tabAccount
 		where is_group = 1 and docstatus != 2 and company = %s
 		and %s like %s order by name limit %s, %s"""
@@ -335,26 +335,26 @@ def get_account_currency(account):
 		return
 
 	def generator():
-		account_currency, company = frappe.get_cached_value(
+		account_currency, company = capkpi.get_cached_value(
 			"Account", account, ["account_currency", "company"]
 		)
 		if not account_currency:
-			account_currency = frappe.get_cached_value("Company", company, "default_currency")
+			account_currency = capkpi.get_cached_value("Company", company, "default_currency")
 
 		return account_currency
 
-	return frappe.local_cache("account_currency", account, generator)
+	return capkpi.local_cache("account_currency", account, generator)
 
 
 def on_doctype_update():
-	frappe.db.add_index("Account", ["lft", "rgt"])
+	capkpi.db.add_index("Account", ["lft", "rgt"])
 
 
 def get_account_autoname(account_number, account_name, company):
 	# first validate if company exists
-	company = frappe.get_cached_value("Company", company, ["abbr", "name"], as_dict=True)
+	company = capkpi.get_cached_value("Company", company, ["abbr", "name"], as_dict=True)
 	if not company:
-		frappe.throw(_("Company {0} does not exist").format(company))
+		capkpi.throw(_("Company {0} does not exist").format(company))
 
 	parts = [account_name.strip(), company.abbr]
 	if cstr(account_number).strip():
@@ -364,59 +364,59 @@ def get_account_autoname(account_number, account_name, company):
 
 def validate_account_number(name, account_number, company):
 	if account_number:
-		account_with_same_number = frappe.db.get_value(
+		account_with_same_number = capkpi.db.get_value(
 			"Account", {"account_number": account_number, "company": company, "name": ["!=", name]}
 		)
 		if account_with_same_number:
-			frappe.throw(
+			capkpi.throw(
 				_("Account Number {0} already used in account {1}").format(
 					account_number, account_with_same_number
 				)
 			)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_account_number(name, account_name, account_number=None, from_descendant=False):
-	account = frappe.db.get_value("Account", name, "company", as_dict=True)
+	account = capkpi.db.get_value("Account", name, "company", as_dict=True)
 	if not account:
 		return
 
-	old_acc_name, old_acc_number = frappe.db.get_value(
+	old_acc_name, old_acc_number = capkpi.db.get_value(
 		"Account", name, ["account_name", "account_number"]
 	)
 
 	# check if account exists in parent company
 	ancestors = get_ancestors_of("Company", account.company)
-	allow_independent_account_creation = frappe.get_value(
+	allow_independent_account_creation = capkpi.get_value(
 		"Company", account.company, "allow_account_creation_against_child_company"
 	)
 
 	if ancestors and not allow_independent_account_creation:
 		for ancestor in ancestors:
-			if frappe.db.get_value("Account", {"account_name": old_acc_name, "company": ancestor}, "name"):
+			if capkpi.db.get_value("Account", {"account_name": old_acc_name, "company": ancestor}, "name"):
 				# same account in parent company exists
 				allow_child_account_creation = _("Allow Account Creation Against Child Company")
 
 				message = _("Account {0} exists in parent company {1}.").format(
-					frappe.bold(old_acc_name), frappe.bold(ancestor)
+					capkpi.bold(old_acc_name), capkpi.bold(ancestor)
 				)
 				message += "<br>"
 				message += _("Renaming it is only allowed via parent company {0}, to avoid mismatch.").format(
-					frappe.bold(ancestor)
+					capkpi.bold(ancestor)
 				)
 				message += "<br><br>"
 				message += _("To overrule this, enable '{0}' in company {1}").format(
-					allow_child_account_creation, frappe.bold(account.company)
+					allow_child_account_creation, capkpi.bold(account.company)
 				)
 
-				frappe.throw(message, title=_("Rename Not Allowed"))
+				capkpi.throw(message, title=_("Rename Not Allowed"))
 
 	validate_account_number(name, account_number, account.company)
 	if account_number:
-		frappe.db.set_value("Account", name, "account_number", account_number.strip())
+		capkpi.db.set_value("Account", name, "account_number", account_number.strip())
 	else:
-		frappe.db.set_value("Account", name, "account_number", "")
-	frappe.db.set_value("Account", name, "account_name", account_name.strip())
+		capkpi.db.set_value("Account", name, "account_number", "")
+	capkpi.db.set_value("Account", name, "account_name", account_name.strip())
 
 	if not from_descendant:
 		# Update and rename in child company accounts as well
@@ -428,17 +428,17 @@ def update_account_number(name, account_name, account_number=None, from_descenda
 
 	new_name = get_account_autoname(account_number, account_name, account.company)
 	if name != new_name:
-		frappe.rename_doc("Account", name, new_name, force=1)
+		capkpi.rename_doc("Account", name, new_name, force=1)
 		return new_name
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def merge_account(old, new, is_group, root_type, company):
 	# Validate properties before merging
-	if not frappe.db.exists("Account", new):
+	if not capkpi.db.exists("Account", new):
 		throw(_("Account {0} does not exist").format(new))
 
-	val = list(frappe.db.get_value("Account", new, ["is_group", "root_type", "company"]))
+	val = list(capkpi.db.get_value("Account", new, ["is_group", "root_type", "company"]))
 
 	if val != [cint(is_group), root_type, company]:
 		throw(
@@ -447,17 +447,17 @@ def merge_account(old, new, is_group, root_type, company):
 			)
 		)
 
-	if is_group and frappe.db.get_value("Account", new, "parent_account") == old:
-		frappe.db.set_value(
-			"Account", new, "parent_account", frappe.db.get_value("Account", old, "parent_account")
+	if is_group and capkpi.db.get_value("Account", new, "parent_account") == old:
+		capkpi.db.set_value(
+			"Account", new, "parent_account", capkpi.db.get_value("Account", old, "parent_account")
 		)
 
-	frappe.rename_doc("Account", old, new, merge=1, force=1)
+	capkpi.rename_doc("Account", old, new, merge=1, force=1)
 
 	return new
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_root_company(company):
 	# return the topmost company in the hierarchy
 	ancestors = get_ancestors_of("Company", company, "lft asc")
@@ -474,7 +474,7 @@ def sync_update_account_number_in_child(
 	if old_acc_number:
 		filters["account_number"] = old_acc_number
 
-	for d in frappe.db.get_values(
+	for d in capkpi.db.get_values(
 		"Account", filters=filters, fieldname=["company", "name"], as_dict=True
 	):
 		update_account_number(d["name"], account_name, account_number, from_descendant=True)

@@ -4,11 +4,11 @@
 
 import json
 
-import frappe
-from frappe import _, msgprint
-from frappe.desk.notifications import clear_doctype_notifications
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import cint, cstr, flt
+import capkpi
+from capkpi import _, msgprint
+from capkpi.desk.notifications import clear_doctype_notifications
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import cint, cstr, flt
 
 from erp.accounts.doctype.sales_invoice.sales_invoice import (
 	unlink_inter_company_doc,
@@ -47,7 +47,7 @@ class PurchaseOrder(BuyingController):
 		]
 
 	def onload(self):
-		supplier_tds = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
+		supplier_tds = capkpi.db.get_value("Supplier", self.supplier, "tax_withholding_category")
 		self.set_onload("supplier_tds", supplier_tds)
 
 	def validate(self):
@@ -106,7 +106,7 @@ class PurchaseOrder(BuyingController):
 			}
 		)
 
-		if cint(frappe.db.get_single_value("Buying Settings", "maintain_same_rate")):
+		if cint(capkpi.db.get_single_value("Buying Settings", "maintain_same_rate")):
 			self.validate_rate_with_reference_doc(
 				[["Supplier Quotation", "supplier_quotation", "supplier_quotation_item"]]
 			)
@@ -142,20 +142,20 @@ class PurchaseOrder(BuyingController):
 		self.calculate_taxes_and_totals()
 
 	def validate_supplier(self):
-		prevent_po = frappe.db.get_value("Supplier", self.supplier, "prevent_pos")
+		prevent_po = capkpi.db.get_value("Supplier", self.supplier, "prevent_pos")
 		if prevent_po:
-			standing = frappe.db.get_value("Supplier Scorecard", self.supplier, "status")
+			standing = capkpi.db.get_value("Supplier Scorecard", self.supplier, "status")
 			if standing:
-				frappe.throw(
+				capkpi.throw(
 					_("Purchase Orders are not allowed for {0} due to a scorecard standing of {1}.").format(
 						self.supplier, standing
 					)
 				)
 
-		warn_po = frappe.db.get_value("Supplier", self.supplier, "warn_pos")
+		warn_po = capkpi.db.get_value("Supplier", self.supplier, "warn_pos")
 		if warn_po:
-			standing = frappe.db.get_value("Supplier Scorecard", self.supplier, "status")
-			frappe.msgprint(
+			standing = capkpi.db.get_value("Supplier Scorecard", self.supplier, "status")
+			capkpi.msgprint(
 				_(
 					"{0} currently has a {1} Supplier Scorecard standing, and Purchase Orders to this supplier should be issued with caution."
 				).format(self.supplier, standing),
@@ -170,8 +170,8 @@ class PurchaseOrder(BuyingController):
 			return
 		items = list(set(d.item_code for d in self.get("items")))
 
-		itemwise_min_order_qty = frappe._dict(
-			frappe.db.sql(
+		itemwise_min_order_qty = capkpi._dict(
+			capkpi.db.sql(
 				"""select name, min_order_qty
 			from tabItem where name in ({0})""".format(
 					", ".join(["%s"] * len(items))
@@ -180,14 +180,14 @@ class PurchaseOrder(BuyingController):
 			)
 		)
 
-		itemwise_qty = frappe._dict()
+		itemwise_qty = capkpi._dict()
 		for d in self.get("items"):
 			itemwise_qty.setdefault(d.item_code, 0)
 			itemwise_qty[d.item_code] += flt(d.stock_qty)
 
 		for item_code, qty in itemwise_qty.items():
 			if flt(qty) < flt(itemwise_min_order_qty.get(item_code)):
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Item {0}: Ordered qty {1} cannot be less than minimum order qty {2} (defined in Item)."
 					).format(item_code, qty, itemwise_min_order_qty.get(item_code))
@@ -197,7 +197,7 @@ class PurchaseOrder(BuyingController):
 		if self.is_subcontracted == "Yes":
 			for item in self.items:
 				if not item.bom:
-					frappe.throw(
+					capkpi.throw(
 						_("BOM is not specified for subcontracting item {0} at row {1}").format(
 							item.item_code, item.idx
 						)
@@ -206,11 +206,11 @@ class PurchaseOrder(BuyingController):
 	def get_schedule_dates(self):
 		for d in self.get("items"):
 			if d.material_request_item and not d.schedule_date:
-				d.schedule_date = frappe.db.get_value(
+				d.schedule_date = capkpi.db.get_value(
 					"Material Request Item", d.material_request_item, "schedule_date"
 				)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_last_purchase_rate(self):
 		"""get last purchase rates for all items"""
 
@@ -229,7 +229,7 @@ class PurchaseOrder(BuyingController):
 					d.last_purchase_rate = d.rate
 				else:
 
-					item_last_purchase_rate = frappe.get_cached_value("Item", d.item_code, "last_purchase_rate")
+					item_last_purchase_rate = capkpi.get_cached_value("Item", d.item_code, "last_purchase_rate")
 					if item_last_purchase_rate:
 						d.base_price_list_rate = (
 							d.base_rate
@@ -255,11 +255,11 @@ class PurchaseOrder(BuyingController):
 
 		for mr, mr_item_rows in material_request_map.items():
 			if mr and mr_item_rows:
-				mr_obj = frappe.get_doc("Material Request", mr)
+				mr_obj = capkpi.get_doc("Material Request", mr)
 
 				if mr_obj.status in ["Stopped", "Cancelled"]:
-					frappe.throw(
-						_("Material Request {0} is cancelled or stopped").format(mr), frappe.InvalidStatusError
+					capkpi.throw(
+						_("Material Request {0} is cancelled or stopped").format(mr), capkpi.InvalidStatusError
 					)
 
 				mr_obj.update_requested_qty(mr_item_rows)
@@ -271,7 +271,7 @@ class PurchaseOrder(BuyingController):
 			if (
 				(not po_item_rows or d.name in po_item_rows)
 				and [d.item_code, d.warehouse] not in item_wh_list
-				and frappe.get_cached_value("Item", d.item_code, "is_stock_item")
+				and capkpi.get_cached_value("Item", d.item_code, "is_stock_item")
 				and d.warehouse
 				and not d.delivered_by_supplier
 			):
@@ -280,8 +280,8 @@ class PurchaseOrder(BuyingController):
 			update_bin_qty(item_code, warehouse, {"ordered_qty": get_ordered_qty(item_code, warehouse)})
 
 	def check_modified_date(self):
-		mod_db = frappe.db.sql("select modified from `tabPurchase Order` where name = %s", self.name)
-		date_diff = frappe.db.sql("select '%s' - '%s' " % (mod_db[0][0], cstr(self.modified)))
+		mod_db = capkpi.db.sql("select modified from `tabPurchase Order` where name = %s", self.name)
+		date_diff = capkpi.db.sql("select '%s' - '%s' " % (mod_db[0][0], cstr(self.modified)))
 
 		if date_diff and date_diff[0][0]:
 			msgprint(
@@ -314,7 +314,7 @@ class PurchaseOrder(BuyingController):
 		if self.is_subcontracted == "Yes":
 			self.update_reserved_qty_for_subcontract()
 
-		frappe.get_doc("Authorization Control").validate_approving_authority(
+		capkpi.get_doc("Authorization Control").validate_approving_authority(
 			self.doctype, self.company, self.base_grand_total
 		)
 
@@ -336,7 +336,7 @@ class PurchaseOrder(BuyingController):
 
 		self.check_on_hold_or_closed_status()
 
-		frappe.db.set(self, "status", "Cancelled")
+		capkpi.db.set(self, "status", "Cancelled")
 
 		self.update_prevdoc_status()
 
@@ -387,7 +387,7 @@ class PurchaseOrder(BuyingController):
 					sales_orders_to_update.append(item.sales_order)
 
 		for so_name in sales_orders_to_update:
-			so = frappe.get_doc("Sales Order", so_name)
+			so = capkpi.get_doc("Sales Order", so_name)
 			so.update_delivery_status()
 			so.set_status(update=True)
 			so.notify_update()
@@ -432,19 +432,19 @@ def item_last_purchase_rate(name, conversion_rate, item_code, conversion_factor=
 		) / conversion_rate
 		return last_purchase_rate
 	else:
-		item_last_purchase_rate = frappe.get_cached_value("Item", item_code, "last_purchase_rate")
+		item_last_purchase_rate = capkpi.get_cached_value("Item", item_code, "last_purchase_rate")
 		if item_last_purchase_rate:
 			return item_last_purchase_rate
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def close_or_unclose_purchase_orders(names, status):
-	if not frappe.has_permission("Purchase Order", "write"):
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	if not capkpi.has_permission("Purchase Order", "write"):
+		capkpi.throw(_("Not permitted"), capkpi.PermissionError)
 
 	names = json.loads(names)
 	for name in names:
-		po = frappe.get_doc("Purchase Order", name)
+		po = capkpi.get_doc("Purchase Order", name)
 		if po.docstatus == 1:
 			if status == "Closed":
 				if po.status not in ("Cancelled", "Closed") and (po.per_received < 100 or po.per_billed < 100):
@@ -454,7 +454,7 @@ def close_or_unclose_purchase_orders(names, status):
 					po.update_status("Draft")
 			po.update_blanket_order()
 
-	frappe.local.message_log = []
+	capkpi.local.message_log = []
 
 
 def set_missing_values(source, target):
@@ -462,7 +462,7 @@ def set_missing_values(source, target):
 	target.run_method("calculate_taxes_and_totals")
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_purchase_receipt(source_name, target_doc=None):
 	def update_item(obj, target, source_parent):
 		target.qty = flt(obj.qty) - flt(obj.received_qty)
@@ -507,20 +507,20 @@ def make_purchase_receipt(source_name, target_doc=None):
 	return doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_purchase_invoice(source_name, target_doc=None):
 	return get_mapped_purchase_invoice(source_name, target_doc)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_purchase_invoice_from_portal(purchase_order_name):
 	doc = get_mapped_purchase_invoice(purchase_order_name, ignore_permissions=True)
-	if doc.contact_email != frappe.session.user:
-		frappe.throw(_("Not Permitted"), frappe.PermissionError)
+	if doc.contact_email != capkpi.session.user:
+		capkpi.throw(_("Not Permitted"), capkpi.PermissionError)
 	doc.save()
-	frappe.db.commit()
-	frappe.response["type"] = "redirect"
-	frappe.response.location = "/purchase-invoices/" + doc.name
+	capkpi.db.commit()
+	capkpi.response["type"] = "redirect"
+	capkpi.response.location = "/purchase-invoices/" + doc.name
 
 
 def get_mapped_purchase_invoice(source_name, target_doc=None, ignore_permissions=False):
@@ -544,7 +544,7 @@ def get_mapped_purchase_invoice(source_name, target_doc=None, ignore_permissions
 		item_group = get_item_group_defaults(target.item_code, source_parent.company)
 		target.cost_center = (
 			obj.cost_center
-			or frappe.db.get_value("Project", obj.project, "cost_center")
+			or capkpi.db.get_value("Project", obj.project, "cost_center")
 			or item.get("buying_cost_center")
 			or item_group.get("buying_cost_center")
 		)
@@ -586,28 +586,28 @@ def get_mapped_purchase_invoice(source_name, target_doc=None, ignore_permissions
 	return doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_rm_stock_entry(purchase_order, rm_items):
 	rm_items_list = rm_items
 
 	if isinstance(rm_items, str):
 		rm_items_list = json.loads(rm_items)
 	elif not rm_items:
-		frappe.throw(_("No Items available for transfer"))
+		capkpi.throw(_("No Items available for transfer"))
 
 	if rm_items_list:
 		fg_items = list(set(d["item_code"] for d in rm_items_list))
 	else:
-		frappe.throw(_("No Items selected for transfer"))
+		capkpi.throw(_("No Items selected for transfer"))
 
 	if purchase_order:
-		purchase_order = frappe.get_doc("Purchase Order", purchase_order)
+		purchase_order = capkpi.get_doc("Purchase Order", purchase_order)
 
 	if fg_items:
 		items = tuple(set(d["rm_item_code"] for d in rm_items_list))
 		item_wh = get_item_details(items)
 
-		stock_entry = frappe.new_doc("Stock Entry")
+		stock_entry = capkpi.new_doc("Stock Entry")
 		stock_entry.purpose = "Send to Subcontractor"
 		stock_entry.purchase_order = purchase_order.name
 		stock_entry.supplier = purchase_order.supplier
@@ -641,13 +641,13 @@ def make_rm_stock_entry(purchase_order, rm_items):
 		stock_entry.set_missing_values()
 		return stock_entry.as_dict()
 	else:
-		frappe.throw(_("No Items selected for transfer"))
+		capkpi.throw(_("No Items selected for transfer"))
 	return purchase_order.name
 
 
 def get_item_details(items):
 	item_details = {}
-	for d in frappe.db.sql(
+	for d in capkpi.db.sql(
 		"""select item_code, description, allow_alternative_item from `tabItem`
 		where name in ({0})""".format(
 			", ".join(["%s"] * len(items))
@@ -675,32 +675,32 @@ def get_list_context(context=None):
 	return list_context
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_status(status, name):
-	po = frappe.get_doc("Purchase Order", name)
+	po = capkpi.get_doc("Purchase Order", name)
 	po.update_status(status)
 	po.update_delivered_qty_in_sales_order()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_inter_company_sales_order(source_name, target_doc=None):
 	from erp.accounts.doctype.sales_invoice.sales_invoice import make_inter_company_transaction
 
 	return make_inter_company_transaction("Purchase Order", source_name, target_doc)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_materials_from_supplier(purchase_order, po_details):
 	if isinstance(po_details, str):
 		po_details = json.loads(po_details)
 
-	doc = frappe.get_cached_doc("Purchase Order", purchase_order)
+	doc = capkpi.get_cached_doc("Purchase Order", purchase_order)
 	doc.initialized_fields()
 	doc.purchase_orders = [doc.name]
 	doc.get_available_materials()
 
 	if not doc.available_materials:
-		frappe.throw(
+		capkpi.throw(
 			_("Materials are already received against the purchase order {0}").format(purchase_order)
 		)
 
@@ -708,7 +708,7 @@ def get_materials_from_supplier(purchase_order, po_details):
 
 
 def make_return_stock_entry_for_subcontract(available_materials, po_doc, po_details):
-	ste_doc = frappe.new_doc("Stock Entry")
+	ste_doc = capkpi.new_doc("Stock Entry")
 	ste_doc.purpose = "Material Transfer"
 	ste_doc.purchase_order = po_doc.name
 	ste_doc.company = po_doc.company

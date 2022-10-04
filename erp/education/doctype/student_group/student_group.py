@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint
 
 from erp.education.utils import validate_duplicate_student
 
@@ -20,17 +20,17 @@ class StudentGroup(Document):
 
 	def validate_mandatory_fields(self):
 		if self.group_based_on == "Course" and not self.course:
-			frappe.throw(_("Please select Course"))
+			capkpi.throw(_("Please select Course"))
 		if self.group_based_on == "Course" and (not self.program and self.batch):
-			frappe.throw(_("Please select Program"))
+			capkpi.throw(_("Please select Program"))
 		if self.group_based_on == "Batch" and not self.program:
-			frappe.throw(_("Please select Program"))
+			capkpi.throw(_("Please select Program"))
 
 	def validate_strength(self):
 		if cint(self.max_strength) < 0:
-			frappe.throw(_("""Max strength cannot be less than zero."""))
+			capkpi.throw(_("""Max strength cannot be less than zero."""))
 		if self.max_strength and len(self.students) > self.max_strength:
-			frappe.throw(
+			capkpi.throw(
 				_("""Cannot enroll more than {0} students for this student group.""").format(self.max_strength)
 			)
 
@@ -45,15 +45,15 @@ class StudentGroup(Document):
 		)
 		students = [d.student for d in program_enrollment] if program_enrollment else []
 		for d in self.students:
-			if not frappe.db.get_value("Student", d.student, "enabled") and d.active and not self.disabled:
-				frappe.throw(_("{0} - {1} is inactive student").format(d.group_roll_number, d.student_name))
+			if not capkpi.db.get_value("Student", d.student, "enabled") and d.active and not self.disabled:
+				capkpi.throw(_("{0} - {1} is inactive student").format(d.group_roll_number, d.student_name))
 
 			if (
 				(self.group_based_on == "Batch")
-				and cint(frappe.defaults.get_defaults().validate_batch)
+				and cint(capkpi.defaults.get_defaults().validate_batch)
 				and d.student not in students
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("{0} - {1} is not enrolled in the Batch {2}").format(
 						d.group_roll_number, d.student_name, self.batch
 					)
@@ -61,10 +61,10 @@ class StudentGroup(Document):
 
 			if (
 				(self.group_based_on == "Course")
-				and cint(frappe.defaults.get_defaults().validate_course)
+				and cint(capkpi.defaults.get_defaults().validate_course)
 				and (d.student not in students)
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("{0} - {1} is not enrolled in the Course {2}").format(
 						d.group_roll_number, d.student_name, self.course
 					)
@@ -76,17 +76,17 @@ class StudentGroup(Document):
 		roll_no_list = []
 		for d in self.students:
 			if not d.student_name:
-				d.student_name = frappe.db.get_value("Student", d.student, "title")
+				d.student_name = capkpi.db.get_value("Student", d.student, "title")
 			if not d.group_roll_number:
 				max_roll_no += 1
 				d.group_roll_number = max_roll_no
 			if d.group_roll_number in roll_no_list:
-				frappe.throw(_("Duplicate roll number for student {0}").format(d.student_name))
+				capkpi.throw(_("Duplicate roll number for student {0}").format(d.student_name))
 			else:
 				roll_no_list.append(d.group_roll_number)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_students(
 	academic_year,
 	group_based_on,
@@ -103,14 +103,14 @@ def get_students(
 	if enrolled_students:
 		student_list = []
 		for s in enrolled_students:
-			if frappe.db.get_value("Student", s.student, "enabled"):
+			if capkpi.db.get_value("Student", s.student, "enabled"):
 				s.update({"active": 1})
 			else:
 				s.update({"active": 0})
 			student_list.append(s)
 		return student_list
 	else:
-		frappe.msgprint(_("No students found"))
+		capkpi.msgprint(_("No students found"))
 		return []
 
 
@@ -132,7 +132,7 @@ def get_program_enrollment(
 		condition1 += " and pe.name = pec.parent and pec.course = %(course)s"
 		condition2 = ", `tabProgram Enrollment Course` pec"
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			pe.student, pe.student_name
@@ -159,8 +159,8 @@ def get_program_enrollment(
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def fetch_students(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("group_based_on") != "Activity":
 		enrolled_students = get_program_enrollment(
@@ -170,7 +170,7 @@ def fetch_students(doctype, txt, searchfield, start, page_len, filters):
 			filters.get("batch"),
 			filters.get("student_category"),
 		)
-		student_group_student = frappe.db.sql_list(
+		student_group_student = capkpi.db.sql_list(
 			"""select student from `tabStudent Group Student` where parent=%s""",
 			(filters.get("student_group")),
 		)
@@ -179,7 +179,7 @@ def fetch_students(doctype, txt, searchfield, start, page_len, filters):
 			if enrolled_students
 			else [""]
 		) or [""]
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name, title from tabStudent
 			where name in ({0}) and (`{1}` LIKE %s or title LIKE %s)
 			order by idx desc, name
@@ -189,7 +189,7 @@ def fetch_students(doctype, txt, searchfield, start, page_len, filters):
 			tuple(students + ["%%%s%%" % txt, "%%%s%%" % txt, start, page_len]),
 		)
 	else:
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name, title from tabStudent
 			where `{0}` LIKE %s or title LIKE %s
 			order by idx desc, name

@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, get_last_day, nowdate
+import capkpi
+from capkpi.utils import add_days, get_last_day, nowdate
 
 from erp.assets.doctype.asset.test_asset import create_asset_data
 from erp.assets.doctype.asset_value_adjustment.asset_value_adjustment import (
@@ -22,8 +22,8 @@ class TestAssetValueAdjustment(unittest.TestCase):
 			item_code="Macbook Pro", qty=1, rate=100000.0, location="Test Location"
 		)
 
-		asset_name = frappe.db.get_value("Asset", {"purchase_receipt": pr.name}, "name")
-		asset_doc = frappe.get_doc("Asset", asset_name)
+		asset_name = capkpi.db.get_value("Asset", {"purchase_receipt": pr.name}, "name")
+		asset_doc = capkpi.get_doc("Asset", asset_name)
 
 		month_end_date = get_last_day(nowdate())
 		purchase_date = nowdate() if nowdate() != month_end_date else add_days(nowdate(), -15)
@@ -51,8 +51,8 @@ class TestAssetValueAdjustment(unittest.TestCase):
 			item_code="Macbook Pro", qty=1, rate=100000.0, location="Test Location"
 		)
 
-		asset_name = frappe.db.get_value("Asset", {"purchase_receipt": pr.name}, "name")
-		asset_doc = frappe.get_doc("Asset", asset_name)
+		asset_name = capkpi.db.get_value("Asset", {"purchase_receipt": pr.name}, "name")
+		asset_doc = capkpi.get_doc("Asset", asset_name)
 		asset_doc.calculate_depreciation = 1
 
 		month_end_date = get_last_day(nowdate())
@@ -84,7 +84,7 @@ class TestAssetValueAdjustment(unittest.TestCase):
 			("_Test Depreciations - _TC", 50000.0, 0.0),
 		)
 
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select account, debit, credit from `tabGL Entry`
 			where voucher_type='Journal Entry' and voucher_no = %s
 			order by account""",
@@ -95,9 +95,9 @@ class TestAssetValueAdjustment(unittest.TestCase):
 
 
 def make_asset_value_adjustment(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Asset Value Adjustment",
 			"company": args.company or "_Test Company",

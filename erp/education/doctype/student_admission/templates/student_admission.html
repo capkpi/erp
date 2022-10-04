@@ -10,15 +10,15 @@
 {% endblock %}
 
 {% block page_content %}
-	{% set today = frappe.utils.getdate(frappe.utils.nowdate()) %}
+	{% set today = capkpi.utils.getdate(capkpi.utils.nowdate()) %}
 	<div class="row transaction-subheading">
 	    <div class="col-xs-6">
 	        <span class="indicator
-				{% if frappe.utils.getdate(doc.admission_end_date) == today %}
+				{% if capkpi.utils.getdate(doc.admission_end_date) == today %}
 					red"> Application will be closed soon
-				{% elif frappe.utils.getdate(doc.admission_end_date) > today >= frappe.utils.getdate(doc.admission_start_date)%}
+				{% elif capkpi.utils.getdate(doc.admission_end_date) > today >= capkpi.utils.getdate(doc.admission_start_date)%}
 					green"> Application open
-				{% elif frappe.utils.getdate(doc.admission_start_date) > today %}
+				{% elif capkpi.utils.getdate(doc.admission_start_date) > today %}
 					blue"> Application will open
 				{% else %}
 					gray
@@ -26,8 +26,8 @@
 	        </span>
 		</div>
 	    <div class="col-xs-6 text-muted text-right small">
-	        {{ _("Start on") }}: {{ frappe.format_date(admission_start_date) }}<br>
-	        {{ _("End on") }}: {{ frappe.format_date(admission_end_date) }}
+	        {{ _("Start on") }}: {{ capkpi.format_date(admission_start_date) }}<br>
+	        {{ _("End on") }}: {{ capkpi.format_date(admission_end_date) }}
 	    </div>
 	</div><br>
 
@@ -47,7 +47,7 @@
 						<th style="width: 100px">Minumum Age</th>
 						<th style="width: 100px">Maximum Age</th>
 						<th style="width: 100px">Application Fee</th>
-						{%- if doc.enable_admission_application and frappe.utils.getdate(doc.admission_start_date) <= today -%}
+						{%- if doc.enable_admission_application and capkpi.utils.getdate(doc.admission_start_date) <= today -%}
 							<th style="width: 120px"></th>
 						{% endif %}
 					</tr>
@@ -60,7 +60,7 @@
 							<td>{{ row.min_age }}</td>
 							<td>{{ row.max_age }}</td>
 							<td>{{ row.application_fee }}</td>
-							{%- if doc.enable_admission_application and frappe.utils.getdate(doc.admission_start_date) <= today -%}
+							{%- if doc.enable_admission_application and capkpi.utils.getdate(doc.admission_start_date) <= today -%}
 							<td>
 								<a class='btn btn-sm btn-primary' href='/student-applicant?new=1&student_admission={{doc.name}}&program={{row.program}}&academic_year={{academic_year}}'>
 									{{ _("Apply Now") }}

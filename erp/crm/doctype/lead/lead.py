@@ -2,12 +2,12 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.contacts.address_and_contact import load_address_and_contact
-from frappe.email.inbox import link_communication_to_document
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import comma_and, cstr, getdate, has_gravatar, nowdate, validate_email_address
+import capkpi
+from capkpi import _
+from capkpi.contacts.address_and_contact import load_address_and_contact
+from capkpi.email.inbox import link_communication_to_document
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import comma_and, cstr, getdate, has_gravatar, nowdate, validate_email_address
 
 from erp.accounts.party import set_taxes
 from erp.controllers.selling_controller import SellingController
@@ -18,7 +18,7 @@ class Lead(SellingController):
 		return "{0}: {1}".format(_(self.status), self.lead_name)
 
 	def onload(self):
-		customer = frappe.db.get_value("Customer", {"lead_name": self.name})
+		customer = capkpi.db.get_value("Customer", {"lead_name": self.name})
 		self.get("__onload").is_customer = customer
 		load_address_and_contact(self)
 
@@ -45,29 +45,29 @@ class Lead(SellingController):
 				validate_email_address(self.email_id, throw=True)
 
 			if self.email_id == self.lead_owner:
-				frappe.throw(_("Lead Owner cannot be same as the Lead"))
+				capkpi.throw(_("Lead Owner cannot be same as the Lead"))
 
 			if self.email_id == self.contact_by:
-				frappe.throw(_("Next Contact By cannot be same as the Lead Email Address"))
+				capkpi.throw(_("Next Contact By cannot be same as the Lead Email Address"))
 
 			if self.is_new() or not self.image:
 				self.image = has_gravatar(self.email_id)
 
 	def validate_contact_date(self):
 		if self.contact_date and getdate(self.contact_date) < getdate(nowdate()):
-			frappe.throw(_("Next Contact Date cannot be in the past"))
+			capkpi.throw(_("Next Contact Date cannot be in the past"))
 
 		if self.ends_on and self.contact_date and (getdate(self.ends_on) < getdate(self.contact_date)):
-			frappe.throw(_("Ends On date cannot be before Next Contact Date."))
+			capkpi.throw(_("Ends On date cannot be before Next Contact Date."))
 
 	def on_update(self):
 		self.add_calendar_event()
 
 	def set_prev(self):
 		if self.is_new():
-			self._prev = frappe._dict({"contact_date": None, "ends_on": None, "contact_by": None})
+			self._prev = capkpi._dict({"contact_date": None, "ends_on": None, "contact_by": None})
 		else:
-			self._prev = frappe.db.get_value(
+			self._prev = capkpi.db.get_value(
 				"Lead", self.name, ["contact_date", "ends_on", "contact_by"], as_dict=1
 			)
 
@@ -87,35 +87,35 @@ class Lead(SellingController):
 	def check_email_id_is_unique(self):
 		if self.email_id:
 			# validate email is unique
-			duplicate_leads = frappe.get_all(
+			duplicate_leads = capkpi.get_all(
 				"Lead", filters={"email_id": self.email_id, "name": ["!=", self.name]}
 			)
 			duplicate_leads = [lead.name for lead in duplicate_leads]
 
 			if duplicate_leads:
-				frappe.throw(
+				capkpi.throw(
 					_("Email Address must be unique, already exists for {0}").format(comma_and(duplicate_leads)),
-					frappe.DuplicateEntryError,
+					capkpi.DuplicateEntryError,
 				)
 
 	def on_trash(self):
-		frappe.db.sql("""update `tabIssue` set lead='' where lead=%s""", self.name)
+		capkpi.db.sql("""update `tabIssue` set lead='' where lead=%s""", self.name)
 
 		self.delete_events()
 
 	def has_customer(self):
-		return frappe.db.get_value("Customer", {"lead_name": self.name})
+		return capkpi.db.get_value("Customer", {"lead_name": self.name})
 
 	def has_opportunity(self):
-		return frappe.db.get_value("Opportunity", {"party_name": self.name, "status": ["!=", "Lost"]})
+		return capkpi.db.get_value("Opportunity", {"party_name": self.name, "status": ["!=", "Lost"]})
 
 	def has_quotation(self):
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			"Quotation", {"party_name": self.name, "docstatus": 1, "status": ["!=", "Lost"]}
 		)
 
 	def has_lost_quotation(self):
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			"Quotation", {"party_name": self.name, "docstatus": 1, "status": "Lost"}
 		)
 
@@ -123,7 +123,7 @@ class Lead(SellingController):
 		if not self.lead_name:
 			# Check for leads being created through data import
 			if not self.company_name and not self.email_id and not self.flags.ignore_mandatory:
-				frappe.throw(_("A Lead requires either a person's name or an organization's name"))
+				capkpi.throw(_("A Lead requires either a person's name or an organization's name"))
 			elif self.company_name:
 				self.lead_name = self.company_name
 			else:
@@ -151,7 +151,7 @@ class Lead(SellingController):
 
 		# do not create an address if no fields are available,
 		# skipping country since the system auto-sets it from system defaults
-		address = frappe.new_doc("Address")
+		address = capkpi.new_doc("Address")
 
 		address.update({addr_field: self.get(addr_field) for addr_field in address_fields})
 		address.update({info_field: self.get(info_field) for info_field in info_fields})
@@ -169,7 +169,7 @@ class Lead(SellingController):
 		else:
 			first_name, last_name = self.lead_name, None
 
-		contact = frappe.new_doc("Contact")
+		contact = capkpi.new_doc("Contact")
 		contact.update(
 			{
 				"first_name": first_name,
@@ -211,7 +211,7 @@ class Lead(SellingController):
 			self.contact_doc.save()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_customer(source_name, target_doc=None):
 	return _make_customer(source_name, target_doc)
 
@@ -225,7 +225,7 @@ def _make_customer(source_name, target_doc=None, ignore_permissions=False):
 			target.customer_type = "Individual"
 			target.customer_name = source.lead_name
 
-		target.customer_group = frappe.db.get_default("Customer Group")
+		target.customer_group = capkpi.db.get_default("Customer Group")
 
 	doclist = get_mapped_doc(
 		"Lead",
@@ -249,7 +249,7 @@ def _make_customer(source_name, target_doc=None, ignore_permissions=False):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_opportunity(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		_set_missing_values(source, target)
@@ -278,7 +278,7 @@ def make_opportunity(source_name, target_doc=None):
 	return target_doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_quotation(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		_set_missing_values(source, target)
@@ -300,7 +300,7 @@ def make_quotation(source_name, target_doc=None):
 
 
 def _set_missing_values(source, target):
-	address = frappe.get_all(
+	address = capkpi.get_all(
 		"Dynamic Link",
 		{
 			"link_doctype": source.doctype,
@@ -311,7 +311,7 @@ def _set_missing_values(source, target):
 		limit=1,
 	)
 
-	contact = frappe.get_all(
+	contact = capkpi.get_all(
 		"Dynamic Link",
 		{
 			"link_doctype": source.doctype,
@@ -329,16 +329,16 @@ def _set_missing_values(source, target):
 		target.contact_person = contact[0].parent
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_lead_details(lead, posting_date=None, company=None):
 	if not lead:
 		return {}
 
 	from erp.accounts.party import set_address_details
 
-	out = frappe._dict()
+	out = capkpi._dict()
 
-	lead_doc = frappe.get_doc("Lead", lead)
+	lead_doc = capkpi.get_doc("Lead", lead)
 	lead = lead_doc
 
 	out.update(
@@ -368,18 +368,18 @@ def get_lead_details(lead, posting_date=None, company=None):
 	return out
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_lead_from_communication(communication, ignore_communication_links=False):
 	"""raise a issue from email"""
 
-	doc = frappe.get_doc("Communication", communication)
+	doc = capkpi.get_doc("Communication", communication)
 	lead_name = None
 	if doc.sender:
-		lead_name = frappe.db.get_value("Lead", {"email_id": doc.sender})
+		lead_name = capkpi.db.get_value("Lead", {"email_id": doc.sender})
 	if not lead_name and doc.phone_no:
-		lead_name = frappe.db.get_value("Lead", {"mobile_no": doc.phone_no})
+		lead_name = capkpi.db.get_value("Lead", {"mobile_no": doc.phone_no})
 	if not lead_name:
-		lead = frappe.get_doc(
+		lead = capkpi.get_doc(
 			{
 				"doctype": "Lead",
 				"lead_name": doc.sender_full_name,
@@ -401,7 +401,7 @@ def get_lead_with_phone_number(number):
 	if not number:
 		return
 
-	leads = frappe.get_all(
+	leads = capkpi.get_all(
 		"Lead",
 		or_filters={
 			"phone": ["like", "%{}".format(number)],
@@ -417,6 +417,6 @@ def get_lead_with_phone_number(number):
 
 
 def daily_open_lead():
-	leads = frappe.get_all("Lead", filters=[["contact_date", "Between", [nowdate(), nowdate()]]])
+	leads = capkpi.get_all("Lead", filters=[["contact_date", "Between", [nowdate(), nowdate()]]])
 	for lead in leads:
-		frappe.db.set_value("Lead", lead.name, "status", "Open")
+		capkpi.db.set_value("Lead", lead.name, "status", "Open")

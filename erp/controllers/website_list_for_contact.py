@@ -4,20 +4,20 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.modules.utils import get_module_app
-from frappe.utils import flt, has_common
-from frappe.utils.user import is_website_user
+import capkpi
+from capkpi import _
+from capkpi.modules.utils import get_module_app
+from capkpi.utils import flt, has_common
+from capkpi.utils.user import is_website_user
 
 
 def get_list_context(context=None):
 	return {
-		"global_number_format": frappe.db.get_default("number_format") or "#,###.##",
-		"currency": frappe.db.get_default("currency"),
+		"global_number_format": capkpi.db.get_default("number_format") or "#,###.##",
+		"currency": capkpi.db.get_default("currency"),
 		"currency_symbols": json.dumps(
 			dict(
-				frappe.db.sql(
+				capkpi.db.sql(
 					"""select name, symbol
 			from tabCurrency where enabled=1"""
 				)
@@ -38,12 +38,12 @@ def get_webform_transaction_list(
 	doctype, txt=None, filters=None, limit_start=0, limit_page_length=20, order_by="modified"
 ):
 	"""Get List of transactions for custom doctypes"""
-	from frappe.www.list import get_list
+	from capkpi.www.list import get_list
 
 	if not filters:
 		filters = []
 
-	meta = frappe.get_meta(doctype)
+	meta = capkpi.get_meta(doctype)
 
 	for d in meta.fields:
 		if d.fieldtype == "Link" and d.fieldname != "amended_from":
@@ -72,7 +72,7 @@ def get_transaction_list(
 	order_by="modified",
 	custom=False,
 ):
-	user = frappe.session.user
+	user = capkpi.session.user
 	ignore_permissions = False
 
 	if not filters:
@@ -140,9 +140,9 @@ def get_list_for_transactions(
 	order_by=None,
 ):
 	"""Get List of transactions like Invoices, Orders"""
-	from frappe.www.list import get_list
+	from capkpi.www.list import get_list
 
-	meta = frappe.get_meta(doctype)
+	meta = capkpi.get_meta(doctype)
 	data = []
 	or_filters = []
 
@@ -162,12 +162,12 @@ def get_list_for_transactions(
 		if meta.get_field("items"):
 			if meta.get_field("items").options:
 				child_doctype = meta.get_field("items").options
-				for item in frappe.get_all(child_doctype, {"item_name": ["like", "%" + txt + "%"]}):
-					child = frappe.get_doc(child_doctype, item.name)
+				for item in capkpi.get_all(child_doctype, {"item_name": ["like", "%" + txt + "%"]}):
+					child = capkpi.get_doc(child_doctype, item.name)
 					or_filters.append([doctype, "name", "=", child.parent])
 
 	if or_filters:
-		for r in frappe.get_list(
+		for r in capkpi.get_list(
 			doctype,
 			fields=fields,
 			filters=filters,
@@ -183,7 +183,7 @@ def get_list_for_transactions(
 
 
 def rfq_transaction_list(parties_doctype, doctype, parties, limit_start, limit_page_length):
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""select distinct parent as name, supplier from `tab{doctype}`
 			where supplier = '{supplier}' and docstatus=1  order by modified desc limit {start}, {len}""".format(
 			doctype=parties_doctype, supplier=parties[0], start=limit_start, len=limit_page_length
@@ -197,7 +197,7 @@ def rfq_transaction_list(parties_doctype, doctype, parties, limit_start, limit_p
 def post_process(doctype, data):
 	result = []
 	for d in data:
-		doc = frappe.get_doc(doctype, d.name)
+		doc = capkpi.get_doc(doctype, d.name)
 
 		doc.status_percent = 0
 		doc.status_display = []
@@ -227,15 +227,15 @@ def post_process(doctype, data):
 def get_customers_suppliers(doctype, user):
 	customers = []
 	suppliers = []
-	meta = frappe.get_meta(doctype)
+	meta = capkpi.get_meta(doctype)
 
 	customer_field_name = get_customer_field_name(doctype)
 
 	has_customer_field = meta.has_field(customer_field_name)
 	has_supplier_field = meta.has_field("supplier")
 
-	if has_common(["Supplier", "Customer"], frappe.get_roles(user)):
-		contacts = frappe.db.sql(
+	if has_common(["Supplier", "Customer"], capkpi.get_roles(user)):
+		contacts = capkpi.db.sql(
 			"""
 			select
 				`tabContact`.email_id,
@@ -251,8 +251,8 @@ def get_customers_suppliers(doctype, user):
 		)
 		customers = [c.link_name for c in contacts if c.link_doctype == "Customer"]
 		suppliers = [c.link_name for c in contacts if c.link_doctype == "Supplier"]
-	elif frappe.has_permission(doctype, "read", user=user):
-		customer_list = frappe.get_list("Customer")
+	elif capkpi.has_permission(doctype, "read", user=user):
+		customer_list = capkpi.get_list("Customer")
 		customers = suppliers = [customer.name for customer in customer_list]
 
 	return customers if has_customer_field else None, suppliers if has_supplier_field else None
@@ -262,17 +262,17 @@ def has_website_permission(doc, ptype, user, verbose=False):
 	doctype = doc.doctype
 	customers, suppliers = get_customers_suppliers(doctype, user)
 	if customers:
-		return frappe.db.exists(doctype, get_customer_filter(doc, customers))
+		return capkpi.db.exists(doctype, get_customer_filter(doc, customers))
 	elif suppliers:
 		fieldname = "suppliers" if doctype == "Request for Quotation" else "supplier"
-		return frappe.db.exists(doctype, {"name": doc.name, fieldname: ["in", suppliers]})
+		return capkpi.db.exists(doctype, {"name": doc.name, fieldname: ["in", suppliers]})
 	else:
 		return False
 
 
 def get_customer_filter(doc, customers):
 	doctype = doc.doctype
-	filters = frappe._dict()
+	filters = capkpi._dict()
 	filters.name = doc.name
 	filters[get_customer_field_name(doctype)] = ["in", customers]
 	if doctype == "Quotation":

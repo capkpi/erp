@@ -4,16 +4,16 @@
 import datetime
 import json
 
-import frappe
-from frappe.utils import getdate
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils import getdate
+from capkpi.utils.make_random import get_random
 
 from erp.demo.setup.setup_data import import_json
 from erp.healthcare.doctype.lab_test.lab_test import create_test_from_template
 
 
 def setup_data():
-	frappe.flags.mute_emails = True
+	capkpi.flags.mute_emails = True
 	make_masters()
 	make_patient()
 	make_lab_test()
@@ -21,14 +21,14 @@ def setup_data():
 	make_appointment()
 	consulation_on_appointment()
 	lab_test_on_encounter()
-	frappe.db.commit()
-	frappe.clear_cache()
+	capkpi.db.commit()
+	capkpi.clear_cache()
 
 
 def make_masters():
 	import_json("Healthcare Practitioner")
 	import_drug()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def make_patient():
@@ -38,7 +38,7 @@ def make_patient():
 		count = 1
 
 		for d in enumerate(patient_data):
-			patient = frappe.new_doc("Patient")
+			patient = capkpi.new_doc("Patient")
 			patient.patient_name = d[1]["patient_name"].title()
 			patient.sex = d[1]["gender"]
 			patient.blood_group = "A Positive"
@@ -48,7 +48,7 @@ def make_patient():
 			)
 			if count < 5:
 				patient.insert()
-				frappe.db.commit()
+				capkpi.db.commit()
 			count += 1
 
 
@@ -56,10 +56,10 @@ def make_appointment():
 	i = 1
 	while i <= 4:
 		practitioner = get_random("Healthcare Practitioner")
-		department = frappe.get_value("Healthcare Practitioner", practitioner, "department")
+		department = capkpi.get_value("Healthcare Practitioner", practitioner, "department")
 		patient = get_random("Patient")
-		patient_sex = frappe.get_value("Patient", patient, "sex")
-		appointment = frappe.new_doc("Patient Appointment")
+		patient_sex = capkpi.get_value("Patient", patient, "sex")
+		appointment = capkpi.new_doc("Patient Appointment")
 		startDate = datetime.datetime.now()
 		for x in random_date(startDate, 0):
 			appointment_datetime = x
@@ -77,9 +77,9 @@ def make_appointment():
 def make_consulation():
 	for i in range(3):
 		practitioner = get_random("Healthcare Practitioner")
-		department = frappe.get_value("Healthcare Practitioner", practitioner, "department")
+		department = capkpi.get_value("Healthcare Practitioner", practitioner, "department")
 		patient = get_random("Patient")
-		patient_sex = frappe.get_value("Patient", patient, "sex")
+		patient_sex = capkpi.get_value("Patient", patient, "sex")
 		encounter = set_encounter(patient, patient_sex, practitioner, department, getdate(), i)
 		encounter.save(ignore_permissions=True)
 
@@ -87,7 +87,7 @@ def make_consulation():
 def consulation_on_appointment():
 	for i in range(3):
 		appointment = get_random("Patient Appointment")
-		appointment = frappe.get_doc("Patient Appointment", appointment)
+		appointment = capkpi.get_doc("Patient Appointment", appointment)
 		encounter = set_encounter(
 			appointment.patient,
 			appointment.patient_sex,
@@ -101,7 +101,7 @@ def consulation_on_appointment():
 
 
 def set_encounter(patient, patient_sex, practitioner, department, encounter_date, i):
-	encounter = frappe.new_doc("Patient Encounter")
+	encounter = capkpi.new_doc("Patient Encounter")
 	encounter.patient = patient
 	encounter.patient_sex = patient_sex
 	encounter.practitioner = practitioner
@@ -123,7 +123,7 @@ def set_encounter(patient, patient_sex, practitioner, department, encounter_date
 def make_lab_test():
 	practitioner = get_random("Healthcare Practitioner")
 	patient = get_random("Patient")
-	patient_sex = frappe.get_value("Patient", patient, "sex")
+	patient_sex = capkpi.get_value("Patient", patient, "sex")
 	template = get_random("Lab Test Template")
 	set_lab_test(patient, patient_sex, practitioner, template)
 
@@ -132,8 +132,8 @@ def lab_test_on_encounter():
 	i = 1
 	while i <= 2:
 		test_rx = get_random("Lab Prescription", filters={"test_created": 0})
-		test_rx = frappe.get_doc("Lab Prescription", test_rx)
-		encounter = frappe.get_doc("Patient Encounter", test_rx.parent)
+		test_rx = capkpi.get_doc("Lab Prescription", test_rx)
+		encounter = capkpi.get_doc("Patient Encounter", test_rx.parent)
 		set_lab_test(
 			encounter.patient,
 			encounter.patient_sex,
@@ -145,7 +145,7 @@ def lab_test_on_encounter():
 
 
 def set_lab_test(patient, patient_sex, practitioner, template, rx=None):
-	lab_test = frappe.new_doc("Lab Test")
+	lab_test = capkpi.new_doc("Lab Test")
 	lab_test.practitioner = practitioner
 	lab_test.patient = patient
 	lab_test.patient_sex = patient_sex
@@ -167,7 +167,7 @@ def append_drug_rx(encounter):
 	i = 1
 	while i <= 3:
 		drug = get_random("Item", filters={"item_group": "Drug"})
-		drug = frappe.get_doc("Item", drug)
+		drug = capkpi.get_doc("Item", drug)
 		drug_rx = encounter.append("drug_prescription")
 		drug_rx.drug_code = drug.item_code
 		drug_rx.drug_name = drug.item_name
@@ -186,14 +186,14 @@ def random_date(start, l):
 
 
 def import_drug():
-	frappe.flags.in_import = True
-	data = json.loads(open(frappe.get_app_path("erp", "demo", "data", "drug_list.json")).read())
+	capkpi.flags.in_import = True
+	data = json.loads(open(capkpi.get_app_path("erp", "demo", "data", "drug_list.json")).read())
 	for d in data:
-		doc = frappe.new_doc("Item")
+		doc = capkpi.new_doc("Item")
 		doc.update(d)
 		doc.insert()
-	frappe.flags.in_import = False
+	capkpi.flags.in_import = False
 
 
 def get_json_path(doctype):
-	return frappe.get_app_path("erp", "demo", "data", frappe.scrub(doctype) + ".json")
+	return capkpi.get_app_path("erp", "demo", "data", capkpi.scrub(doctype) + ".json")

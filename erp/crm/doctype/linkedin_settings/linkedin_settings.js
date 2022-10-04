@@ -1,10 +1,10 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('LinkedIn Settings', {
+capkpi.ui.form.on('LinkedIn Settings', {
 	onload: function(frm) {
 		if (frm.doc.session_status == 'Expired' && frm.doc.consumer_key && frm.doc.consumer_secret) {
-			frappe.confirm(
+			capkpi.confirm(
 				__('Session not valid, Do you want to login?'),
 				function(){
 					frm.trigger("login");
@@ -56,15 +56,15 @@ frappe.ui.form.on('LinkedIn Settings', {
 	},
 	login: function(frm) {
 		if (frm.doc.consumer_key && frm.doc.consumer_secret){
-			frappe.dom.freeze();
-			frappe.call({
+			capkpi.dom.freeze();
+			capkpi.call({
 				doc: frm.doc,
 				method: "get_authorization_url",
 				callback : function(r) {
 					window.location.href = r.message;
 				}
 			}).fail(function() {
-				frappe.dom.unfreeze();
+				capkpi.dom.unfreeze();
 			});
 		}
 	},

@@ -1,10 +1,10 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.asset");
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.asset");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on('Asset', {
+capkpi.ui.form.on('Asset', {
 	onload: function(frm) {
 		frm.set_query("item_code", function() {
 			return {
@@ -43,7 +43,7 @@ frappe.ui.form.on('Asset', {
 	setup: function(frm) {
 		frm.make_methods = {
 			'Asset Movement': () => {
-				frappe.call({
+				capkpi.call({
 				method: "erp.assets.doctype.asset.asset.make_asset_movement",
 				freeze: true,
 				args:{
@@ -51,8 +51,8 @@ frappe.ui.form.on('Asset', {
 				},
 				callback: function (r) {
 					if (r.message) {
-						var doc = frappe.model.sync(r.message)[0];
-						frappe.set_route("Form", doc.doctype, doc.name);
+						var doc = capkpi.model.sync(r.message)[0];
+						capkpi.set_route("Form", doc.doctype, doc.name);
 					}
 				}
 			});
@@ -74,7 +74,7 @@ frappe.ui.form.on('Asset', {
 	},
 
 	refresh: function(frm) {
-		frappe.ui.form.trigger("Asset", "is_existing_asset");
+		capkpi.ui.form.trigger("Asset", "is_existing_asset");
 		frm.toggle_display("next_depreciation_date", frm.doc.docstatus < 1);
 		frm.events.make_schedules_editable(frm);
 
@@ -122,13 +122,13 @@ frappe.ui.form.on('Asset', {
 
 			if (frm.doc.purchase_receipt || !frm.doc.is_existing_asset) {
 				frm.add_custom_button(__("View General Ledger"), function() {
-					frappe.route_options = {
+					capkpi.route_options = {
 						"voucher_no": frm.doc.name,
 						"from_date": frm.doc.available_for_use_date,
 						"to_date": frm.doc.available_for_use_date,
 						"company": frm.doc.company
 					};
-					frappe.set_route("query-report", "General Ledger");
+					capkpi.set_route("query-report", "General Ledger");
 				}, __("Manage"));
 			}
 
@@ -170,15 +170,15 @@ frappe.ui.form.on('Asset', {
 	},
 
 	make_journal_entry: function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "erp.assets.doctype.asset.asset.make_journal_entry",
 			args: {
 				asset_name: frm.doc.name
 			},
 			callback: function(r) {
 				if (r.message) {
-					var doclist = frappe.model.sync(r.message);
-					frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+					var doclist = capkpi.model.sync(r.message);
+					capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 				}
 			}
 		})
@@ -190,7 +190,7 @@ frappe.ui.form.on('Asset', {
 		var last_depreciation_date = frm.doc.purchase_date;
 
 		if(frm.doc.opening_accumulated_depreciation) {
-			last_depreciation_date = frappe.datetime.add_months(frm.doc.next_depreciation_date,
+			last_depreciation_date = capkpi.datetime.add_months(frm.doc.next_depreciation_date,
 				-1*frm.doc.frequency_of_depreciation);
 
 			x_intervals.push(last_depreciation_date);
@@ -241,7 +241,7 @@ frappe.ui.form.on('Asset', {
 	},
 
 	set_finance_book: function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "erp.assets.doctype.asset.asset.get_item_details",
 			args: {
 				item_code: frm.doc.item_code,
@@ -276,7 +276,7 @@ frappe.ui.form.on('Asset', {
 	},
 
 	make_sales_invoice: function(frm) {
-		frappe.call({
+		capkpi.call({
 			args: {
 				"asset": frm.doc.name,
 				"item_code": frm.doc.item_code,
@@ -285,14 +285,14 @@ frappe.ui.form.on('Asset', {
 			},
 			method: "erp.assets.doctype.asset.asset.make_sales_invoice",
 			callback: function(r) {
-				var doclist = frappe.model.sync(r.message);
-				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+				var doclist = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 			}
 		})
 	},
 
 	create_asset_maintenance: function(frm) {
-		frappe.call({
+		capkpi.call({
 			args: {
 				"asset": frm.doc.name,
 				"item_code": frm.doc.item_code,
@@ -302,28 +302,28 @@ frappe.ui.form.on('Asset', {
 			},
 			method: "erp.assets.doctype.asset.asset.create_asset_maintenance",
 			callback: function(r) {
-				var doclist = frappe.model.sync(r.message);
-				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+				var doclist = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 			}
 		})
 	},
 
 	create_asset_repair: function(frm) {
-		frappe.call({
+		capkpi.call({
 			args: {
 				"asset": frm.doc.name,
 				"asset_name": frm.doc.asset_name
 			},
 			method: "erp.assets.doctype.asset.asset.create_asset_repair",
 			callback: function(r) {
-				var doclist = frappe.model.sync(r.message);
-				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+				var doclist = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 			}
 		});
 	},
 
 	create_asset_value_adjustment: function(frm) {
-		frappe.call({
+		capkpi.call({
 			args: {
 				"asset": frm.doc.name,
 				"asset_category": frm.doc.asset_category,
@@ -332,8 +332,8 @@ frappe.ui.form.on('Asset', {
 			method: "erp.assets.doctype.asset.asset.create_asset_value_adjustment",
 			freeze: 1,
 			callback: function(r) {
-				var doclist = frappe.model.sync(r.message);
-				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+				var doclist = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 			}
 		})
 	},
@@ -352,12 +352,12 @@ frappe.ui.form.on('Asset', {
 		frm.trigger('toggle_reference_doc');
 		if (frm.doc.purchase_receipt) {
 			if (frm.doc.item_code) {
-				frappe.db.get_doc('Purchase Receipt', frm.doc.purchase_receipt).then(pr_doc => {
+				capkpi.db.get_doc('Purchase Receipt', frm.doc.purchase_receipt).then(pr_doc => {
 					frm.events.set_values_from_purchase_doc(frm, 'Purchase Receipt', pr_doc)
 				});
 			} else {
 				frm.set_value('purchase_receipt', '');
-				frappe.msgprint({
+				capkpi.msgprint({
 					title: __('Not Allowed'),
 					message: __("Please select Item Code first")
 				});
@@ -369,12 +369,12 @@ frappe.ui.form.on('Asset', {
 		frm.trigger('toggle_reference_doc');
 		if (frm.doc.purchase_invoice) {
 			if (frm.doc.item_code) {
-				frappe.db.get_doc('Purchase Invoice', frm.doc.purchase_invoice).then(pi_doc => {
+				capkpi.db.get_doc('Purchase Invoice', frm.doc.purchase_invoice).then(pi_doc => {
 					frm.events.set_values_from_purchase_doc(frm, 'Purchase Invoice', pi_doc)
 				});
 			} else {
 				frm.set_value('purchase_invoice', '');
-				frappe.msgprint({
+				capkpi.msgprint({
 					title: __('Not Allowed'),
 					message: __("Please select Item Code first")
 				});
@@ -387,9 +387,9 @@ frappe.ui.form.on('Asset', {
 		frm.set_value('purchase_date', purchase_doc.posting_date);
 		const item = purchase_doc.items.find(item => item.item_code === frm.doc.item_code);
 		if (!item) {
-			doctype_field = frappe.scrub(doctype)
+			doctype_field = capkpi.scrub(doctype)
 			frm.set_value(doctype_field, '');
-			frappe.msgprint({
+			capkpi.msgprint({
 				title: __('Invalid {0}', [__(doctype)]),
 				message: __('The selected {0} does not contain the selected Asset Item.', [__(doctype)]),
 				indicator: 'red'
@@ -404,14 +404,14 @@ frappe.ui.form.on('Asset', {
 	set_depreciation_rate: function(frm, row) {
 		if (row.total_number_of_depreciations && row.frequency_of_depreciation
 			&& row.expected_value_after_useful_life) {
-			frappe.call({
+			capkpi.call({
 				method: "get_depreciation_rate",
 				doc: frm.doc,
 				args: row,
 				callback: function(r) {
 					if (r.message) {
-						frappe.flags.dont_change_rate = true;
-						frappe.model.set_value(row.doctype, row.name,
+						capkpi.flags.dont_change_rate = true;
+						capkpi.model.set_value(row.doctype, row.name,
 							"rate_of_depreciation", flt(r.message, precision("rate_of_depreciation", row)));
 					}
 				}
@@ -420,7 +420,7 @@ frappe.ui.form.on('Asset', {
 	}
 });
 
-frappe.ui.form.on('Asset Finance Book', {
+capkpi.ui.form.on('Asset Finance Book', {
 	depreciation_method: function(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		frm.events.set_depreciation_rate(frm, row);
@@ -443,35 +443,35 @@ frappe.ui.form.on('Asset Finance Book', {
 	},
 
 	rate_of_depreciation: function(frm, cdt, cdn) {
-		if(!frappe.flags.dont_change_rate) {
-			frappe.model.set_value(cdt, cdn, "expected_value_after_useful_life", 0);
+		if(!capkpi.flags.dont_change_rate) {
+			capkpi.model.set_value(cdt, cdn, "expected_value_after_useful_life", 0);
 		}
 
-		frappe.flags.dont_change_rate = false;
+		capkpi.flags.dont_change_rate = false;
 	},
 
 	depreciation_start_date: function(frm, cdt, cdn) {
 		const book = locals[cdt][cdn];
 		if (frm.doc.available_for_use_date && book.depreciation_start_date == frm.doc.available_for_use_date) {
-			frappe.msgprint(__("Depreciation Posting Date should not be equal to Available for Use Date."));
+			capkpi.msgprint(__("Depreciation Posting Date should not be equal to Available for Use Date."));
 			book.depreciation_start_date = "";
 			frm.refresh_field("finance_books");
 		}
 	}
 });
 
-frappe.ui.form.on('Depreciation Schedule', {
+capkpi.ui.form.on('Depreciation Schedule', {
 	make_depreciation_entry: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 		if (!row.journal_entry) {
-			frappe.call({
+			capkpi.call({
 				method: "erp.assets.doctype.asset.depreciation.make_depreciation_entry",
 				args: {
 					"asset_name": frm.doc.name,
 					"date": row.schedule_date
 				},
 				callback: function(r) {
-					frappe.model.sync(r.message);
+					capkpi.model.sync(r.message);
 					frm.refresh();
 				}
 			})
@@ -490,14 +490,14 @@ erp.asset.set_accumulated_depreciation = function(frm) {
 	var accumulated_depreciation = flt(frm.doc.opening_accumulated_depreciation);
 	$.each(frm.doc.schedules || [], function(i, row) {
 		accumulated_depreciation  += flt(row.depreciation_amount);
-		frappe.model.set_value(row.doctype, row.name,
+		capkpi.model.set_value(row.doctype, row.name,
 			"accumulated_depreciation_amount", accumulated_depreciation);
 	})
 };
 
 erp.asset.scrap_asset = function(frm) {
-	frappe.confirm(__("Do you really want to scrap this asset?"), function () {
-		frappe.call({
+	capkpi.confirm(__("Do you really want to scrap this asset?"), function () {
+		capkpi.call({
 			args: {
 				"asset_name": frm.doc.name
 			},
@@ -510,8 +510,8 @@ erp.asset.scrap_asset = function(frm) {
 };
 
 erp.asset.restore_asset = function(frm) {
-	frappe.confirm(__("Do you really want to restore this scrapped asset?"), function () {
-		frappe.call({
+	capkpi.confirm(__("Do you really want to restore this scrapped asset?"), function () {
+		capkpi.call({
 			args: {
 				"asset_name": frm.doc.name
 			},
@@ -524,7 +524,7 @@ erp.asset.restore_asset = function(frm) {
 };
 
 erp.asset.transfer_asset = function() {
-	frappe.call({
+	capkpi.call({
 		method: "erp.assets.doctype.asset.asset.make_asset_movement",
 		freeze: true,
 		args:{
@@ -533,8 +533,8 @@ erp.asset.transfer_asset = function() {
 		},
 		callback: function (r) {
 			if (r.message) {
-				var doc = frappe.model.sync(r.message)[0];
-				frappe.set_route("Form", doc.doctype, doc.name);
+				var doc = capkpi.model.sync(r.message)[0];
+				capkpi.set_route("Form", doc.doctype, doc.name);
 			}
 		}
 	});

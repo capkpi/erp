@@ -6,13 +6,13 @@ import csv
 import json
 import re
 
-import frappe
+import capkpi
 import openpyxl
-from frappe import _
-from frappe.core.doctype.data_import.data_import import DataImport
-from frappe.core.doctype.data_import.importer import Importer, ImportFile
-from frappe.utils.background_jobs import enqueue
-from frappe.utils.xlsxutils import ILLEGAL_CHARACTERS_RE, handle_html
+from capkpi import _
+from capkpi.core.doctype.data_import.data_import import DataImport
+from capkpi.core.doctype.data_import.importer import Importer, ImportFile
+from capkpi.utils.background_jobs import enqueue
+from capkpi.utils.xlsxutils import ILLEGAL_CHARACTERS_RE, handle_html
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from six import string_types
@@ -34,7 +34,7 @@ class BankStatementImport(DataImport):
 
 			template_options_dict = {}
 			column_to_field_map = {}
-			bank = frappe.get_doc("Bank", self.bank)
+			bank = capkpi.get_doc("Bank", self.bank)
 			for i in bank.bank_transaction_mapping:
 				column_to_field_map[i.file_field] = i.bank_transaction_field
 			template_options_dict["column_to_field_map"] = column_to_field_map
@@ -47,18 +47,18 @@ class BankStatementImport(DataImport):
 
 	def start_import(self):
 
-		preview = frappe.get_doc("Bank Statement Import", self.name).get_preview_from_template(
+		preview = capkpi.get_doc("Bank Statement Import", self.name).get_preview_from_template(
 			self.import_file, self.google_sheets_url
 		)
 
 		if "Bank Account" not in json.dumps(preview["columns"]):
-			frappe.throw(_("Please add the Bank Account column"))
+			capkpi.throw(_("Please add the Bank Account column"))
 
-		from frappe.core.page.background_jobs.background_jobs import get_info
-		from frappe.utils.scheduler import is_scheduler_inactive
+		from capkpi.core.page.background_jobs.background_jobs import get_info
+		from capkpi.utils.scheduler import is_scheduler_inactive
 
-		if is_scheduler_inactive() and not frappe.flags.in_test:
-			frappe.throw(_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive"))
+		if is_scheduler_inactive() and not capkpi.flags.in_test:
+			capkpi.throw(_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive"))
 
 		enqueued_jobs = [d.get("job_name") for d in get_info()]
 
@@ -75,28 +75,28 @@ class BankStatementImport(DataImport):
 				google_sheets_url=self.google_sheets_url,
 				bank=self.bank,
 				template_options=self.template_options,
-				now=frappe.conf.developer_mode or frappe.flags.in_test,
+				now=capkpi.conf.developer_mode or capkpi.flags.in_test,
 			)
 			return True
 
 		return False
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_preview_from_template(data_import, import_file=None, google_sheets_url=None):
-	return frappe.get_doc("Bank Statement Import", data_import).get_preview_from_template(
+	return capkpi.get_doc("Bank Statement Import", data_import).get_preview_from_template(
 		import_file, google_sheets_url
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def form_start_import(data_import):
-	return frappe.get_doc("Bank Statement Import", data_import).start_import()
+	return capkpi.get_doc("Bank Statement Import", data_import).start_import()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def download_errored_template(data_import_name):
-	data_import = frappe.get_doc("Bank Statement Import", data_import_name)
+	data_import = capkpi.get_doc("Bank Statement Import", data_import_name)
 	data_import.export_errored_rows()
 
 
@@ -120,7 +120,7 @@ def start_import(
 
 	update_mapping_db(bank, template_options)
 
-	data_import = frappe.get_doc("Bank Statement Import", data_import)
+	data_import = capkpi.get_doc("Bank Statement Import", data_import)
 	file = import_file_path if import_file_path else google_sheets_url
 
 	import_file = ImportFile("Bank Transaction", file=file, import_type="Insert New Records")
@@ -135,17 +135,17 @@ def start_import(
 		i = Importer(data_import.reference_doctype, data_import=data_import)
 		i.import_data()
 	except Exception:
-		frappe.db.rollback()
+		capkpi.db.rollback()
 		data_import.db_set("status", "Error")
-		frappe.log_error(title=data_import.name)
+		capkpi.log_error(title=data_import.name)
 	finally:
-		frappe.flags.in_import = False
+		capkpi.flags.in_import = False
 
-	frappe.publish_realtime("data_import_refresh", {"data_import": data_import.name})
+	capkpi.publish_realtime("data_import_refresh", {"data_import": data_import.name})
 
 
 def update_mapping_db(bank, template_options):
-	bank = frappe.get_doc("Bank", bank)
+	bank = capkpi.get_doc("Bank", bank)
 	for d in bank.bank_transaction_mapping:
 		d.delete()
 
@@ -222,10 +222,10 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 	return True
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def upload_bank_statement(**args):
-	args = frappe._dict(args)
-	bsi = frappe.new_doc("Bank Statement Import")
+	args = capkpi._dict(args)
+	bsi = capkpi.new_doc("Bank Statement Import")
 
 	if args.company:
 		bsi.update(

@@ -2,7 +2,7 @@
 // License: GNU General Public License v3. See license.txt
 
 // render
-frappe.listview_settings['POS Invoice'] = {
+capkpi.listview_settings['POS Invoice'] = {
 	add_fields: ["customer", "customer_name", "base_grand_total", "outstanding_amount", "due_date", "company",
 		"currency", "is_return"],
 	get_indicator: function(doc) {
@@ -24,7 +24,7 @@ frappe.listview_settings['POS Invoice'] = {
 	onload: function(me) {
 		me.page.add_action_item('Make Merge Log', function() {
 			const invoices = me.get_checked_items();
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.pos_invoice.pos_invoice.make_merge_log",
 				freeze: true,
 				args:{
@@ -32,8 +32,8 @@ frappe.listview_settings['POS Invoice'] = {
 				},
 				callback: function (r) {
 					if (r.message) {
-						var doc = frappe.model.sync(r.message)[0];
-						frappe.set_route("Form", doc.doctype, doc.name);
+						var doc = capkpi.model.sync(r.message)[0];
+						capkpi.set_route("Form", doc.doctype, doc.name);
 					}
 				}
 			});

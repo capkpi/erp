@@ -1,9 +1,9 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.ui.form.on("Tax Rule", "customer", function(frm) {
+capkpi.ui.form.on("Tax Rule", "customer", function(frm) {
 	if(frm.doc.customer) {
-		frappe.call({
+		capkpi.call({
 			method:"erp.accounts.doctype.tax_rule.tax_rule.get_party_details",
 			args: {
 				"party": frm.doc.customer,
@@ -20,9 +20,9 @@ frappe.ui.form.on("Tax Rule", "customer", function(frm) {
 	}
 });
 
-frappe.ui.form.on("Tax Rule", "supplier", function(frm) {
+capkpi.ui.form.on("Tax Rule", "supplier", function(frm) {
 	if(frm.doc.supplier) {
-		frappe.call({
+		capkpi.call({
 			method:"erp.accounts.doctype.tax_rule.tax_rule.get_party_details",
 			args: {
 				"party": frm.doc.supplier,

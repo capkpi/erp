@@ -2,14 +2,14 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-import frappe.defaults
-from frappe import _, msgprint
-from frappe.contacts.address_and_contact import (
+import capkpi
+import capkpi.defaults
+from capkpi import _, msgprint
+from capkpi.contacts.address_and_contact import (
 	delete_contact_and_address,
 	load_address_and_contact,
 )
-from frappe.model.naming import set_name_by_naming_series, set_name_from_naming_options
+from capkpi.model.naming import set_name_by_naming_series, set_name_from_naming_options
 
 from erp.accounts.party import (  # noqa
 	get_dashboard_info,
@@ -40,13 +40,13 @@ class Supplier(TransactionBase):
 		self.set_onload("dashboard_info", info)
 
 	def autoname(self):
-		supp_master_name = frappe.defaults.get_global_default("supp_master_name")
+		supp_master_name = capkpi.defaults.get_global_default("supp_master_name")
 		if supp_master_name == "Supplier Name":
 			self.name = self.supplier_name
 		elif supp_master_name == "Naming Series":
 			set_name_by_naming_series(self)
 		else:
-			self.name = set_name_from_naming_options(frappe.get_meta(self.doctype).autoname, self)
+			self.name = set_name_from_naming_options(capkpi.get_meta(self.doctype).autoname, self)
 
 	def on_update(self):
 		if not self.naming_series:
@@ -59,16 +59,16 @@ class Supplier(TransactionBase):
 		self.flags.is_new_doc = self.is_new()
 
 		# validation for Naming Series mandatory field...
-		if frappe.defaults.get_global_default("supp_master_name") == "Naming Series":
+		if capkpi.defaults.get_global_default("supp_master_name") == "Naming Series":
 			if not self.naming_series:
 				msgprint(_("Series is mandatory"), raise_exception=1)
 
 		validate_party_accounts(self)
 		self.validate_internal_supplier()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_supplier_group_details(self):
-		doc = frappe.get_doc("Supplier Group", self.supplier_group)
+		doc = capkpi.get_doc("Supplier Group", self.supplier_group)
 		self.payment_terms = ""
 		self.accounts = []
 
@@ -87,7 +87,7 @@ class Supplier(TransactionBase):
 		if not self.is_internal_supplier:
 			self.represents_company = ""
 
-		internal_supplier = frappe.db.get_value(
+		internal_supplier = capkpi.db.get_value(
 			"Supplier",
 			{
 				"is_internal_supplier": 1,
@@ -98,9 +98,9 @@ class Supplier(TransactionBase):
 		)
 
 		if internal_supplier:
-			frappe.throw(
+			capkpi.throw(
 				_("Internal Supplier for company {0} already exists").format(
-					frappe.bold(self.represents_company)
+					capkpi.bold(self.represents_company)
 				)
 			)
 
@@ -115,7 +115,7 @@ class Supplier(TransactionBase):
 				self.db_set("email_id", self.email_id)
 
 	def create_primary_address(self):
-		from frappe.contacts.doctype.address.address import get_address_display
+		from capkpi.contacts.doctype.address.address import get_address_display
 
 		from erp.selling.doctype.customer.customer import make_address
 
@@ -128,7 +128,7 @@ class Supplier(TransactionBase):
 
 	def on_trash(self):
 		if self.supplier_primary_contact:
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""
 				UPDATE `tabSupplier`
 				SET
@@ -144,11 +144,11 @@ class Supplier(TransactionBase):
 		delete_contact_and_address("Supplier", self.name)
 
 	def after_rename(self, olddn, newdn, merge=False):
-		if frappe.defaults.get_global_default("supp_master_name") == "Supplier Name":
-			frappe.db.set(self, "supplier_name", newdn)
+		if capkpi.defaults.get_global_default("supp_master_name") == "Supplier Name":
+			capkpi.db.set(self, "supplier_name", newdn)
 
 	def create_onboarding_docs(self, args):
-		company = frappe.defaults.get_defaults().get("company") or frappe.db.get_single_value(
+		company = capkpi.defaults.get_defaults().get("company") or capkpi.db.get_single_value(
 			"Global Defaults", "default_company"
 		)
 
@@ -156,7 +156,7 @@ class Supplier(TransactionBase):
 			supplier = args.get("supplier_name_" + str(i))
 			if supplier:
 				try:
-					doc = frappe.get_doc(
+					doc = capkpi.get_doc(
 						{
 							"doctype": self.doctype,
 							"supplier_name": supplier,
@@ -169,15 +169,15 @@ class Supplier(TransactionBase):
 						from erp.selling.doctype.customer.customer import create_contact
 
 						create_contact(supplier, "Supplier", doc.name, args.get("supplier_email_" + str(i)))
-				except frappe.NameError:
+				except capkpi.NameError:
 					pass
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_supplier_primary_contact(doctype, txt, searchfield, start, page_len, filters):
 	supplier = filters.get("supplier")
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT
 			`tabContact`.name from `tabContact`,

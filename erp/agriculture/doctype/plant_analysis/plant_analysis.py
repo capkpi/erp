@@ -2,14 +2,14 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class PlantAnalysis(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def load_contents(self):
-		docs = frappe.get_all(
+		docs = capkpi.get_all(
 			"Agriculture Analysis Criteria", filters={"linked_doctype": "Plant Analysis"}
 		)
 		for doc in docs:

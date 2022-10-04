@@ -1,9 +1,9 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide('erp.accounts.dimensions');
+capkpi.provide('erp.accounts.dimensions');
 
-frappe.ui.form.on('Shipping Rule', {
+capkpi.ui.form.on('Shipping Rule', {
 	onload: function(frm) {
 		erp.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
 	},

@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import add_days, cstr, date_diff, get_first_day, get_last_day, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import add_days, cstr, date_diff, get_first_day, get_last_day, getdate
 
 from erp.education.api import get_student_group_students
 from erp.education.doctype.student_attendance.student_attendance import get_holiday_list
@@ -26,7 +26,7 @@ def execute(filters=None):
 
 	for stud in students:
 		row = [stud.student, stud.student_name]
-		student_status = frappe.db.get_value("Student", stud.student, "enabled")
+		student_status = capkpi.db.get_value("Student", stud.student, "enabled")
 		date = from_date
 		total_p = total_a = 0.0
 
@@ -70,7 +70,7 @@ def get_students_list(students):
 
 
 def get_attendance_list(from_date, to_date, student_group, students_list):
-	attendance_list = frappe.db.sql(
+	attendance_list = capkpi.db.sql(
 		"""select student, date, status
 		from `tabStudent Attendance` where student_group = %s
 		and docstatus = 1
@@ -85,7 +85,7 @@ def get_attendance_list(from_date, to_date, student_group, students_list):
 		from_date, to_date, students_list
 	)
 	for d in attendance_list:
-		att_map.setdefault(d.student, frappe._dict()).setdefault(d.date, "")
+		att_map.setdefault(d.student, capkpi._dict()).setdefault(d.date, "")
 
 		if students_with_leave_application.get(
 			d.date
@@ -102,7 +102,7 @@ def get_attendance_list(from_date, to_date, student_group, students_list):
 def get_students_with_leave_application(from_date, to_date, students_list):
 	if not students_list:
 		return
-	leave_applications = frappe.db.sql(
+	leave_applications = capkpi.db.sql(
 		"""
 		select student, from_date, to_date
 		from `tabStudent Leave Application`
@@ -132,9 +132,9 @@ def daterange(d1, d2):
 	return (d1 + datetime.timedelta(days=i) for i in range((d2 - d1).days + 1))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_attendance_years():
-	year_list = frappe.db.sql_list(
+	year_list = capkpi.db.sql_list(
 		"""select distinct YEAR(date) from `tabStudent Attendance` ORDER BY YEAR(date) DESC"""
 	)
 	if not year_list:
@@ -149,6 +149,6 @@ def mark_holidays(att_map, from_date, to_date, students_list):
 	for dt in daterange(getdate(from_date), getdate(to_date)):
 		if dt in holidays:
 			for student in students_list:
-				att_map.setdefault(student, frappe._dict()).setdefault(dt, "Holiday")
+				att_map.setdefault(student, capkpi._dict()).setdefault(dt, "Holiday")
 
 	return att_map

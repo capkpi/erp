@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.ui.form.on('Pricing Rule', {
+capkpi.ui.form.on('Pricing Rule', {
 	setup: function(frm) {
 		frm.fields_dict["for_price_list"].get_query = function(doc){
 			return {
@@ -18,7 +18,7 @@ frappe.ui.form.on('Pricing Rule', {
 				var row = locals[cdt][cdn];
 				return {
 					query:"erp.accounts.doctype.pricing_rule.pricing_rule.get_item_uoms",
-					filters: {'value': row[frappe.scrub(doc.apply_on)], apply_on: doc.apply_on}
+					filters: {'value': row[capkpi.scrub(doc.apply_on)], apply_on: doc.apply_on}
 				}
 			};
 		})

@@ -1,7 +1,7 @@
 # Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-import frappe
-import frappe.defaults
+import capkpi
+import capkpi.defaults
 
 from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import is_cart_enabled
 
@@ -9,7 +9,7 @@ from erp.e_commerce.doctype.e_commerce_settings.e_commerce_settings import is_ca
 def show_cart_count():
 	if (
 		is_cart_enabled()
-		and frappe.db.get_value("User", frappe.session.user, "user_type") == "Website User"
+		and capkpi.db.get_value("User", capkpi.session.user, "user_type") == "Website User"
 	):
 		return True
 
@@ -35,7 +35,7 @@ def set_cart_count(login_manager):
 
 def clear_cart_count(login_manager):
 	if show_cart_count():
-		frappe.local.cookie_manager.delete_cookie("cart_count")
+		capkpi.local.cookie_manager.delete_cookie("cart_count")
 
 
 def update_website_context(context):
@@ -44,10 +44,10 @@ def update_website_context(context):
 
 
 def is_customer():
-	if frappe.session.user and frappe.session.user != "Guest":
-		contact_name = frappe.get_value("Contact", {"email_id": frappe.session.user})
+	if capkpi.session.user and capkpi.session.user != "Guest":
+		contact_name = capkpi.get_value("Contact", {"email_id": capkpi.session.user})
 		if contact_name:
-			contact = frappe.get_doc("Contact", contact_name)
+			contact = capkpi.get_doc("Contact", contact_name)
 			for link in contact.links:
 				if link.link_doctype == "Customer":
 					return True

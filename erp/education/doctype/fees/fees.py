@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import money_in_words
-from frappe.utils.csvutils import getlink
+import capkpi
+from capkpi import _
+from capkpi.utils import money_in_words
+from capkpi.utils.csvutils import getlink
 
 import erp
 from erp.accounts.doctype.payment_request.payment_request import make_payment_request
@@ -29,11 +29,11 @@ class Fees(AccountsController):
 
 	def set_missing_accounts_and_fields(self):
 		if not self.company:
-			self.company = frappe.defaults.get_defaults().company
+			self.company = capkpi.defaults.get_defaults().company
 		if not self.currency:
 			self.currency = erp.get_company_currency(self.company)
 		if not (self.receivable_account and self.income_account and self.cost_center):
-			accounts_details = frappe.get_all(
+			accounts_details = capkpi.get_all(
 				"Company",
 				fields=["default_receivable_account", "default_income_account", "cost_center"],
 				filters={"name": self.company},
@@ -48,7 +48,7 @@ class Fees(AccountsController):
 			self.student_email = self.get_student_emails()
 
 	def get_student_emails(self):
-		student_emails = frappe.db.sql_list(
+		student_emails = capkpi.db.sql_list(
 			"""
 			select g.email_address
 			from `tabGuardian` g, `tabStudent Guardian` sg
@@ -58,7 +58,7 @@ class Fees(AccountsController):
 			self.student,
 		)
 
-		student_email_id = frappe.db.get_value("Student", self.student, "student_email_id")
+		student_email_id = capkpi.db.get_value("Student", self.student, "student_email_id")
 		if student_email_id:
 			student_emails.append(student_email_id)
 		if student_emails:
@@ -88,12 +88,12 @@ class Fees(AccountsController):
 				submit_doc=True,
 				use_dummy_message=True,
 			)
-			frappe.msgprint(_("Payment request {0} created").format(getlink("Payment Request", pr.name)))
+			capkpi.msgprint(_("Payment request {0} created").format(getlink("Payment Request", pr.name)))
 
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ("GL Entry", "Stock Ledger Entry")
 		make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
-		# frappe.db.set(self, 'status', 'Cancelled')
+		# capkpi.db.set(self, 'status', 'Cancelled')
 
 	def make_gl_entries(self):
 		if not self.grand_total:
@@ -134,10 +134,10 @@ class Fees(AccountsController):
 
 
 def get_fee_list(doctype, txt, filters, limit_start, limit_page_length=20, order_by="modified"):
-	user = frappe.session.user
-	student = frappe.db.sql("select name from `tabStudent` where student_email_id= %s", user)
+	user = capkpi.session.user
+	student = capkpi.db.sql("select name from `tabStudent` where student_email_id= %s", user)
 	if student:
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""
 			select name, program, due_date, grand_total - outstanding_amount as paid_amount,
 			outstanding_amount, grand_total, currency

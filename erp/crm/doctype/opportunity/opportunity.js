@@ -2,10 +2,10 @@
 // License: GNU General Public License v3. See license.txt
 
 {% include 'erp/selling/sales_common.js' %}
-frappe.provide("erp.crm");
+capkpi.provide("erp.crm");
 
 cur_frm.email_field = "contact_email";
-frappe.ui.form.on("Opportunity", {
+capkpi.ui.form.on("Opportunity", {
 	setup: function(frm) {
 		frm.custom_make_buttons = {
 			'Quotation': 'Quotation',
@@ -25,9 +25,9 @@ frappe.ui.form.on("Opportunity", {
 		}
 	},
 	contact_date: function(frm) {
-		if(frm.doc.contact_date < frappe.datetime.now_datetime()){
+		if(frm.doc.contact_date < capkpi.datetime.now_datetime()){
 			frm.set_value("contact_date", "");
-			frappe.throw(__("Next follow up date should be greater than now."))
+			capkpi.throw(__("Next follow up date should be greater than now."))
 		}
 	},
 
@@ -126,9 +126,9 @@ frappe.ui.form.on("Opportunity", {
 
 	set_contact_link: function(frm) {
 		if(frm.doc.opportunity_from == "Customer" && frm.doc.party_name) {
-			frappe.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Customer'}
+			capkpi.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Customer'}
 		} else if(frm.doc.opportunity_from == "Lead" && frm.doc.party_name) {
-			frappe.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Lead'}
+			capkpi.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Lead'}
 		}
 	},
 
@@ -139,14 +139,14 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	make_supplier_quotation: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.opportunity.opportunity.make_supplier_quotation",
 			frm: frm
 		})
 	},
 
 	make_request_for_quotation: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.opportunity.opportunity.make_request_for_quotation",
 			frm: frm
 		})
@@ -155,17 +155,17 @@ frappe.ui.form.on("Opportunity", {
 })
 
 // TODO commonify this code
-erp.crm.Opportunity = frappe.ui.form.Controller.extend({
+erp.crm.Opportunity = capkpi.ui.form.Controller.extend({
 	onload: function() {
 
 		if(!this.frm.doc.status) {
 			frm.set_value('status', 'Open');
 		}
-		if(!this.frm.doc.company && frappe.defaults.get_user_default("Company")) {
-			frm.set_value('company', frappe.defaults.get_user_default("Company"));
+		if(!this.frm.doc.company && capkpi.defaults.get_user_default("Company")) {
+			frm.set_value('company', capkpi.defaults.get_user_default("Company"));
 		}
 		if(!this.frm.doc.currency) {
-			frm.set_value('currency', frappe.defaults.get_user_default("Currency"));
+			frm.set_value('currency', capkpi.defaults.get_user_default("Currency"));
 		}
 
 		this.setup_queries();
@@ -198,14 +198,14 @@ erp.crm.Opportunity = frappe.ui.form.Controller.extend({
 	},
 
 	create_quotation: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.opportunity.opportunity.make_quotation",
 			frm: cur_frm
 		})
 	},
 
 	make_customer: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.crm.doctype.opportunity.opportunity.make_customer",
 			frm: cur_frm
 		})
@@ -217,13 +217,13 @@ $.extend(cur_frm.cscript, new erp.crm.Opportunity({frm: cur_frm}));
 cur_frm.cscript.item_code = function(doc, cdt, cdn) {
 	var d = locals[cdt][cdn];
 	if (d.item_code) {
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.crm.doctype.opportunity.opportunity.get_item_details",
 			args: {"item_code":d.item_code},
 			callback: function(r, rt) {
 				if(r.message) {
 					$.each(r.message, function(k, v) {
-						frappe.model.set_value(cdt, cdn, k, v);
+						capkpi.model.set_value(cdt, cdn, k, v);
 					});
 					refresh_field('image_view', d.name, 'items');
 				}

@@ -1,4 +1,4 @@
-frappe.listview_settings['Subscription'] = {
+capkpi.listview_settings['Subscription'] = {
 	get_indicator: function(doc) {
 		if(doc.status === 'Trialling') {
 			return [__("Trialling"), "green"];

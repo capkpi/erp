@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.views.calendar["Asset Maintenance Log"] = {
+capkpi.views.calendar["Asset Maintenance Log"] = {
 	field_map: {
 		"start": "due_date",
 		"end": "due_date",
@@ -18,5 +18,5 @@ frappe.views.calendar["Asset Maintenance Log"] = {
 			"label": __("Asset Maintenance")
 		}
 	],
-	get_events_method: "frappe.desk.calendar.get_events"
+	get_events_method: "capkpi.desk.calendar.get_events"
 };

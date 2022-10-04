@@ -3,9 +3,9 @@
 
 
 import dateutil
-import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.model.document import Document
+import capkpi
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_fields
+from capkpi.model.document import Document
 
 from erp.erp_integrations.doctype.amazon_mws_settings.amazon_methods import get_orders
 
@@ -18,25 +18,25 @@ class AmazonMWSSettings(Document):
 		else:
 			self.enable_sync = 0
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_products_details(self):
 		if self.enable_amazon == 1:
-			frappe.enqueue(
+			capkpi.enqueue(
 				"erp.erp_integrations.doctype.amazon_mws_settings.amazon_methods.get_products_details"
 			)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_order_details(self):
 		if self.enable_amazon == 1:
 			after_date = dateutil.parser.parse(self.after_date).strftime("%Y-%m-%d")
-			frappe.enqueue(
+			capkpi.enqueue(
 				"erp.erp_integrations.doctype.amazon_mws_settings.amazon_methods.get_orders",
 				after_date=after_date,
 			)
 
 
 def schedule_get_order_details():
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	if mws_settings.enable_sync and mws_settings.enable_amazon:
 		after_date = dateutil.parser.parse(mws_settings.after_date).strftime("%Y-%m-%d")
 		get_orders(after_date=after_date)

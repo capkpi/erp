@@ -1,7 +1,7 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Student Applicant", {
+capkpi.ui.form.on("Student Applicant", {
 	setup: function(frm) {
 		frm.add_fetch("guardian", "guardian_name", "guardian_name");
 	},
@@ -31,14 +31,14 @@ frappe.ui.form.on("Student Applicant", {
 			}, 'Actions');
 		}
 
-		frappe.realtime.on("enroll_student_progress", function(data) {
+		capkpi.realtime.on("enroll_student_progress", function(data) {
 			if(data.progress) {
-				frappe.hide_msgprint(true);
-				frappe.show_progress(__("Enrolling student"), data.progress[0],data.progress[1]);
+				capkpi.hide_msgprint(true);
+				capkpi.show_progress(__("Enrolling student"), data.progress[0],data.progress[1]);
 			}
 		});
 
-		frappe.db.get_value("Education Settings", {name: "Education Settings"}, "user_creation_skip", (r) => {
+		capkpi.db.get_value("Education Settings", {name: "Education Settings"}, "user_creation_skip", (r) => {
 			if (cint(r.user_creation_skip) !== 1) {
 				frm.set_df_property("student_email_id", "reqd", 1);
 			}
@@ -46,14 +46,14 @@ frappe.ui.form.on("Student Applicant", {
 	},
 
 	enroll: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.education.api.enroll_student",
 			frm: frm
 		})
 	}
 });
 
-frappe.ui.form.on('Student Sibling', {
+capkpi.ui.form.on('Student Sibling', {
 	setup: function(frm) {
 		frm.add_fetch("student", "title", "full_name");
 		frm.add_fetch("student", "gender", "gender");

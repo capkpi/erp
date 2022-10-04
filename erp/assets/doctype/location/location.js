@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Location', {
+capkpi.ui.form.on('Location', {
 	setup: function (frm) {
 		frm.set_query("parent_location", function () {
 			return {

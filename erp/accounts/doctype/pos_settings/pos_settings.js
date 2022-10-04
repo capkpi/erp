@@ -8,16 +8,16 @@ let do_not_include_fields = ["naming_series", "item_code", "item_name", "stock_u
 	"deferred_expense_account", "quality_inspection_template", "route", "slideshow", "website_image_alt", "thumbnail",
 	"web_long_description", "hub_sync_id"]
 
-frappe.ui.form.on('POS Settings', {
+capkpi.ui.form.on('POS Settings', {
 	onload: function(frm) {
 		frm.trigger("get_invoice_fields");
 		frm.trigger("add_search_options");
 	},
 
 	get_invoice_fields: function(frm) {
-		frappe.model.with_doctype("POS Invoice", () => {
-			var fields = $.map(frappe.get_doc("DocType", "POS Invoice").fields, function(d) {
-				if (frappe.model.no_value_type.indexOf(d.fieldtype) === -1 || ['Button'].includes(d.fieldtype)) {
+		capkpi.model.with_doctype("POS Invoice", () => {
+			var fields = $.map(capkpi.get_doc("DocType", "POS Invoice").fields, function(d) {
+				if (capkpi.model.no_value_type.indexOf(d.fieldtype) === -1 || ['Button'].includes(d.fieldtype)) {
 					return { label: d.label + ' (' + d.fieldtype + ')', value: d.fieldname };
 				} else {
 					return null;
@@ -32,8 +32,8 @@ frappe.ui.form.on('POS Settings', {
 	},
 
 	add_search_options: function(frm) {
-		frappe.model.with_doctype("Item", () => {
-			var fields = $.map(frappe.get_doc("DocType", "Item").fields, function(d) {
+		capkpi.model.with_doctype("Item", () => {
+			var fields = $.map(capkpi.get_doc("DocType", "Item").fields, function(d) {
 				if (search_fields_datatypes.includes(d.fieldtype) && !(do_not_include_fields.includes(d.fieldname))) {
 					return [d.label];
 				} else {
@@ -48,10 +48,10 @@ frappe.ui.form.on('POS Settings', {
 	}
 });
 
-frappe.ui.form.on("POS Search Fields", {
+capkpi.ui.form.on("POS Search Fields", {
 	field: function(frm, doctype, name) {
-		var doc = frappe.get_doc(doctype, name);
-		var df = $.map(frappe.get_doc("DocType", "Item").fields, function(d) {
+		var doc = capkpi.get_doc(doctype, name);
+		var df = $.map(capkpi.get_doc("DocType", "Item").fields, function(d) {
 			if (doc.field == d.label && search_fields_datatypes.includes(d.fieldtype)) {
 				return d;
 			} else {
@@ -64,10 +64,10 @@ frappe.ui.form.on("POS Search Fields", {
 	}
 });
 
-frappe.ui.form.on("POS Field", {
+capkpi.ui.form.on("POS Field", {
 	fieldname: function(frm, doctype, name) {
-		var doc = frappe.get_doc(doctype, name);
-		var df = $.map(frappe.get_doc("DocType", "POS Invoice").fields, function(d) {
+		var doc = capkpi.get_doc(doctype, name);
+		var df = $.map(capkpi.get_doc("DocType", "POS Invoice").fields, function(d) {
 			return doc.fieldname == d.fieldname ? d : null;
 		})[0];
 

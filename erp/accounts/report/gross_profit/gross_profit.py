@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, scrub
-from frappe.utils import cint, flt
+import capkpi
+from capkpi import _, scrub
+from capkpi.utils import cint, flt
 
 from erp.controllers.queries import get_match_cond
 from erp.stock.utils import get_incoming_rate
@@ -12,14 +12,14 @@ from erp.stock.utils import get_incoming_rate
 
 def execute(filters=None):
 	if not filters:
-		filters = frappe._dict()
-	filters.currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+		filters = capkpi._dict()
+	filters.currency = capkpi.get_cached_value("Company", filters.company, "default_currency")
 
 	gross_profit_data = GrossProfitGenerator(filters)
 
 	data = []
 
-	group_wise_columns = frappe._dict(
+	group_wise_columns = capkpi._dict(
 		{
 			"invoice": [
 				"invoice_or_item",
@@ -149,7 +149,7 @@ def get_data_when_grouped_by_invoice(
 	del columns[4:6]
 
 	for src in gross_profit_data.si_list:
-		row = frappe._dict()
+		row = capkpi._dict()
 		row.indent = src.indent
 		row.parent_invoice = src.parent_invoice
 		row.currency = filters.currency
@@ -173,7 +173,7 @@ def get_data_when_not_grouped_by_invoice(gross_profit_data, filters, group_wise_
 
 def get_columns(group_wise_columns, filters):
 	columns = []
-	column_map = frappe._dict(
+	column_map = capkpi._dict(
 		{
 			"parent": {
 				"label": _("Sales Invoice"),
@@ -337,7 +337,7 @@ def get_columns(group_wise_columns, filters):
 
 
 def get_column_names():
-	return frappe._dict(
+	return capkpi._dict(
 		{
 			"invoice_or_item": "sales_invoice",
 			"customer": "customer",
@@ -365,7 +365,7 @@ class GrossProfitGenerator(object):
 	def __init__(self, filters=None):
 		self.data = []
 		self.average_buying_rate = {}
-		self.filters = frappe._dict(filters)
+		self.filters = capkpi._dict(filters)
 		self.load_invoice_items()
 
 		if filters.group_by == "Invoice":
@@ -381,8 +381,8 @@ class GrossProfitGenerator(object):
 		self.grouped = {}
 		self.grouped_data = []
 
-		self.currency_precision = cint(frappe.db.get_default("currency_precision")) or 3
-		self.float_precision = cint(frappe.db.get_default("float_precision")) or 2
+		self.currency_precision = cint(capkpi.db.get_default("currency_precision")) or 3
+		self.float_precision = cint(capkpi.db.get_default("float_precision")) or 2
 
 		grouped_by_invoice = True if self.filters.get("group_by") == "Invoice" else False
 
@@ -397,10 +397,10 @@ class GrossProfitGenerator(object):
 
 			product_bundles = []
 			if row.update_stock:
-				product_bundles = self.product_bundles.get(row.parenttype, {}).get(row.parent, frappe._dict())
+				product_bundles = self.product_bundles.get(row.parenttype, {}).get(row.parent, capkpi._dict())
 			elif row.dn_detail:
 				product_bundles = self.product_bundles.get("Delivery Note", {}).get(
-					row.delivery_note, frappe._dict()
+					row.delivery_note, capkpi._dict()
 				)
 				row.item_row = row.dn_detail
 
@@ -500,7 +500,7 @@ class GrossProfitGenerator(object):
 		)
 
 	def get_returned_invoice_items(self):
-		returned_invoices = frappe.db.sql(
+		returned_invoices = capkpi.db.sql(
 			"""
 			select
 				si.name, si_item.item_code, si_item.stock_qty as qty, si_item.base_net_amount as base_amount, si.return_against
@@ -514,9 +514,9 @@ class GrossProfitGenerator(object):
 			as_dict=1,
 		)
 
-		self.returned_invoices = frappe._dict()
+		self.returned_invoices = capkpi._dict()
 		for inv in returned_invoices:
-			self.returned_invoices.setdefault(inv.return_against, frappe._dict()).setdefault(
+			self.returned_invoices.setdefault(inv.return_against, capkpi._dict()).setdefault(
 				inv.item_code, []
 			).append(inv)
 
@@ -587,11 +587,11 @@ class GrossProfitGenerator(object):
 		return self.average_buying_rate[item_code]
 
 	def get_last_purchase_rate(self, item_code, row):
-		purchase_invoice = frappe.qb.DocType("Purchase Invoice")
-		purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
+		purchase_invoice = capkpi.qb.DocType("Purchase Invoice")
+		purchase_invoice_item = capkpi.qb.DocType("Purchase Invoice Item")
 
 		query = (
-			frappe.qb.from_(purchase_invoice_item)
+			capkpi.qb.from_(purchase_invoice_item)
 			.inner_join(purchase_invoice)
 			.on(purchase_invoice.name == purchase_invoice_item.parent)
 			.select(purchase_invoice_item.base_rate / purchase_invoice_item.conversion_factor)
@@ -606,7 +606,7 @@ class GrossProfitGenerator(object):
 		if row.cost_center:
 			query.where(purchase_invoice_item.cost_center == row.cost_center)
 
-		query.orderby(purchase_invoice.posting_date, order=frappe.qb.desc)
+		query.orderby(purchase_invoice.posting_date, order=capkpi.qb.desc)
 		query.limit(1)
 		last_purchase_rate = query.run()
 
@@ -634,7 +634,7 @@ class GrossProfitGenerator(object):
 		if self.filters.get("item_code"):
 			conditions += " and `tabSales Invoice Item`.item_code = %(item_code)s"
 
-		self.si_list = frappe.db.sql(
+		self.si_list = capkpi.db.sql(
 			"""
 			select
 				`tabSales Invoice Item`.parenttype, `tabSales Invoice Item`.parent,
@@ -692,11 +692,11 @@ class GrossProfitGenerator(object):
 					row.parent_invoice = row.parent
 					row.invoice_or_item = row.item_code
 
-					if frappe.db.exists("Product Bundle", row.item_code):
+					if capkpi.db.exists("Product Bundle", row.item_code):
 						self.add_bundle_items(row, index)
 
 	def get_invoice_row(self, row):
-		return frappe._dict(
+		return capkpi._dict(
 			{
 				"parent_invoice": "",
 				"indent": 0.0,
@@ -720,7 +720,7 @@ class GrossProfitGenerator(object):
 				"item_row": None,
 				"is_return": row.is_return,
 				"cost_center": row.cost_center,
-				"base_net_amount": frappe.db.get_value("Sales Invoice", row.parent, "base_net_total"),
+				"base_net_amount": capkpi.db.get_value("Sales Invoice", row.parent, "base_net_total"),
 			}
 		)
 
@@ -732,14 +732,14 @@ class GrossProfitGenerator(object):
 			self.si_list.insert((index + i + 1), bundle_item)
 
 	def get_bundle_items(self, product_bundle):
-		return frappe.get_all(
+		return capkpi.get_all(
 			"Product Bundle Item", filters={"parent": product_bundle.item_code}, fields=["item_code", "qty"]
 		)
 
 	def get_bundle_item_row(self, product_bundle, item):
 		item_name, description, item_group, brand = self.get_bundle_item_details(item.item_code)
 
-		return frappe._dict(
+		return capkpi._dict(
 			{
 				"parent_invoice": product_bundle.item_code,
 				"indent": product_bundle.indent + 1,
@@ -766,12 +766,12 @@ class GrossProfitGenerator(object):
 		)
 
 	def get_bundle_item_details(self, item_code):
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			"Item", item_code, ["item_name", "description", "item_group", "brand"]
 		)
 
 	def load_stock_ledger_entries(self):
-		res = frappe.db.sql(
+		res = capkpi.db.sql(
 			"""select item_code, voucher_type, voucher_no,
 				voucher_detail_no, stock_value, warehouse, actual_qty as qty
 			from `tabStock Ledger Entry`
@@ -792,18 +792,18 @@ class GrossProfitGenerator(object):
 	def load_product_bundle(self):
 		self.product_bundles = {}
 
-		for d in frappe.db.sql(
+		for d in capkpi.db.sql(
 			"""select parenttype, parent, parent_item,
 			item_code, warehouse, -1*qty as total_qty, parent_detail_docname
 			from `tabPacked Item` where docstatus=1""",
 			as_dict=True,
 		):
-			self.product_bundles.setdefault(d.parenttype, frappe._dict()).setdefault(
-				d.parent, frappe._dict()
+			self.product_bundles.setdefault(d.parenttype, capkpi._dict()).setdefault(
+				d.parent, capkpi._dict()
 			).setdefault(d.parent_item, []).append(d)
 
 	def load_non_stock_items(self):
-		self.non_stock_items = frappe.db.sql_list(
+		self.non_stock_items = capkpi.db.sql_list(
 			"""select name from tabItem
 			where is_stock_item=0"""
 		)

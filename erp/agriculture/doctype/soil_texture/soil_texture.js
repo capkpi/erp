@@ -1,9 +1,9 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide('agriculture');
+capkpi.provide('agriculture');
 
-frappe.ui.form.on('Soil Texture', {
+capkpi.ui.form.on('Soil Texture', {
 	refresh: (frm) => {
 		let map_tools = ["a.leaflet-draw-draw-polyline",
 			"a.leaflet-draw-draw-polygon",

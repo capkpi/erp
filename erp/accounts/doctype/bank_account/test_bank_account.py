@@ -3,10 +3,10 @@
 
 import unittest
 
-import frappe
-from frappe import ValidationError
+import capkpi
+from capkpi import ValidationError
 
-# test_records = frappe.get_test_records('Bank Account')
+# test_records = capkpi.get_test_records('Bank Account')
 
 
 class TestBankAccount(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestBankAccount(unittest.TestCase):
 			"FR66 3000 6000 0112 3456 7890 189",
 		]
 
-		bank_account = frappe.get_doc({"doctype": "Bank Account"})
+		bank_account = capkpi.get_doc({"doctype": "Bank Account"})
 
 		try:
 			bank_account.validate_iban()

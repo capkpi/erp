@@ -2,13 +2,13 @@
 // License: GNU General Public License v3. See license.txt
 
 
-frappe.query_reports["Absent Student Report"] = {
+capkpi.query_reports["Absent Student Report"] = {
 	"filters": [
 		{
 			"fieldname":"date",
 			"label": __("Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today(),
+			"default": capkpi.datetime.get_today(),
 			"reqd": 1
 		}
 	]

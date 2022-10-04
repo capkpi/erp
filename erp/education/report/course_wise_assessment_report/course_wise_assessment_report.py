@@ -4,15 +4,15 @@
 
 from collections import OrderedDict, defaultdict
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.education.api import get_grade
 
 
 def execute(filters=None):
 	data, chart, grades = [], [], []
-	args = frappe._dict()
+	args = capkpi._dict()
 	grade_wise_analysis = defaultdict(dict)
 
 	args["academic_year"] = filters.get("academic_year")
@@ -23,7 +23,7 @@ def execute(filters=None):
 	args["student_group"] = filters.get("student_group")
 
 	if args["assessment_group"] == "All Assessment Groups":
-		frappe.throw(_("Please select the assessment group other than 'All Assessment Groups'"))
+		capkpi.throw(_("Please select the assessment group other than 'All Assessment Groups'"))
 
 	returned_values = get_formatted_result(args, get_assessment_criteria=True)
 	student_dict = returned_values["student_details"]
@@ -35,7 +35,7 @@ def execute(filters=None):
 		student_row["student"] = student
 		student_row["student_name"] = student_dict[student]
 		for criteria in assessment_criteria_dict:
-			scrub_criteria = frappe.scrub(criteria)
+			scrub_criteria = capkpi.scrub(criteria)
 			if criteria in result_dict[student][args.course][args.assessment_group]:
 				student_row[scrub_criteria] = result_dict[student][args.course][args.assessment_group][
 					criteria
@@ -54,8 +54,8 @@ def execute(filters=None):
 				else:
 					grade_wise_analysis[criteria][student_row[scrub_criteria]] += 1
 			else:
-				student_row[frappe.scrub(criteria)] = ""
-				student_row[frappe.scrub(criteria) + "_score"] = ""
+				student_row[capkpi.scrub(criteria)] = ""
+				student_row[capkpi.scrub(criteria) + "_score"] = ""
 		data.append(student_row)
 
 	assessment_criteria_list = [d for d in assessment_criteria_dict]
@@ -93,7 +93,7 @@ def get_formatted_result(
 		cond4 = " and ar.student in (%s)" % (", ".join(["%s"] * len(args.students)))
 		args_list += args.students
 
-	assessment_result = frappe.db.sql(
+	assessment_result = capkpi.db.sql(
 		"""
 		SELECT
 			ar.student, ar.student_name, ar.academic_year, ar.academic_term, ar.program, ar.course,
@@ -159,7 +159,7 @@ def get_formatted_result(
 		):
 			formatted_assessment_result[result.student][result.course][assessment_group][
 				"Final Grade"
-			] = frappe._dict(
+			] = capkpi._dict(
 				{
 					"assessment_criteria": "Final Grade",
 					"maximum_score": result.maximum_score,
@@ -174,7 +174,7 @@ def get_formatted_result(
 		if result.student not in student_details:
 			student_details[result.student] = result.student_name
 
-		assessment_criteria_details = frappe._dict(
+		assessment_criteria_details = capkpi._dict(
 			{
 				"assessment_criteria": result.assessment_criteria,
 				"maximum_score": result.maximum_score,
@@ -255,10 +255,10 @@ def get_column(assessment_criteria):
 		{"fieldname": "student_name", "label": _("Student Name"), "fieldtype": "Data", "width": 160},
 	]
 	for d in assessment_criteria:
-		columns.append({"fieldname": frappe.scrub(d), "label": d, "fieldtype": "Data", "width": 110})
+		columns.append({"fieldname": capkpi.scrub(d), "label": d, "fieldtype": "Data", "width": 110})
 		columns.append(
 			{
-				"fieldname": frappe.scrub(d) + "_score",
+				"fieldname": capkpi.scrub(d) + "_score",
 				"label": "Score(" + str(int(assessment_criteria[d])) + ")",
 				"fieldtype": "Float",
 				"width": 100,
@@ -273,7 +273,7 @@ def get_chart_data(grades, criteria_list, kounter):
 	datasets = []
 
 	for grade in grades:
-		tmp = frappe._dict({"name": grade, "values": []})
+		tmp = capkpi._dict({"name": grade, "values": []})
 		for criteria in criteria_list:
 			if grade in kounter[criteria]:
 				tmp["values"].append(kounter[criteria][grade])
@@ -289,9 +289,9 @@ def get_chart_data(grades, criteria_list, kounter):
 
 def get_child_assessment_groups(assessment_group):
 	assessment_groups = []
-	group_type = frappe.get_value("Assessment Group", assessment_group, "is_group")
+	group_type = capkpi.get_value("Assessment Group", assessment_group, "is_group")
 	if group_type:
-		from frappe.desk.treeview import get_children
+		from capkpi.desk.treeview import get_children
 
 		assessment_groups = [
 			d.get("value")

@@ -4,9 +4,9 @@ QUnit.test("test: supplier quotation with item wise discount", function(assert){
 	assert.expect(2);
 	let done = assert.async();
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Supplier Quotation', [
+			return capkpi.tests.make('Supplier Quotation', [
 				{supplier: 'Test Supplier'},
 				{company: 'For Testing'},
 				{items: [
@@ -26,9 +26,9 @@ QUnit.test("test: supplier quotation with item wise discount", function(assert){
 			assert.ok(cur_frm.doc.grand_total == 900, "Grand total correct");
 		},
 
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(0.3),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(0.3),
 		() => done()
 	]);
 });

@@ -1,6 +1,6 @@
 import json
 
-import frappe
+import capkpi
 from six import iteritems
 
 from erp.demo.domains import data
@@ -9,20 +9,20 @@ from erp.demo.domains import data
 def setup_data():
 	setup_item()
 	setup_item_price()
-	frappe.db.commit()
-	frappe.clear_cache()
+	capkpi.db.commit()
+	capkpi.clear_cache()
 
 
 def setup_item():
-	items = json.loads(open(frappe.get_app_path("erp", "demo", "data", "item.json")).read())
+	items = json.loads(open(capkpi.get_app_path("erp", "demo", "data", "item.json")).read())
 	for i in items:
 		if not i.get("domain") == "Retail":
 			continue
-		item = frappe.new_doc("Item")
+		item = capkpi.new_doc("Item")
 		item.update(i)
 		if hasattr(item, "item_defaults") and item.item_defaults[0].default_warehouse:
 			item.item_defaults[0].company = data.get("Retail").get("company_name")
-			warehouse = frappe.get_all(
+			warehouse = capkpi.get_all(
 				"Warehouse", filters={"warehouse_name": item.item_defaults[0].default_warehouse}, limit=1
 			)
 			if warehouse:
@@ -31,7 +31,7 @@ def setup_item():
 
 
 def setup_item_price():
-	frappe.db.sql("delete from `tabItem Price`")
+	capkpi.db.sql("delete from `tabItem Price`")
 
 	standard_selling = {
 		"OnePlus 6": 579,
@@ -57,7 +57,7 @@ def setup_item_price():
 
 	for price_list in ("standard_buying", "standard_selling"):
 		for item, rate in iteritems(locals().get(price_list)):
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Item Price",
 					"price_list": price_list.replace("_", " ").title(),

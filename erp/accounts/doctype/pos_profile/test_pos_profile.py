@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.pos_profile.pos_profile import get_child_nodes
 from erp.stock.get_item_details import get_pos_profile
@@ -17,24 +17,24 @@ class TestPOSProfile(unittest.TestCase):
 
 		pos_profile = get_pos_profile("_Test Company") or {}
 		if pos_profile:
-			doc = frappe.get_doc("POS Profile", pos_profile.get("name"))
+			doc = capkpi.get_doc("POS Profile", pos_profile.get("name"))
 			doc.append("item_groups", {"item_group": "_Test Item Group"})
 			doc.append("customer_groups", {"customer_group": "_Test Customer Group"})
 			doc.save()
 			items = get_items_list(doc, doc.company)
 			customers = get_customers_list(doc)
 
-			products_count = frappe.db.sql(
+			products_count = capkpi.db.sql(
 				""" select count(name) from tabItem where item_group = '_Test Item Group'""", as_list=1
 			)
-			customers_count = frappe.db.sql(
+			customers_count = capkpi.db.sql(
 				""" select count(name) from tabCustomer where customer_group = '_Test Customer Group'"""
 			)
 
 			self.assertEqual(len(items), products_count[0][0])
 			self.assertEqual(len(customers), customers_count[0][0])
 
-		frappe.db.sql("delete from `tabPOS Profile`")
+		capkpi.db.sql("delete from `tabPOS Profile`")
 
 
 def get_customers_list(pos_profile=None):
@@ -51,7 +51,7 @@ def get_customers_list(pos_profile=None):
 		cond = "customer_group in (%s)" % (", ".join(["%s"] * len(customer_groups)))
 
 	return (
-		frappe.db.sql(
+		capkpi.db.sql(
 			""" select name, customer_name, customer_group,
 		territory, customer_pos_id from tabCustomer where disabled = 0
 		and {cond}""".format(
@@ -74,7 +74,7 @@ def get_items_list(pos_profile, company):
 		if args_list:
 			cond = "and i.item_group in (%s)" % (", ".join(["%s"] * len(args_list)))
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			i.name, i.item_code, i.item_name, i.description, i.item_group, i.has_batch_no,
@@ -97,12 +97,12 @@ def get_items_list(pos_profile, company):
 
 
 def make_pos_profile(**args):
-	frappe.db.sql("delete from `tabPOS Payment Method`")
-	frappe.db.sql("delete from `tabPOS Profile`")
+	capkpi.db.sql("delete from `tabPOS Payment Method`")
+	capkpi.db.sql("delete from `tabPOS Profile`")
 
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	pos_profile = frappe.get_doc(
+	pos_profile = capkpi.get_doc(
 		{
 			"company": args.company or "_Test Company",
 			"cost_center": args.cost_center or "_Test Cost Center - _TC",
@@ -114,24 +114,24 @@ def make_pos_profile(**args):
 			"naming_series": "_T-POS Profile-",
 			"selling_price_list": args.selling_price_list or "_Test Price List",
 			"territory": args.territory or "_Test Territory",
-			"customer_group": frappe.db.get_value("Customer Group", {"is_group": 0}, "name"),
+			"customer_group": capkpi.db.get_value("Customer Group", {"is_group": 0}, "name"),
 			"warehouse": args.warehouse or "_Test Warehouse - _TC",
 			"write_off_account": args.write_off_account or "_Test Write Off - _TC",
 			"write_off_cost_center": args.write_off_cost_center or "_Test Write Off Cost Center - _TC",
 		}
 	)
 
-	mode_of_payment = frappe.get_doc("Mode of Payment", "Cash")
+	mode_of_payment = capkpi.get_doc("Mode of Payment", "Cash")
 	company = args.company or "_Test Company"
 	default_account = args.income_account or "Sales - _TC"
 
-	if not frappe.db.get_value("Mode of Payment Account", {"company": company, "parent": "Cash"}):
+	if not capkpi.db.get_value("Mode of Payment Account", {"company": company, "parent": "Cash"}):
 		mode_of_payment.append("accounts", {"company": company, "default_account": default_account})
 		mode_of_payment.save()
 
 	pos_profile.append("payments", {"mode_of_payment": "Cash", "default": 1})
 
-	if not frappe.db.exists("POS Profile", args.name or "_Test POS Profile"):
+	if not capkpi.db.exists("POS Profile", args.name or "_Test POS Profile"):
 		pos_profile.insert()
 
 	return pos_profile

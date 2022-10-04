@@ -1,14 +1,14 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Supplier Quotation Comparison"] = {
+capkpi.query_reports["Supplier Quotation Comparison"] = {
 	filters: [
 		{
 			fieldtype: "Link",
 			label: __("Company"),
 			options: "Company",
 			fieldname: "company",
-			default: frappe.defaults.get_user_default("Company"),
+			default: capkpi.defaults.get_user_default("Company"),
 			"reqd": 1
 		},
 		{
@@ -17,7 +17,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			"fieldtype": "Date",
 			"width": "80",
 			"reqd": 1,
-			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+			"default": capkpi.datetime.add_months(capkpi.datetime.get_today(), -1),
 		},
 		{
 			"fieldname":"to_date",
@@ -25,7 +25,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			"fieldtype": "Date",
 			"width": "80",
 			"reqd": 1,
-			"default": frappe.datetime.get_today()
+			"default": capkpi.datetime.get_today()
 		},
 		{
 			default: "",
@@ -34,7 +34,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			fieldname: "item_code",
 			fieldtype: "Link",
 			get_query: () => {
-				let quote = frappe.query_report.get_filter_value('supplier_quotation');
+				let quote = capkpi.query_report.get_filter_value('supplier_quotation');
 				if (quote != "") {
 					return {
 						query: "erp.stock.doctype.quality_inspection.quality_inspection.item_query",
@@ -56,7 +56,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			label: __("Supplier"),
 			fieldtype: "MultiSelectList",
 			get_data: function(txt) {
-				return frappe.db.get_link_options('Supplier', txt);
+				return capkpi.db.get_link_options('Supplier', txt);
 			}
 		},
 		{
@@ -65,7 +65,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			fieldname: "supplier_quotation",
 			default: "",
 			get_data: function(txt) {
-				return frappe.db.get_link_options('Supplier Quotation', txt, {'docstatus': ["<", 2]});
+				return capkpi.db.get_link_options('Supplier Quotation', txt, {'docstatus': ["<", 2]});
 			}
 		},
 		{
@@ -97,10 +97,10 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 		value = default_formatter(value, row, column, data);
 
 		if(column.fieldname === "valid_till" && data.valid_till){
-			if(frappe.datetime.get_diff(data.valid_till, frappe.datetime.nowdate()) <= 1){
+			if(capkpi.datetime.get_diff(data.valid_till, capkpi.datetime.nowdate()) <= 1){
 				value = `<div style="color:red">${value}</div>`;
 			}
-			else if (frappe.datetime.get_diff(data.valid_till, frappe.datetime.nowdate()) <= 7){
+			else if (capkpi.datetime.get_diff(data.valid_till, capkpi.datetime.nowdate()) <= 7){
 				value = `<div style="color:darkorange">${value}</div>`;
 			}
 		}
@@ -114,7 +114,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 	onload: (report) => {
 		// Create a button for setting the default supplier
 		report.page.add_inner_button(__("Select Default Supplier"), () => {
-			let reporter = frappe.query_reports["Quoted Item Comparison"];
+			let reporter = capkpi.query_reports["Quoted Item Comparison"];
 
 			//Always make a new one so that the latest values get updated
 			reporter.make_default_supplier_dialog(report);
@@ -132,7 +132,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 		let suppliers = $.map(report.data, (row, idx)=>{ return row.supplier_name })
 
 		// Create a dialog window for the user to pick their supplier
-		let dialog = new frappe.ui.Dialog({
+		let dialog = new capkpi.ui.Dialog({
 			title: __('Select Default Supplier'),
 			fields: [
 				{
@@ -156,8 +156,8 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 			let values = dialog.get_values();
 			if(values) {
 				// Set the default_supplier field of the appropriate Item to the selected supplier
-				frappe.call({
-					method: "frappe.client.set_value",
+				capkpi.call({
+					method: "capkpi.client.set_value",
 					args: {
 						doctype: "Item",
 						name: item_code,
@@ -166,7 +166,7 @@ frappe.query_reports["Supplier Quotation Comparison"] = {
 					},
 					freeze: true,
 					callback: (r) => {
-						frappe.msgprint(__("Successfully Set Supplier"));
+						capkpi.msgprint(__("Successfully Set Supplier"));
 						dialog.hide();
 					}
 				});

@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cint, flt, getdate, today
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, flt, getdate, today
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_checks_for_pl_and_bs_accounts,
@@ -14,7 +14,7 @@ from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 def post_depreciation_entries(date=None):
 	# Return if automatic booking of asset depreciation is disabled
 	if not cint(
-		frappe.db.get_value("Accounts Settings", None, "book_asset_depreciation_entry_automatically")
+		capkpi.db.get_value("Accounts Settings", None, "book_asset_depreciation_entry_automatically")
 	):
 		return
 
@@ -22,11 +22,11 @@ def post_depreciation_entries(date=None):
 		date = today()
 	for asset in get_depreciable_assets(date):
 		make_depreciation_entry(asset, date)
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def get_depreciable_assets(date):
-	return frappe.db.sql_list(
+	return capkpi.db.sql_list(
 		"""select distinct a.name
 		from tabAsset a, `tabDepreciation Schedule` ds
 		where a.name = ds.parent and a.docstatus=1 and ds.schedule_date<=%s and a.calculate_depreciation = 1
@@ -36,21 +36,21 @@ def get_depreciable_assets(date):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_depreciation_entry(asset_name, date=None):
-	frappe.has_permission("Journal Entry", throw=True)
+	capkpi.has_permission("Journal Entry", throw=True)
 
 	if not date:
 		date = today()
 
-	asset = frappe.get_doc("Asset", asset_name)
+	asset = capkpi.get_doc("Asset", asset_name)
 	(
 		fixed_asset_account,
 		accumulated_depreciation_account,
 		depreciation_expense_account,
 	) = get_depreciation_accounts(asset)
 
-	depreciation_cost_center, depreciation_series = frappe.get_cached_value(
+	depreciation_cost_center, depreciation_series = capkpi.get_cached_value(
 		"Company", asset.company, ["depreciation_cost_center", "series_for_depreciation_entry"]
 	)
 
@@ -60,7 +60,7 @@ def make_depreciation_entry(asset_name, date=None):
 
 	for d in asset.get("schedules"):
 		if not d.journal_entry and getdate(d.schedule_date) <= getdate(date):
-			je = frappe.new_doc("Journal Entry")
+			je = capkpi.new_doc("Journal Entry")
 			je.voucher_type = "Depreciation Entry"
 			je.naming_series = depreciation_series
 			je.posting_date = d.schedule_date
@@ -129,7 +129,7 @@ def make_depreciation_entry(asset_name, date=None):
 def get_depreciation_accounts(asset):
 	fixed_asset_account = accumulated_depreciation_account = depreciation_expense_account = None
 
-	accounts = frappe.db.get_value(
+	accounts = capkpi.db.get_value(
 		"Asset Category Account",
 		filters={"parent": asset.asset_category, "company_name": asset.company},
 		fieldname=[
@@ -146,7 +146,7 @@ def get_depreciation_accounts(asset):
 		depreciation_expense_account = accounts.depreciation_expense_account
 
 	if not accumulated_depreciation_account or not depreciation_expense_account:
-		accounts = frappe.get_cached_value(
+		accounts = capkpi.get_cached_value(
 			"Company", asset.company, ["accumulated_depreciation_account", "depreciation_expense_account"]
 		)
 
@@ -160,7 +160,7 @@ def get_depreciation_accounts(asset):
 		or not accumulated_depreciation_account
 		or not depreciation_expense_account
 	):
-		frappe.throw(
+		capkpi.throw(
 			_("Please set Depreciation related Accounts in Asset Category {0} or Company {1}").format(
 				asset.asset_category, asset.company
 			)
@@ -170,7 +170,7 @@ def get_depreciation_accounts(asset):
 
 
 def get_credit_and_debit_accounts(accumulated_depreciation_account, depreciation_expense_account):
-	root_type = frappe.get_value("Account", depreciation_expense_account, "root_type")
+	root_type = capkpi.get_value("Account", depreciation_expense_account, "root_type")
 
 	if root_type == "Expense":
 		credit_account = accumulated_depreciation_account
@@ -179,27 +179,27 @@ def get_credit_and_debit_accounts(accumulated_depreciation_account, depreciation
 		credit_account = depreciation_expense_account
 		debit_account = accumulated_depreciation_account
 	else:
-		frappe.throw(_("Depreciation Expense Account should be an Income or Expense Account."))
+		capkpi.throw(_("Depreciation Expense Account should be an Income or Expense Account."))
 
 	return credit_account, debit_account
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def scrap_asset(asset_name):
-	asset = frappe.get_doc("Asset", asset_name)
+	asset = capkpi.get_doc("Asset", asset_name)
 
 	if asset.docstatus != 1:
-		frappe.throw(_("Asset {0} must be submitted").format(asset.name))
+		capkpi.throw(_("Asset {0} must be submitted").format(asset.name))
 	elif asset.status in ("Cancelled", "Sold", "Scrapped"):
-		frappe.throw(
+		capkpi.throw(
 			_("Asset {0} cannot be scrapped, as it is already {1}").format(asset.name, asset.status)
 		)
 
-	depreciation_series = frappe.get_cached_value(
+	depreciation_series = capkpi.get_cached_value(
 		"Company", asset.company, "series_for_depreciation_entry"
 	)
 
-	je = frappe.new_doc("Journal Entry")
+	je = capkpi.new_doc("Journal Entry")
 	je.voucher_type = "Journal Entry"
 	je.naming_series = depreciation_series
 	je.posting_date = today()
@@ -213,23 +213,23 @@ def scrap_asset(asset_name):
 	je.flags.ignore_permissions = True
 	je.submit()
 
-	frappe.db.set_value("Asset", asset_name, "disposal_date", today())
-	frappe.db.set_value("Asset", asset_name, "journal_entry_for_scrap", je.name)
+	capkpi.db.set_value("Asset", asset_name, "disposal_date", today())
+	capkpi.db.set_value("Asset", asset_name, "journal_entry_for_scrap", je.name)
 	asset.set_status("Scrapped")
 
-	frappe.msgprint(_("Asset scrapped via Journal Entry {0}").format(je.name))
+	capkpi.msgprint(_("Asset scrapped via Journal Entry {0}").format(je.name))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def restore_asset(asset_name):
-	asset = frappe.get_doc("Asset", asset_name)
+	asset = capkpi.get_doc("Asset", asset_name)
 
 	je = asset.journal_entry_for_scrap
 
 	asset.db_set("disposal_date", None)
 	asset.db_set("journal_entry_for_scrap", None)
 
-	frappe.get_doc("Journal Entry", je).cancel()
+	capkpi.get_doc("Journal Entry", je).cancel()
 
 	asset.set_status()
 
@@ -344,17 +344,17 @@ def get_profit_gl_entries(profit_amount, gl_entries, disposal_account, depreciat
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_disposal_account_and_cost_center(company):
-	disposal_account, depreciation_cost_center = frappe.get_cached_value(
+	disposal_account, depreciation_cost_center = capkpi.get_cached_value(
 		"Company", company, ["disposal_account", "depreciation_cost_center"]
 	)
 
 	if not disposal_account:
-		frappe.throw(
+		capkpi.throw(
 			_("Please set 'Gain/Loss Account on Asset Disposal' in Company {0}").format(company)
 		)
 	if not depreciation_cost_center:
-		frappe.throw(_("Please set 'Asset Depreciation Cost Center' in Company {0}").format(company))
+		capkpi.throw(_("Please set 'Asset Depreciation Cost Center' in Company {0}").format(company))
 
 	return disposal_account, depreciation_cost_center

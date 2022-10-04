@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Topic', {
+capkpi.ui.form.on('Topic', {
 	refresh: function(frm) {
 		if (!cur_frm.doc.__islocal) {
 			frm.add_custom_button(__('Add to Courses'), function() {
@@ -13,7 +13,7 @@ frappe.ui.form.on('Topic', {
 	add_topic_to_courses: function(frm) {
 		get_courses_without_topic(frm.doc.name).then(r => {
 			if (r.message.length) {
-				frappe.prompt([
+				capkpi.prompt([
 					{
 						fieldname: 'courses',
 						label: __('Courses'),
@@ -24,7 +24,7 @@ frappe.ui.form.on('Topic', {
 					}
 				],
 				function(data) {
-					frappe.call({
+					capkpi.call({
 						method: 'erp.education.doctype.topic.topic.add_topic_to_courses',
 						args: {
 							'topic': frm.doc.name,
@@ -40,14 +40,14 @@ frappe.ui.form.on('Topic', {
 					});
 				}, __('Add Topic to Courses'), __('Add'));
 			} else {
-				frappe.msgprint(__('This topic is already added to the existing courses'));
+				capkpi.msgprint(__('This topic is already added to the existing courses'));
 			}
 		});
 	}
 });
 
 let get_courses_without_topic = function(topic) {
-	return frappe.call({
+	return capkpi.call({
 		type: 'GET',
 		method: 'erp.education.doctype.topic.topic.get_courses_without_topic',
 		args: {'topic': topic}

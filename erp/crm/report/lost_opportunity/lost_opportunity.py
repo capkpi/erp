@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -73,7 +73,7 @@ def get_columns():
 
 
 def get_data(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT
 			`tabOpportunity`.name,

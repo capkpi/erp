@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 import erp
 from erp.accounts.report.item_wise_sales_register.item_wise_sales_register import (
@@ -104,8 +104,8 @@ def _execute(filters=None, additional_table_columns=None, additional_query_colum
 			item_tax = itemised_tax.get(d.name, {}).get(tax, {})
 			row.update(
 				{
-					frappe.scrub(tax + " Rate"): item_tax.get("tax_rate", 0),
-					frappe.scrub(tax + " Amount"): item_tax.get("tax_amount", 0),
+					capkpi.scrub(tax + " Rate"): item_tax.get("tax_rate", 0),
+					capkpi.scrub(tax + " Amount"): item_tax.get("tax_amount", 0),
 				}
 			)
 			total_tax += flt(item_tax.get("tax_amount"))
@@ -320,7 +320,7 @@ def get_items(filters, additional_query_columns):
 	else:
 		additional_query_columns = ""
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			`tabPurchase Invoice Item`.`name`, `tabPurchase Invoice Item`.`parent`,
@@ -347,15 +347,15 @@ def get_items(filters, additional_query_columns):
 
 
 def get_aii_accounts():
-	return dict(frappe.db.sql("select name, stock_received_but_not_billed from tabCompany"))
+	return dict(capkpi.db.sql("select name, stock_received_but_not_billed from tabCompany"))
 
 
 def get_purchase_receipts_against_purchase_order(item_list):
-	po_pr_map = frappe._dict()
+	po_pr_map = capkpi._dict()
 	po_item_rows = list(set(d.po_detail for d in item_list))
 
 	if po_item_rows:
-		purchase_receipts = frappe.db.sql(
+		purchase_receipts = capkpi.db.sql(
 			"""
 			select parent, purchase_order_item
 			from `tabPurchase Receipt Item`

@@ -4,14 +4,14 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class BuyingSettings(Document):
 	def validate(self):
 		for key in ["supplier_group", "supp_master_name", "maintain_same_rate", "buying_price_list"]:
-			frappe.db.set_default(key, self.get(key, ""))
+			capkpi.db.set_default(key, self.get(key, ""))
 
 		from erp.setup.doctype.naming_series.naming_series import set_by_naming_series
 

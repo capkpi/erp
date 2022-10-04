@@ -4,8 +4,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import today
+import capkpi
+from capkpi.utils import today
 
 from erp.accounts.doctype.finance_book.test_finance_book import create_finance_book
 from erp.accounts.doctype.journal_entry.test_journal_entry import make_journal_entry
@@ -15,7 +15,7 @@ from erp.accounts.utils import get_fiscal_year, now
 
 class TestPeriodClosingVoucher(unittest.TestCase):
 	def test_closing_entry(self):
-		frappe.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
+		capkpi.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
 
 		company = create_company()
 		cost_center = create_cost_center("Test Cost Center 1")
@@ -53,7 +53,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			("Sales - TPC", 400.0, 0.0),
 		)
 
-		pcv_gle = frappe.db.sql(
+		pcv_gle = capkpi.db.sql(
 			"""
 			select account, debit, credit from `tabGL Entry` where voucher_no=%s order by account
 		""",
@@ -64,7 +64,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 		self.assertEqual(pcv_gle, expected_gle)
 
 	def test_cost_center_wise_posting(self):
-		frappe.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
+		capkpi.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
 
 		company = create_company()
 		surplus_account = create_account()
@@ -106,7 +106,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			("Sales - TPC", 200.0, 0.0, cost_center2),
 		)
 
-		pcv_gle = frappe.db.sql(
+		pcv_gle = capkpi.db.sql(
 			"""
 			select account, debit, credit, cost_center
 			from `tabGL Entry` where voucher_no=%s
@@ -121,14 +121,14 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 		pcv.cancel()
 
 		self.assertFalse(
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"GL Entry",
 				{"voucher_type": "Period Closing Voucher", "voucher_no": pcv.name, "is_cancelled": 0},
 			)
 		)
 
 	def test_period_closing_with_finance_book_entries(self):
-		frappe.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
+		capkpi.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
 
 		company = create_company()
 		surplus_account = create_account()
@@ -167,7 +167,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			("Sales - TPC", 400.0, 0.0, jv.finance_book),
 		)
 
-		pcv_gle = frappe.db.sql(
+		pcv_gle = capkpi.db.sql(
 			"""
 			select account, debit, credit, finance_book
 			from `tabGL Entry` where voucher_no=%s
@@ -181,7 +181,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 	def make_period_closing_voucher(self, submit=True):
 		surplus_account = create_account()
 		cost_center = create_cost_center("Test Cost Center 1")
-		pcv = frappe.get_doc(
+		pcv = capkpi.get_doc(
 			{
 				"doctype": "Period Closing Voucher",
 				"transaction_date": today(),
@@ -201,7 +201,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 
 
 def create_company():
-	company = frappe.get_doc(
+	company = capkpi.get_doc(
 		{
 			"doctype": "Company",
 			"company_name": "Test PCV Company",
@@ -214,7 +214,7 @@ def create_company():
 
 
 def create_account():
-	account = frappe.get_doc(
+	account = capkpi.get_doc(
 		{
 			"account_name": "Reserve and Surplus",
 			"is_group": 0,
@@ -230,7 +230,7 @@ def create_account():
 
 
 def create_cost_center(cc_name):
-	costcenter = frappe.get_doc(
+	costcenter = capkpi.get_doc(
 		{
 			"company": "Test PCV Company",
 			"cost_center_name": cc_name,
@@ -243,4 +243,4 @@ def create_cost_center(cc_name):
 
 
 test_dependencies = ["Customer", "Cost Center"]
-test_records = frappe.get_test_records("Period Closing Voucher")
+test_records = capkpi.get_test_records("Period Closing Voucher")

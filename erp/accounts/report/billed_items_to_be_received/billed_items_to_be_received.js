@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports['Billed Items To Be Received'] = {
+capkpi.query_reports['Billed Items To Be Received'] = {
 	'filters': [
 		{
 			'label': __('Company'),
@@ -10,7 +10,7 @@ frappe.query_reports['Billed Items To Be Received'] = {
 			'fieldtype': 'Link',
 			'options': 'Company',
 			'reqd': 1,
-			'default': frappe.defaults.get_default('Company')
+			'default': capkpi.defaults.get_default('Company')
 		},
 		{
 			'label': __('As on Date'),

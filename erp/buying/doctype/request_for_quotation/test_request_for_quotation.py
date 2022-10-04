@@ -2,9 +2,9 @@
 # See license.txt
 
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
-from frappe.utils import nowdate
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
+from capkpi.utils import nowdate
 
 from erp.buying.doctype.request_for_quotation.request_for_quotation import (
 	create_supplier_quotation,
@@ -52,8 +52,8 @@ class TestRequestforQuotation(CapKPITestCase):
 		self.assertEqual(sq1.get("items")[0].qty, 5)
 
 	def test_make_supplier_quotation_with_special_characters(self):
-		frappe.delete_doc_if_exists("Supplier", "_Test Supplier '1", force=1)
-		supplier = frappe.new_doc("Supplier")
+		capkpi.delete_doc_if_exists("Supplier", "_Test Supplier '1", force=1)
+		supplier = capkpi.new_doc("Supplier")
 		supplier.supplier_name = "_Test Supplier '1"
 		supplier.supplier_group = "_Test Supplier Group"
 		supplier.insert()
@@ -65,12 +65,12 @@ class TestRequestforQuotation(CapKPITestCase):
 		)
 		sq.submit()
 
-		frappe.form_dict.name = rfq.name
+		capkpi.form_dict.name = rfq.name
 
 		self.assertEqual(check_supplier_has_docname_access(supplier_wt_appos[0].get("supplier")), True)
 
 		# reset form_dict
-		frappe.form_dict.name = None
+		capkpi.form_dict.name = None
 
 	def test_make_supplier_quotation_from_portal(self):
 		rfq = make_request_for_quotation()
@@ -78,7 +78,7 @@ class TestRequestforQuotation(CapKPITestCase):
 		rfq.supplier = rfq.suppliers[0].supplier
 		supplier_quotation_name = create_supplier_quotation(rfq)
 
-		supplier_quotation_doc = frappe.get_doc("Supplier Quotation", supplier_quotation_name)
+		supplier_quotation_doc = capkpi.get_doc("Supplier Quotation", supplier_quotation_name)
 
 		self.assertEqual(supplier_quotation_doc.supplier, rfq.get("suppliers")[0].supplier)
 		self.assertEqual(supplier_quotation_doc.get("items")[0].request_for_quotation, rfq.name)
@@ -88,7 +88,7 @@ class TestRequestforQuotation(CapKPITestCase):
 
 	def test_make_multi_uom_supplier_quotation(self):
 		item_code = "_Test Multi UOM RFQ Item"
-		if not frappe.db.exists("Item", item_code):
+		if not capkpi.db.exists("Item", item_code):
 			item = make_item(item_code, {"stock_uom": "_Test UOM"})
 			row = item.append("uoms", {"uom": "Kg", "conversion_factor": 2})
 			row.db_update()
@@ -102,7 +102,7 @@ class TestRequestforQuotation(CapKPITestCase):
 		self.assertEqual(rfq.items[0].stock_qty, 10)
 
 		supplier_quotation_name = create_supplier_quotation(rfq)
-		supplier_quotation = frappe.get_doc("Supplier Quotation", supplier_quotation_name)
+		supplier_quotation = capkpi.get_doc("Supplier Quotation", supplier_quotation_name)
 
 		self.assertEqual(supplier_quotation.items[0].qty, 5)
 		self.assertEqual(supplier_quotation.items[0].stock_qty, 10)
@@ -129,9 +129,9 @@ def make_request_for_quotation(**args):
 	"""
 	:param supplier_data: List containing supplier data
 	"""
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 	supplier_data = args.get("supplier_data") if args.get("supplier_data") else get_supplier_data()
-	rfq = frappe.new_doc("Request for Quotation")
+	rfq = capkpi.new_doc("Request for Quotation")
 	rfq.transaction_date = nowdate()
 	rfq.status = "Draft"
 	rfq.company = "_Test Company"

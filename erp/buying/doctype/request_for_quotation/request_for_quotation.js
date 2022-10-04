@@ -6,7 +6,7 @@
 
 cur_frm.add_fetch('contact', 'email_id', 'email_id')
 
-frappe.ui.form.on("Request for Quotation",{
+capkpi.ui.form.on("Request for Quotation",{
 	setup: function(frm) {
 		frm.custom_make_buttons = {
 			'Supplier Quotation': 'Create'
@@ -15,7 +15,7 @@ frappe.ui.form.on("Request for Quotation",{
 		frm.fields_dict["suppliers"].grid.get_field("contact").get_query = function(doc, cdt, cdn) {
 			let d = locals[cdt][cdn];
 			return {
-				query: "frappe.contacts.doctype.contact.contact.contact_query",
+				query: "capkpi.contacts.doctype.contact.contact.contact_query",
 				filters: {
 					link_doctype: "Supplier",
 					link_name: d.supplier || ""
@@ -38,7 +38,7 @@ frappe.ui.form.on("Request for Quotation",{
 
 
 			frm.add_custom_button(__("Send Emails to Suppliers"), function() {
-				frappe.call({
+				capkpi.call({
 					method: 'erp.buying.doctype.request_for_quotation.request_for_quotation.send_supplier_emails',
 					freeze: true,
 					args: {
@@ -67,17 +67,17 @@ frappe.ui.form.on("Request for Quotation",{
 					}
 				}];
 
-				frappe.prompt(fields, data => {
+				capkpi.prompt(fields, data => {
 					var child = locals[cdt][cdn]
 
 					var w = window.open(
-						frappe.urllib.get_full_url("/api/method/erp.buying.doctype.request_for_quotation.request_for_quotation.get_pdf?"
+						capkpi.urllib.get_full_url("/api/method/erp.buying.doctype.request_for_quotation.request_for_quotation.get_pdf?"
 						+"doctype="+encodeURIComponent(frm.doc.doctype)
 						+"&name="+encodeURIComponent(frm.doc.name)
 						+"&supplier="+encodeURIComponent(data.supplier)
 						+"&no_letterhead=0"));
 					if(!w) {
-						frappe.msgprint(__("Please enable pop-ups")); return;
+						capkpi.msgprint(__("Please enable pop-ups")); return;
 					}
 				},
 				'Download PDF for Supplier',
@@ -92,7 +92,7 @@ frappe.ui.form.on("Request for Quotation",{
 
 	make_supplier_quotation: function(frm) {
 		var doc = frm.doc;
-		var dialog = new frappe.ui.Dialog({
+		var dialog = new capkpi.ui.Dialog({
 			title: __("Create Supplier Quotation"),
 			fields: [
 				{	"fieldtype": "Link",
@@ -114,7 +114,7 @@ frappe.ui.form.on("Request for Quotation",{
 				if(!args) return;
 				dialog.hide();
 
-				return frappe.call({
+				return capkpi.call({
 					type: "GET",
 					method: "erp.buying.doctype.request_for_quotation.request_for_quotation.make_supplier_quotation_from_rfq",
 					args: {
@@ -124,8 +124,8 @@ frappe.ui.form.on("Request for Quotation",{
 					freeze: true,
 					callback: function(r) {
 						if(!r.exc) {
-							var doc = frappe.model.sync(r.message);
-							frappe.set_route("Form", r.message.doctype, r.message.name);
+							var doc = capkpi.model.sync(r.message);
+							capkpi.set_route("Form", r.message.doctype, r.message.name);
 						}
 					}
 				});
@@ -144,7 +144,7 @@ frappe.ui.form.on("Request for Quotation",{
 		refresh_field("items");
 	},
 	preview: (frm) => {
-		let dialog = new frappe.ui.Dialog({
+		let dialog = new capkpi.ui.Dialog({
 			title: __('Preview Email'),
 			fields: [
 				{
@@ -203,17 +203,17 @@ frappe.ui.form.on("Request for Quotation",{
 		dialog.show();
 	}
 })
-frappe.ui.form.on("Request for Quotation Item", {
+capkpi.ui.form.on("Request for Quotation Item", {
 	items_add(frm, cdt, cdn) {
 		if (frm.doc.schedule_date) {
-			frappe.model.set_value(cdt, cdn, 'schedule_date', frm.doc.schedule_date);
+			capkpi.model.set_value(cdt, cdn, 'schedule_date', frm.doc.schedule_date);
 		}
 	}
 });
-frappe.ui.form.on("Request for Quotation Supplier",{
+capkpi.ui.form.on("Request for Quotation Supplier",{
 	supplier: function(frm, cdt, cdn) {
 		var d = locals[cdt][cdn]
-		frappe.call({
+		capkpi.call({
 			method:"erp.accounts.party.get_party_details",
 			args:{
 				party: d.supplier,
@@ -221,8 +221,8 @@ frappe.ui.form.on("Request for Quotation Supplier",{
 			},
 			callback: function(r){
 				if(r.message){
-					frappe.model.set_value(cdt, cdn, 'contact', r.message.contact_person)
-					frappe.model.set_value(cdt, cdn, 'email_id', r.message.contact_email)
+					capkpi.model.set_value(cdt, cdn, 'contact', r.message.contact_person)
+					capkpi.model.set_value(cdt, cdn, 'email_id', r.message.contact_email)
 				}
 			}
 		})
@@ -277,7 +277,7 @@ erp.buying.RequestforQuotationController = erp.buying.BuyingController.extend({
 			// Get items from open Material Requests based on supplier
 			this.frm.add_custom_button(__('Possible Supplier'), function() {
 				// Create a dialog window for the user to pick their supplier
-				var dialog = new frappe.ui.Dialog({
+				var dialog = new capkpi.ui.Dialog({
 					title: __('Select Possible Supplier'),
 					fields: [
 						{
@@ -339,7 +339,7 @@ erp.buying.RequestforQuotationController = erp.buying.BuyingController.extend({
 
 	get_suppliers_button: function (frm) {
 		var doc = frm.doc;
-		var dialog = new frappe.ui.Dialog({
+		var dialog = new capkpi.ui.Dialog({
 			title: __("Get Suppliers"),
 			fields: [
 				{
@@ -349,7 +349,7 @@ erp.buying.RequestforQuotationController = erp.buying.BuyingController.extend({
 					"reqd": 1,
 					onchange() {
 						if(dialog.get_value('search_type') == 'Tag'){
-							frappe.call({
+							capkpi.call({
 								method: 'erp.buying.doctype.request_for_quotation.request_for_quotation.get_supplier_tag',
 							}).then(r => {
 								dialog.set_df_property("tag", "options", r.message)
@@ -409,9 +409,9 @@ erp.buying.RequestforQuotationController = erp.buying.BuyingController.extend({
 				}
 
 				if (args.search_type === "Tag" && args.tag) {
-					return frappe.call({
+					return capkpi.call({
 						type: "GET",
-						method: "frappe.desk.doctype.tag.tag.get_tagged_docs",
+						method: "capkpi.desk.doctype.tag.tag.get_tagged_docs",
 						args: {
 							"doctype": "Supplier",
 							"tag": args.tag
@@ -419,8 +419,8 @@ erp.buying.RequestforQuotationController = erp.buying.BuyingController.extend({
 						callback: load_suppliers
 					});
 				} else if (args.supplier_group) {
-					return frappe.call({
-						method: "frappe.client.get_list",
+					return capkpi.call({
+						method: "capkpi.client.get_list",
 						args: {
 							doctype: "Supplier",
 							order_by: "name",

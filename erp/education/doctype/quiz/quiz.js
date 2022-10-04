@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Quiz', {
+capkpi.ui.form.on('Quiz', {
 	refresh: function(frm) {
 		if (!frm.doc.__islocal) {
 			frm.add_custom_button(__('Add to Topics'), function() {
@@ -21,14 +21,14 @@ frappe.ui.form.on('Quiz', {
 		});
 		var questions_set = new Set(questions);
 		if (questions.length != questions_set.size) {
-			frappe.throw(__('The question cannot be duplicate'));
+			capkpi.throw(__('The question cannot be duplicate'));
 		}
 	},
 
 	add_quiz_to_topics: function(frm) {
 		get_topics_without_quiz(frm.doc.name).then(r => {
 			if (r.message.length) {
-				frappe.prompt([
+				capkpi.prompt([
 					{
 						fieldname: 'topics',
 						label: __('Topics'),
@@ -39,7 +39,7 @@ frappe.ui.form.on('Quiz', {
 					}
 				],
 				function(data) {
-					frappe.call({
+					capkpi.call({
 						method: 'erp.education.doctype.topic.topic.add_content_to_topics',
 						args: {
 							'content_type': 'Quiz',
@@ -56,14 +56,14 @@ frappe.ui.form.on('Quiz', {
 					});
 				}, __('Add Quiz to Topics'), __('Add'));
 			} else {
-				frappe.msgprint(__('This quiz is already added to the existing topics'));
+				capkpi.msgprint(__('This quiz is already added to the existing topics'));
 			}
 		});
 	}
 });
 
 let get_topics_without_quiz = function(quiz) {
-	return frappe.call({
+	return capkpi.call({
 		type: 'GET',
 		method: 'erp.education.doctype.quiz.quiz.get_topics_without_quiz',
 		args: {'quiz': quiz}

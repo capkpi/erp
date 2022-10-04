@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_months, getdate
+import capkpi
+from capkpi.utils import add_months, getdate
 
 from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
 from erp.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
@@ -28,7 +28,7 @@ class TestBankClearance(unittest.TestCase):
 	# Basic test case to test if bank clearance tool doesn't break
 	# Detailed test can be added later
 	def test_bank_clearance(self):
-		bank_clearance = frappe.get_doc("Bank Clearance")
+		bank_clearance = capkpi.get_doc("Bank Clearance")
 		bank_clearance.account = "_Test Bank Clearance - _TC"
 		bank_clearance.from_date = add_months(getdate(), -1)
 		bank_clearance.to_date = getdate()
@@ -37,8 +37,8 @@ class TestBankClearance(unittest.TestCase):
 
 
 def make_bank_account():
-	if not frappe.db.get_value("Account", "_Test Bank Clearance - _TC"):
-		frappe.get_doc(
+	if not capkpi.db.get_value("Account", "_Test Bank Clearance - _TC"):
+		capkpi.get_doc(
 			{
 				"doctype": "Account",
 				"account_type": "Bank",

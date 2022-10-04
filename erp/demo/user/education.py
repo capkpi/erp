@@ -5,9 +5,9 @@
 import random
 from datetime import timedelta
 
-import frappe
-from frappe.utils import cstr
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils import cstr
+from capkpi.utils.make_random import get_random
 
 from erp.education.api import (
 	collect_fees,
@@ -20,13 +20,13 @@ from erp.education.api import (
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_education_user"))
+	capkpi.set_user(capkpi.db.get_global("demo_education_user"))
 	for d in range(20):
 		approve_random_student_applicant()
-		enroll_random_student(frappe.flags.current_date)
-	# if frappe.flags.current_date.weekday()== 0:
-	# 	make_course_schedule(frappe.flags.current_date, frappe.utils.add_days(frappe.flags.current_date, 5))
-	mark_student_attendance(frappe.flags.current_date)
+		enroll_random_student(capkpi.flags.current_date)
+	# if capkpi.flags.current_date.weekday()== 0:
+	# 	make_course_schedule(capkpi.flags.current_date, capkpi.utils.add_days(capkpi.flags.current_date, 5))
+	mark_student_attendance(capkpi.flags.current_date)
 	# make_assessment_plan()
 	make_fees()
 
@@ -35,7 +35,7 @@ def approve_random_student_applicant():
 	random_student = get_random("Student Applicant", {"application_status": "Applied"})
 	if random_student:
 		status = ["Approved", "Rejected"]
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Student Applicant", random_student, "application_status", status[weighted_choice([9, 3])]
 		)
 
@@ -55,7 +55,7 @@ def enroll_random_student(current_date):
 		for course in enrolled_courses:
 			enrollment.append("courses", course)
 		enrollment.submit()
-		frappe.db.commit()
+		capkpi.db.commit()
 		assign_student_group(
 			enrollment.student,
 			enrollment.student_name,
@@ -67,12 +67,12 @@ def enroll_random_student(current_date):
 
 def assign_student_group(student, student_name, program, courses, batch):
 	course_list = [d["course"] for d in courses]
-	for d in frappe.get_list(
+	for d in capkpi.get_list(
 		"Student Group",
 		fields=("name"),
 		filters={"program": program, "course": ("in", course_list), "disabled": 0},
 	):
-		student_group = frappe.get_doc("Student Group", d.name)
+		student_group = capkpi.get_doc("Student Group", d.name)
 		student_group.append(
 			"students",
 			{
@@ -83,12 +83,12 @@ def assign_student_group(student, student_name, program, courses, batch):
 			},
 		)
 		student_group.save()
-	student_batch = frappe.get_list(
+	student_batch = capkpi.get_list(
 		"Student Group",
 		fields=("name"),
 		filters={"program": program, "group_based_on": "Batch", "batch": batch, "disabled": 0},
 	)[0]
-	student_batch_doc = frappe.get_doc("Student Group", student_batch.name)
+	student_batch_doc = capkpi.get_doc("Student Group", student_batch.name)
 	student_batch_doc.append(
 		"students",
 		{
@@ -99,12 +99,12 @@ def assign_student_group(student, student_name, program, courses, batch):
 		},
 	)
 	student_batch_doc.save()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def mark_student_attendance(current_date):
 	status = ["Present", "Absent"]
-	for d in frappe.db.get_list("Student Group", filters={"group_based_on": "Batch", "disabled": 0}):
+	for d in capkpi.db.get_list("Student Group", filters={"group_based_on": "Batch", "disabled": 0}):
 		students = get_student_group_students(d.name)
 		for stud in students:
 			make_attendance_records(
@@ -115,13 +115,13 @@ def mark_student_attendance(current_date):
 def make_fees():
 	for d in range(1, 10):
 		random_fee = get_random("Fees", {"paid_amount": 0})
-		collect_fees(random_fee, frappe.db.get_value("Fees", random_fee, "outstanding_amount"))
+		collect_fees(random_fee, capkpi.db.get_value("Fees", random_fee, "outstanding_amount"))
 
 
 def make_assessment_plan(date):
 	for d in range(1, 4):
 		random_group = get_random("Student Group", {"group_based_on": "Course", "disabled": 0}, True)
-		doc = frappe.new_doc("Assessment Plan")
+		doc = capkpi.new_doc("Assessment Plan")
 		doc.student_group = random_group.name
 		doc.course = random_group.course
 		doc.assessment_group = get_random(
@@ -132,8 +132,8 @@ def make_assessment_plan(date):
 
 
 def make_course_schedule(start_date, end_date):
-	for d in frappe.db.get_list("Student Group"):
-		cs = frappe.new_doc("Scheduling Tool")
+	for d in capkpi.db.get_list("Student Group"):
+		cs = capkpi.new_doc("Scheduling Tool")
 		cs.student_group = d.name
 		cs.room = get_random("Room")
 		cs.instructor = get_random("Instructor")

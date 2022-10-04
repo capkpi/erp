@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.e_commerce.api import get_product_filter_data
 from erp.e_commerce.doctype.website_item.test_website_item import create_regular_web_item
@@ -25,14 +25,14 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 		for item in item_codes:
 			item_code = item[0]
 			item_args = {"item_group": item[1]}
-			if not frappe.db.exists("Website Item", {"item_code": item_code}):
+			if not capkpi.db.exists("Website Item", {"item_code": item_code}):
 				create_regular_web_item(item_code, item_args=item_args)
 
-		frappe.db.set_value("Item Group", "_Test Item Group B - 1", "show_in_website", 1)
-		frappe.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 1", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 1)
 
 	def tearDown(self):
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def test_product_listing_in_item_group(self):
 		"Test if only products belonging to the Item Group are fetched."
@@ -54,7 +54,7 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 
 	def test_products_in_multiple_item_groups(self):
 		"""Test if product is visible on multiple item group pages barring its own."""
-		website_item = frappe.get_doc("Website Item", {"item_code": "Test Mobile E"})
+		website_item = capkpi.get_doc("Website Item", {"item_code": "Test Mobile E"})
 
 		# show item belonging to '_Test Item Group B - 2' in '_Test Item Group B - 1' as well
 		website_item.append("website_item_groups", {"item_group": "_Test Item Group B - 1"})
@@ -93,7 +93,7 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 
 	def test_item_group_with_sub_groups(self):
 		"Test Valid Sub Item Groups in Item Group Page."
-		frappe.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 0)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 0)
 
 		result = get_product_filter_data(
 			query_args={
@@ -110,7 +110,7 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 		# check if child group is fetched if shown in website
 		self.assertIn("_Test Item Group B - 1", child_groups)
 
-		frappe.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 2", "show_in_website", 1)
 		result = get_product_filter_data(
 			query_args={
 				"field_filters": {},
@@ -132,7 +132,7 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 		        > _Test Item Group B - 1 [Level 2]
 		                > _Test Item Group B - 1 - 1 [Level 3]
 		"""
-		frappe.get_doc(
+		capkpi.get_doc(
 			{  # create Level 3 nested child group
 				"doctype": "Item Group",
 				"is_group": 1,
@@ -145,10 +145,10 @@ class TestItemGroupProductDataEngine(unittest.TestCase):
 			"Test Mobile F", item_args={"item_group": "_Test Item Group B - 1 - 1"}
 		)
 
-		frappe.db.set_value("Item Group", "_Test Item Group B - 1 - 1", "show_in_website", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B - 1 - 1", "show_in_website", 1)
 
 		# enable 'include descendants' in Level 1
-		frappe.db.set_value("Item Group", "_Test Item Group B", "include_descendants", 1)
+		capkpi.db.set_value("Item Group", "_Test Item Group B", "include_descendants", 1)
 
 		result = get_product_filter_data(
 			query_args={

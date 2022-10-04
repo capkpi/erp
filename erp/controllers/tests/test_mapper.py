@@ -1,11 +1,11 @@
 import json
 import unittest
 
-import frappe
-import frappe.utils
-from frappe.model import mapper
-from frappe.test_runner import make_test_records
-from frappe.utils import add_months, nowdate
+import capkpi
+import capkpi.utils
+from capkpi.model import mapper
+from capkpi.test_runner import make_test_records
+from capkpi.utils import add_months, nowdate
 
 
 class TestMapper(unittest.TestCase):
@@ -30,7 +30,7 @@ class TestMapper(unittest.TestCase):
 
 	def make_quotation(self, item_list, customer):
 
-		qtn = frappe.get_doc(
+		qtn = capkpi.get_doc(
 			{
 				"doctype": "Quotation",
 				"quotation_to": "Customer",
@@ -47,7 +47,7 @@ class TestMapper(unittest.TestCase):
 		return qtn, item_list
 
 	def make_sales_order(self):
-		item = frappe.get_doc(
+		item = capkpi.get_doc(
 			{
 				"base_amount": 1000.0,
 				"base_rate": 100.0,
@@ -64,6 +64,6 @@ class TestMapper(unittest.TestCase):
 				"uom": "_Test UOM",
 			}
 		)
-		so = frappe.get_doc(frappe.get_test_records("Sales Order")[0])
+		so = capkpi.get_doc(capkpi.get_test_records("Sales Order")[0])
 		so.insert(ignore_permissions=True)
 		return so, [item.item_code]

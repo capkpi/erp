@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 
 def execute(filters=None):
@@ -14,7 +14,7 @@ def execute(filters=None):
 
 def get_data(filters):
 	data = []
-	depreciation_accounts = frappe.db.sql_list(
+	depreciation_accounts = capkpi.db.sql_list(
 		""" select name from tabAccount
 		where ifnull(account_type, '') = 'Depreciation' """
 	)
@@ -32,7 +32,7 @@ def get_data(filters):
 
 	if filters.get("asset_category"):
 
-		assets = frappe.db.sql_list(
+		assets = capkpi.db.sql_list(
 			"""select name from tabAsset
 			where asset_category = %s and docstatus=1""",
 			filters.get("asset_category"),
@@ -43,7 +43,7 @@ def get_data(filters):
 	if filters.get("finance_book"):
 		filters_data.append(["finance_book", "in", ["", filters.get("finance_book")]])
 
-	gl_entries = frappe.get_all(
+	gl_entries = capkpi.get_all(
 		"GL Entry",
 		filters=filters_data,
 		fields=["against_voucher", "debit_in_account_currency as debit", "voucher_no", "posting_date"],
@@ -64,7 +64,7 @@ def get_data(filters):
 			else:
 				asset_data.accumulated_depreciation_amount += d.debit
 
-			row = frappe._dict(asset_data)
+			row = capkpi._dict(asset_data)
 			row.update(
 				{
 					"depreciation_amount": d.debit,
@@ -93,7 +93,7 @@ def get_assets_details(assets):
 		"purchase_date",
 	]
 
-	for d in frappe.get_all("Asset", fields=fields, filters={"name": ("in", assets)}):
+	for d in capkpi.get_all("Asset", fields=fields, filters={"name": ("in", assets)}):
 		assets_details.setdefault(d.asset, d)
 
 	return assets_details

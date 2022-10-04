@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import add_days, flt, formatdate
+import capkpi
+from capkpi import _
+from capkpi.utils import add_days, flt, formatdate
 
 
 def execute(filters=None):
@@ -20,7 +20,7 @@ def get_data(filters):
 	assets = get_assets(filters)
 
 	for asset_category in asset_categories:
-		row = frappe._dict()
+		row = capkpi._dict()
 		# row.asset_category = asset_category
 		row.update(asset_category)
 
@@ -58,7 +58,7 @@ def get_data(filters):
 
 
 def get_asset_categories(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT asset_category,
 			   ifnull(sum(case when purchase_date < %(from_date)s then
@@ -107,7 +107,7 @@ def get_asset_categories(filters):
 
 
 def get_assets(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT results.asset_category,
 			   sum(results.accumulated_depreciation_as_on_from_date) as accumulated_depreciation_as_on_from_date,

@@ -2,14 +2,14 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Fixed Asset Register"] = {
+capkpi.query_reports["Fixed Asset Register"] = {
 	"filters": [
 		{
 			fieldname:"company",
 			label: __("Company"),
 			fieldtype: "Link",
 			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
+			default: capkpi.defaults.get_user_default("Company"),
 			reqd: 1
 		},
 		{
@@ -31,7 +31,7 @@ frappe.query_reports["Fixed Asset Register"] = {
 			"fieldname":"from_date",
 			"label": __("Start Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.add_months(frappe.datetime.nowdate(), -12),
+			"default": capkpi.datetime.add_months(capkpi.datetime.nowdate(), -12),
 			"depends_on": "eval: doc.filter_based_on == 'Date Range'",
 			"reqd": 1
 		},
@@ -39,7 +39,7 @@ frappe.query_reports["Fixed Asset Register"] = {
 			"fieldname":"to_date",
 			"label": __("End Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.nowdate(),
+			"default": capkpi.datetime.nowdate(),
 			"depends_on": "eval: doc.filter_based_on == 'Date Range'",
 			"reqd": 1
 		},
@@ -48,7 +48,7 @@ frappe.query_reports["Fixed Asset Register"] = {
 			"label": __("Start Year"),
 			"fieldtype": "Link",
 			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"default": capkpi.defaults.get_user_default("fiscal_year"),
 			"depends_on": "eval: doc.filter_based_on == 'Fiscal Year'",
 			"reqd": 1
 		},
@@ -57,7 +57,7 @@ frappe.query_reports["Fixed Asset Register"] = {
 			"label": __("End Year"),
 			"fieldtype": "Link",
 			"options": "Fiscal Year",
-			"default": frappe.defaults.get_user_default("fiscal_year"),
+			"default": capkpi.defaults.get_user_default("fiscal_year"),
 			"depends_on": "eval: doc.filter_based_on == 'Fiscal Year'",
 			"reqd": 1
 		},

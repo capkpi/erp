@@ -1,4 +1,4 @@
-frappe.listview_settings['Payment Request'] = {
+capkpi.listview_settings['Payment Request'] = {
 	add_fields: ["status"],
 	get_indicator: function(doc) {
 		if(doc.status == "Draft") {

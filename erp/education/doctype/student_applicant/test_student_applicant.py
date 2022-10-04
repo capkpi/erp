@@ -3,7 +3,7 @@
 
 import unittest
 
-# test_records = frappe.get_test_records('Student Applicant')
+# test_records = capkpi.get_test_records('Student Applicant')
 
 
 class TestStudentApplicant(unittest.TestCase):

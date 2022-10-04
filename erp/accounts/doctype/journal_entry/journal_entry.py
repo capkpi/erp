@@ -4,9 +4,9 @@
 
 import json
 
-import frappe
-from frappe import _, msgprint, scrub
-from frappe.utils import cint, cstr, flt, fmt_money, formatdate, get_link_to_form, nowdate
+import capkpi
+from capkpi import _, msgprint, scrub
+from capkpi.utils import cint, cstr, flt, fmt_money, formatdate, get_link_to_form, nowdate
 from six import iteritems, string_types
 
 import erp
@@ -31,7 +31,7 @@ from erp.hr.doctype.expense_claim.expense_claim import (
 )
 
 
-class StockAccountInvalidTransaction(frappe.ValidationError):
+class StockAccountInvalidTransaction(capkpi.ValidationError):
 	pass
 
 
@@ -58,10 +58,10 @@ class JournalEntry(AccountsController):
 		self.validate_debit_credit_amount()
 
 		# Do not validate while importing via data import
-		if not frappe.flags.in_import:
+		if not capkpi.flags.in_import:
 			self.validate_total_debit_and_credit()
 
-		if not frappe.flags.is_reverse_depr_entry:
+		if not capkpi.flags.is_reverse_depr_entry:
 			self.validate_against_jv()
 			self.validate_stock_accounts()
 
@@ -111,7 +111,7 @@ class JournalEntry(AccountsController):
 		return self.pay_to_recd_from or self.accounts[0].account
 
 	def update_advance_paid(self):
-		advance_paid = frappe._dict()
+		advance_paid = capkpi._dict()
 		for d in self.get("accounts"):
 			if d.is_advance:
 				if d.reference_type in ("Sales Order", "Purchase Order", "Employee Advance"):
@@ -119,19 +119,19 @@ class JournalEntry(AccountsController):
 
 		for voucher_type, order_list in iteritems(advance_paid):
 			for voucher_no in list(set(order_list)):
-				frappe.get_doc(voucher_type, voucher_no).set_total_advance_paid()
+				capkpi.get_doc(voucher_type, voucher_no).set_total_advance_paid()
 
 	def validate_inter_company_accounts(self):
 		if (
 			self.voucher_type == "Inter Company Journal Entry"
 			and self.inter_company_journal_entry_reference
 		):
-			doc = frappe.get_doc("Journal Entry", self.inter_company_journal_entry_reference)
-			account_currency = frappe.get_cached_value("Company", self.company, "default_currency")
-			previous_account_currency = frappe.get_cached_value("Company", doc.company, "default_currency")
+			doc = capkpi.get_doc("Journal Entry", self.inter_company_journal_entry_reference)
+			account_currency = capkpi.get_cached_value("Company", self.company, "default_currency")
+			previous_account_currency = capkpi.get_cached_value("Company", doc.company, "default_currency")
 			if account_currency == previous_account_currency:
 				if self.total_credit != doc.total_debit or self.total_debit != doc.total_credit:
-					frappe.throw(_("Total Credit/ Debit Amount should be same as linked Journal Entry"))
+					capkpi.throw(_("Total Credit/ Debit Amount should be same as linked Journal Entry"))
 
 	def validate_stock_accounts(self):
 		stock_accounts = get_stock_accounts(self.company, self.doctype, self.name)
@@ -141,7 +141,7 @@ class JournalEntry(AccountsController):
 			)
 
 			if account_bal == stock_bal:
-				frappe.throw(
+				capkpi.throw(
 					_("Account: {0} can only be updated via Stock Transactions").format(account),
 					StockAccountInvalidTransaction,
 				)
@@ -156,7 +156,7 @@ class JournalEntry(AccountsController):
 		parties = list(set(parties))
 
 		if len(parties) > 1:
-			frappe.throw(_("Cannot apply TDS against multiple parties in one entry"))
+			capkpi.throw(_("Cannot apply TDS against multiple parties in one entry"))
 
 		account_type_map = get_account_type_map(self.company)
 		party_type = "supplier" if self.voucher_type == "Credit Note" else "customer"
@@ -184,7 +184,7 @@ class JournalEntry(AccountsController):
 			d.get(rev_debit_or_credit) for d in self.get("accounts") if d.account == party_account
 		)
 
-		inv = frappe._dict(
+		inv = capkpi._dict(
 			{
 				party_type: parties[0],
 				"doctype": doctype,
@@ -240,7 +240,7 @@ class JournalEntry(AccountsController):
 			self.voucher_type == "Inter Company Journal Entry"
 			and self.inter_company_journal_entry_reference
 		):
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Journal Entry",
 				self.inter_company_journal_entry_reference,
 				"inter_company_journal_entry_reference",
@@ -251,7 +251,7 @@ class JournalEntry(AccountsController):
 		def _validate_invoice_discounting_status(inv_disc, id_status, expected_status, row_id):
 			id_link = get_link_to_form("Invoice Discounting", inv_disc)
 			if id_status != expected_status:
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: Status must be {1} for Invoice Discounting {2}").format(
 						d.idx, expected_status, id_link
 					)
@@ -261,7 +261,7 @@ class JournalEntry(AccountsController):
 			set([d.reference_name for d in self.accounts if d.reference_type == "Invoice Discounting"])
 		)
 		for inv_disc in invoice_discounting_list:
-			inv_disc_doc = frappe.get_doc("Invoice Discounting", inv_disc)
+			inv_disc_doc = capkpi.get_doc("Invoice Discounting", inv_disc)
 			status = None
 			for d in self.accounts:
 				if d.account == inv_disc_doc.short_term_loan and d.reference_name == inv_disc:
@@ -286,7 +286,7 @@ class JournalEntry(AccountsController):
 	def unlink_advance_entry_reference(self):
 		for d in self.get("accounts"):
 			if d.is_advance == "Yes" and d.reference_type in ("Sales Invoice", "Purchase Invoice"):
-				doc = frappe.get_doc(d.reference_type, d.reference_name)
+				doc = capkpi.get_doc(d.reference_type, d.reference_name)
 				doc.delink_advance_entries(self.name)
 				d.reference_type = ""
 				d.reference_name = ""
@@ -295,7 +295,7 @@ class JournalEntry(AccountsController):
 	def unlink_asset_reference(self):
 		for d in self.get("accounts"):
 			if d.reference_type == "Asset" and d.reference_name:
-				asset = frappe.get_doc("Asset", d.reference_name)
+				asset = capkpi.get_doc("Asset", d.reference_name)
 				for s in asset.get("schedules"):
 					if s.journal_entry == self.name:
 						s.db_set("journal_entry", None)
@@ -312,16 +312,16 @@ class JournalEntry(AccountsController):
 			self.voucher_type == "Inter Company Journal Entry"
 			and self.inter_company_journal_entry_reference
 		):
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Journal Entry",
 				self.inter_company_journal_entry_reference,
 				"inter_company_journal_entry_reference",
 				"",
 			)
-			frappe.db.set_value("Journal Entry", self.name, "inter_company_journal_entry_reference", "")
+			capkpi.db.set_value("Journal Entry", self.name, "inter_company_journal_entry_reference", "")
 
 	def unlink_asset_adjustment_entry(self):
-		frappe.db.sql(
+		capkpi.db.sql(
 			""" update `tabAsset Value Adjustment`
 			set journal_entry = null where journal_entry = %s""",
 			self.name,
@@ -329,10 +329,10 @@ class JournalEntry(AccountsController):
 
 	def validate_party(self):
 		for d in self.get("accounts"):
-			account_type = frappe.db.get_value("Account", d.account, "account_type")
+			account_type = capkpi.db.get_value("Account", d.account, "account_type")
 			if account_type in ["Receivable", "Payable"]:
 				if not (d.party_type and d.party):
-					frappe.throw(
+					capkpi.throw(
 						_("Row {0}: Party Type and Party is required for Receivable / Payable account {1}").format(
 							d.idx, d.account
 						)
@@ -377,7 +377,7 @@ class JournalEntry(AccountsController):
 							alert=True,
 						)
 					elif d.reference_type in ("Sales Order", "Purchase Order") and d.is_advance != "Yes":
-						frappe.throw(
+						capkpi.throw(
 							_(
 								"Row {0}: Payment against Sales/Purchase Order should always be marked as advance"
 							).format(d.idx)
@@ -385,31 +385,31 @@ class JournalEntry(AccountsController):
 
 				if d.is_advance == "Yes":
 					if d.party_type == "Customer" and flt(d.debit) > 0:
-						frappe.throw(_("Row {0}: Advance against Customer must be credit").format(d.idx))
+						capkpi.throw(_("Row {0}: Advance against Customer must be credit").format(d.idx))
 					elif d.party_type == "Supplier" and flt(d.credit) > 0:
-						frappe.throw(_("Row {0}: Advance against Supplier must be debit").format(d.idx))
+						capkpi.throw(_("Row {0}: Advance against Supplier must be debit").format(d.idx))
 
 	def validate_against_jv(self):
 		for d in self.get("accounts"):
 			if d.reference_type == "Journal Entry":
-				account_root_type = frappe.db.get_value("Account", d.account, "root_type")
+				account_root_type = capkpi.db.get_value("Account", d.account, "root_type")
 				if account_root_type == "Asset" and flt(d.debit) > 0:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row #{0}: For {1}, you can select reference document only if account gets credited"
 						).format(d.idx, d.account)
 					)
 				elif account_root_type == "Liability" and flt(d.credit) > 0:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row #{0}: For {1}, you can select reference document only if account gets debited"
 						).format(d.idx, d.account)
 					)
 
 				if d.reference_name == self.name:
-					frappe.throw(_("You can not enter current voucher in 'Against Journal Entry' column"))
+					capkpi.throw(_("You can not enter current voucher in 'Against Journal Entry' column"))
 
-				against_entries = frappe.db.sql(
+				against_entries = capkpi.db.sql(
 					"""select * from `tabJournal Entry Account`
 					where account = %s and docstatus = 1 and parent = %s
 					and (reference_type is null or reference_type in ("", "Sales Order", "Purchase Order"))
@@ -419,7 +419,7 @@ class JournalEntry(AccountsController):
 				)
 
 				if not against_entries:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Journal Entry {0} does not have account {1} or already matched against other voucher"
 						).format(d.reference_name, d.account)
@@ -431,7 +431,7 @@ class JournalEntry(AccountsController):
 						if flt(jvd[dr_or_cr]) > 0:
 							valid = True
 					if not valid:
-						frappe.throw(
+						capkpi.throw(
 							_("Against Journal Entry {0} does not have any unmatched {1} entry").format(
 								d.reference_name, dr_or_cr
 							)
@@ -464,12 +464,12 @@ class JournalEntry(AccountsController):
 
 				# check debit or credit type Sales / Purchase Order
 				if d.reference_type == "Sales Order" and flt(d.debit) > 0:
-					frappe.throw(
+					capkpi.throw(
 						_("Row {0}: Debit entry can not be linked with a {1}").format(d.idx, d.reference_type)
 					)
 
 				if d.reference_type == "Purchase Order" and flt(d.credit) > 0:
-					frappe.throw(
+					capkpi.throw(
 						_("Row {0}: Credit entry can not be linked with a {1}").format(d.idx, d.reference_type)
 					)
 
@@ -483,12 +483,12 @@ class JournalEntry(AccountsController):
 				self.reference_types[d.reference_name] = d.reference_type
 				self.reference_accounts[d.reference_name] = d.account
 
-				against_voucher = frappe.db.get_value(
+				against_voucher = capkpi.db.get_value(
 					d.reference_type, d.reference_name, [scrub(dt) for dt in field_dict.get(d.reference_type)]
 				)
 
 				if not against_voucher:
-					frappe.throw(_("Row {0}: Invalid reference {1}").format(d.idx, d.reference_name))
+					capkpi.throw(_("Row {0}: Invalid reference {1}").format(d.idx, d.reference_name))
 
 				# check if party and account match
 				if d.reference_type in ("Sales Invoice", "Purchase Invoice"):
@@ -507,7 +507,7 @@ class JournalEntry(AccountsController):
 							party_account = against_voucher[1]
 
 					if against_voucher[0] != cstr(d.party) or party_account != d.account:
-						frappe.throw(
+						capkpi.throw(
 							_("Row {0}: Party / Account does not match with {1} / {2} in {3} {4}").format(
 								d.idx,
 								field_dict.get(d.reference_type)[0],
@@ -521,7 +521,7 @@ class JournalEntry(AccountsController):
 				if d.reference_type in ("Sales Order", "Purchase Order"):
 					# set totals
 					if against_voucher != d.party:
-						frappe.throw(
+						capkpi.throw(
 							_("Row {0}: {1} {2} does not match with {3}").format(
 								d.idx, d.party_type, d.party, d.reference_type
 							)
@@ -537,16 +537,16 @@ class JournalEntry(AccountsController):
 			account = self.reference_accounts[reference_name]
 
 			if reference_type in ("Sales Order", "Purchase Order"):
-				order = frappe.get_doc(reference_type, reference_name)
+				order = capkpi.get_doc(reference_type, reference_name)
 
 				if order.docstatus != 1:
-					frappe.throw(_("{0} {1} is not submitted").format(reference_type, reference_name))
+					capkpi.throw(_("{0} {1} is not submitted").format(reference_type, reference_name))
 
 				if flt(order.per_billed) >= 100:
-					frappe.throw(_("{0} {1} is fully billed").format(reference_type, reference_name))
+					capkpi.throw(_("{0} {1} is fully billed").format(reference_type, reference_name))
 
 				if cstr(order.status) == "Closed":
-					frappe.throw(_("{0} {1} is closed").format(reference_type, reference_name))
+					capkpi.throw(_("{0} {1} is closed").format(reference_type, reference_name))
 
 				account_currency = get_account_currency(account)
 				if account_currency == self.company_currency:
@@ -561,7 +561,7 @@ class JournalEntry(AccountsController):
 					)
 
 				if flt(voucher_total) < (flt(order.advance_paid) + total):
-					frappe.throw(
+					capkpi.throw(
 						_("Advance paid against {0} {1} cannot be greater than Grand Total {2}").format(
 							reference_type, reference_name, formatted_voucher_total
 						)
@@ -576,15 +576,15 @@ class JournalEntry(AccountsController):
 				"Debit Note",
 				"Credit Note",
 			]:
-				invoice = frappe.db.get_value(
+				invoice = capkpi.db.get_value(
 					reference_type, reference_name, ["docstatus", "outstanding_amount"], as_dict=1
 				)
 
 				if invoice.docstatus != 1:
-					frappe.throw(_("{0} {1} is not submitted").format(reference_type, reference_name))
+					capkpi.throw(_("{0} {1} is not submitted").format(reference_type, reference_name))
 
 				if total and flt(invoice.outstanding_amount) < total:
-					frappe.throw(
+					capkpi.throw(
 						_("Payment against {0} {1} cannot be greater than Outstanding Amount {2}").format(
 							reference_type, reference_name, invoice.outstanding_amount
 						)
@@ -599,7 +599,7 @@ class JournalEntry(AccountsController):
 				else:
 					field = "supplier"
 
-				d.against_account = frappe.db.get_value(d.reference_type, d.reference_name, field)
+				d.against_account = capkpi.db.get_value(d.reference_type, d.reference_name, field)
 		else:
 			for d in self.get("accounts"):
 				if flt(d.debit > 0):
@@ -616,12 +616,12 @@ class JournalEntry(AccountsController):
 	def validate_debit_credit_amount(self):
 		for d in self.get("accounts"):
 			if not flt(d.debit) and not flt(d.credit):
-				frappe.throw(_("Row {0}: Both Debit and Credit values cannot be zero").format(d.idx))
+				capkpi.throw(_("Row {0}: Both Debit and Credit values cannot be zero").format(d.idx))
 
 	def validate_total_debit_and_credit(self):
 		self.set_total_debit_credit()
 		if self.difference:
-			frappe.throw(
+			capkpi.throw(
 				_("Total Debit must be equal to Total Credit. The difference is {0}").format(self.difference)
 			)
 
@@ -629,7 +629,7 @@ class JournalEntry(AccountsController):
 		self.total_debit, self.total_credit, self.difference = 0, 0, 0
 		for d in self.get("accounts"):
 			if d.debit and d.credit:
-				frappe.throw(_("You cannot credit and debit same account at the same time"))
+				capkpi.throw(_("You cannot credit and debit same account at the same time"))
 
 			self.total_debit = flt(self.total_debit) + flt(d.debit, d.precision("debit"))
 			self.total_credit = flt(self.total_credit) + flt(d.credit, d.precision("credit"))
@@ -641,7 +641,7 @@ class JournalEntry(AccountsController):
 	def validate_multi_currency(self):
 		alternate_currency = []
 		for d in self.get("accounts"):
-			account = frappe.db.get_value(
+			account = capkpi.db.get_value(
 				"Account", d.account, ["account_currency", "account_type"], as_dict=1
 			)
 			if account:
@@ -656,7 +656,7 @@ class JournalEntry(AccountsController):
 
 		if alternate_currency:
 			if not self.multi_currency:
-				frappe.throw(_("Please check Multi Currency option to allow accounts with other currency"))
+				capkpi.throw(_("Please check Multi Currency option to allow accounts with other currency"))
 
 		self.set_exchange_rate()
 
@@ -700,7 +700,7 @@ class JournalEntry(AccountsController):
 				)
 
 			if not d.exchange_rate:
-				frappe.throw(_("Row {0}: Exchange Rate is mandatory").format(d.idx))
+				capkpi.throw(_("Row {0}: Exchange Rate is mandatory").format(d.idx))
 
 	def create_remarks(self):
 		r = []
@@ -712,7 +712,7 @@ class JournalEntry(AccountsController):
 			if self.cheque_date:
 				r.append(_("Reference #{0} dated {1}").format(self.cheque_no, formatdate(self.cheque_date)))
 			else:
-				msgprint(_("Please enter Reference date"), raise_exception=frappe.MandatoryError)
+				msgprint(_("Please enter Reference date"), raise_exception=capkpi.MandatoryError)
 
 		for d in self.get("accounts"):
 			if d.reference_type == "Sales Invoice" and d.credit:
@@ -730,7 +730,7 @@ class JournalEntry(AccountsController):
 				)
 
 			if d.reference_type == "Purchase Invoice" and d.debit:
-				bill_no = frappe.db.sql(
+				bill_no = capkpi.db.sql(
 					"""select bill_no, bill_date
 					from `tabPurchase Invoice` where name=%s""",
 					d.reference_name,
@@ -772,12 +772,12 @@ class JournalEntry(AccountsController):
 					party_amount += d.debit_in_account_currency or d.credit_in_account_currency
 					party_account_currency = d.account_currency
 
-			elif frappe.db.get_value("Account", d.account, "account_type") in ["Bank", "Cash"]:
+			elif capkpi.db.get_value("Account", d.account, "account_type") in ["Bank", "Cash"]:
 				bank_amount += d.debit_in_account_currency or d.credit_in_account_currency
 				bank_account_currency = d.account_currency
 
 		if party_type and pay_to_recd_from:
-			self.pay_to_recd_from = frappe.db.get_value(
+			self.pay_to_recd_from = capkpi.db.get_value(
 				party_type, pay_to_recd_from, "customer_name" if party_type == "Customer" else "supplier_name"
 			)
 			if bank_amount:
@@ -792,7 +792,7 @@ class JournalEntry(AccountsController):
 	def set_total_amount(self, amt, currency):
 		self.total_amount = amt
 		self.total_amount_currency = currency
-		from frappe.utils import money_in_words
+		from capkpi.utils import money_in_words
 
 		self.total_amount_in_words = money_in_words(amt, currency)
 
@@ -843,7 +843,7 @@ class JournalEntry(AccountsController):
 		if gl_map:
 			make_gl_entries(gl_map, cancel=cancel, adv_adj=adv_adj, update_outstanding=update_outstanding)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_balance(self):
 		if not self.get("accounts"):
 			msgprint(_("'Entries' cannot be empty"), raise_exception=True)
@@ -871,7 +871,7 @@ class JournalEntry(AccountsController):
 
 			self.validate_total_debit_and_credit()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_outstanding_invoices(self):
 		self.set("accounts", [])
 		total = 0
@@ -910,7 +910,7 @@ class JournalEntry(AccountsController):
 		)
 
 		if self.write_off_based_on == "Accounts Receivable":
-			return frappe.db.sql(
+			return capkpi.db.sql(
 				"""select name, debit_to as account, customer as party, outstanding_amount
 				from `tabSales Invoice` where docstatus = 1 and company = %s
 				and outstanding_amount > 0 %s"""
@@ -919,7 +919,7 @@ class JournalEntry(AccountsController):
 				as_dict=True,
 			)
 		elif self.write_off_based_on == "Accounts Payable":
-			return frappe.db.sql(
+			return capkpi.db.sql(
 				"""select name, credit_to as account, supplier as party, outstanding_amount
 				from `tabPurchase Invoice` where docstatus = 1 and company = %s
 				and outstanding_amount > 0 %s"""
@@ -931,7 +931,7 @@ class JournalEntry(AccountsController):
 	def update_expense_claim(self):
 		for d in self.accounts:
 			if d.reference_type == "Expense Claim" and d.reference_name:
-				doc = frappe.get_doc("Expense Claim", d.reference_name)
+				doc = capkpi.get_doc("Expense Claim", d.reference_name)
 				if self.docstatus == 2:
 					update_reimbursed_amount(doc, -1 * d.debit)
 				else:
@@ -942,7 +942,7 @@ class JournalEntry(AccountsController):
 			if d.reference_type == "Expense Claim":
 				outstanding_amt = get_outstanding_amount_for_claim(d.reference_name)
 				if d.debit > outstanding_amt:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row No {0}: Amount cannot be greater than the Outstanding Amount against Expense Claim {1}. Outstanding Amount is {2}"
 						).format(d.idx, d.reference_name, outstanding_amt)
@@ -950,13 +950,13 @@ class JournalEntry(AccountsController):
 
 	def validate_credit_debit_note(self):
 		if self.stock_entry:
-			if frappe.db.get_value("Stock Entry", self.stock_entry, "docstatus") != 1:
-				frappe.throw(_("Stock Entry {0} is not submitted").format(self.stock_entry))
+			if capkpi.db.get_value("Stock Entry", self.stock_entry, "docstatus") != 1:
+				capkpi.throw(_("Stock Entry {0} is not submitted").format(self.stock_entry))
 
-			if frappe.db.exists(
+			if capkpi.db.exists(
 				{"doctype": "Journal Entry", "stock_entry": self.stock_entry, "docstatus": 1}
 			):
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("Warning: Another {0} # {1} exists against stock entry {2}").format(
 						self.voucher_type, self.name, self.stock_entry
 					)
@@ -964,7 +964,7 @@ class JournalEntry(AccountsController):
 
 	def validate_empty_accounts_table(self):
 		if not self.get("accounts"):
-			frappe.throw(_("Accounts table cannot be blank."))
+			capkpi.throw(_("Accounts table cannot be blank."))
 
 	def set_account_and_party_balance(self):
 		account_balance = {}
@@ -982,7 +982,7 @@ class JournalEntry(AccountsController):
 			d.party_balance = party_balance[(d.party_type, d.party)]
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_default_bank_cash_account(company, account_type=None, mode_of_payment=None, account=None):
 	from erp.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
 
@@ -996,29 +996,29 @@ def get_default_bank_cash_account(company, account_type=None, mode_of_payment=No
 		account (of that type), otherwise return empty dict.
 		"""
 		if account_type == "Bank":
-			account = frappe.get_cached_value("Company", company, "default_bank_account")
+			account = capkpi.get_cached_value("Company", company, "default_bank_account")
 			if not account:
-				account_list = frappe.get_all(
+				account_list = capkpi.get_all(
 					"Account", filters={"company": company, "account_type": "Bank", "is_group": 0}
 				)
 				if len(account_list) == 1:
 					account = account_list[0].name
 
 		elif account_type == "Cash":
-			account = frappe.get_cached_value("Company", company, "default_cash_account")
+			account = capkpi.get_cached_value("Company", company, "default_cash_account")
 			if not account:
-				account_list = frappe.get_all(
+				account_list = capkpi.get_all(
 					"Account", filters={"company": company, "account_type": "Cash", "is_group": 0}
 				)
 				if len(account_list) == 1:
 					account = account_list[0].name
 
 	if account:
-		account_details = frappe.db.get_value(
+		account_details = capkpi.db.get_value(
 			"Account", account, ["account_currency", "account_type"], as_dict=1
 		)
 
-		return frappe._dict(
+		return capkpi._dict(
 			{
 				"account": account,
 				"balance": get_balance_on(account),
@@ -1027,17 +1027,17 @@ def get_default_bank_cash_account(company, account_type=None, mode_of_payment=No
 			}
 		)
 	else:
-		return frappe._dict()
+		return capkpi._dict()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_payment_entry_against_order(
 	dt, dn, amount=None, debit_in_account_currency=None, journal_entry=False, bank_account=None
 ):
-	ref_doc = frappe.get_doc(dt, dn)
+	ref_doc = capkpi.get_doc(dt, dn)
 
 	if flt(ref_doc.per_billed, 2) > 0:
-		frappe.throw(_("Can only make payment against unbilled {0}").format(dt))
+		capkpi.throw(_("Can only make payment against unbilled {0}").format(dt))
 
 	if dt == "Sales Order":
 		party_type = "Customer"
@@ -1075,11 +1075,11 @@ def get_payment_entry_against_order(
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_payment_entry_against_invoice(
 	dt, dn, amount=None, debit_in_account_currency=None, journal_entry=False, bank_account=None
 ):
-	ref_doc = frappe.get_doc(dt, dn)
+	ref_doc = capkpi.get_doc(dt, dn)
 	if dt == "Sales Invoice":
 		party_type = "Customer"
 		party_account = get_party_account_based_on_invoice_discounting(dn) or ref_doc.debit_to
@@ -1115,7 +1115,7 @@ def get_payment_entry_against_invoice(
 
 
 def get_payment_entry(ref_doc, args):
-	cost_center = ref_doc.get("cost_center") or frappe.get_cached_value(
+	cost_center = ref_doc.get("cost_center") or capkpi.get_cached_value(
 		"Company", ref_doc.company, "cost_center"
 	)
 	exchange_rate = 1
@@ -1131,7 +1131,7 @@ def get_payment_entry(ref_doc, args):
 			ref_doc.name,
 		)
 
-	je = frappe.new_doc("Journal Entry")
+	je = capkpi.new_doc("Journal Entry")
 	je.update(
 		{"voucher_type": "Bank Entry", "company": ref_doc.company, "remark": args.get("remarks")}
 	)
@@ -1143,7 +1143,7 @@ def get_payment_entry(ref_doc, args):
 			"party_type": args.get("party_type"),
 			"party": ref_doc.get(args.get("party_type").lower()),
 			"cost_center": cost_center,
-			"account_type": frappe.db.get_value("Account", args.get("party_account"), "account_type"),
+			"account_type": capkpi.db.get_value("Account", args.get("party_account"), "account_type"),
 			"account_currency": args.get("party_account_currency")
 			or get_account_currency(args.get("party_account")),
 			"balance": get_balance_on(args.get("party_account")),
@@ -1194,13 +1194,13 @@ def get_payment_entry(ref_doc, args):
 	return je if args.get("journal_entry") else je.as_dict()
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_against_jv(doctype, txt, searchfield, start, page_len, filters):
-	if not frappe.db.has_column("Journal Entry", searchfield):
+	if not capkpi.db.has_column("Journal Entry", searchfield):
 		return []
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT jv.name, jv.posting_date, jv.user_remark
 		FROM `tabJournal Entry` jv, `tabJournal Entry Account` jv_detail
@@ -1228,10 +1228,10 @@ def get_against_jv(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_outstanding(args):
-	if not frappe.has_permission("Account"):
-		frappe.msgprint(_("No Permission"), raise_exception=1)
+	if not capkpi.has_permission("Account"):
+		capkpi.msgprint(_("No Permission"), raise_exception=1)
 
 	if isinstance(args, string_types):
 		args = json.loads(args)
@@ -1241,7 +1241,7 @@ def get_outstanding(args):
 	if args.get("doctype") == "Journal Entry":
 		condition = " and party=%(party)s" if args.get("party") else ""
 
-		against_jv_amount = frappe.db.sql(
+		against_jv_amount = capkpi.db.sql(
 			"""
 			select sum(debit_in_account_currency) - sum(credit_in_account_currency)
 			from `tabJournal Entry Account` where parent=%(docname)s and account=%(account)s {0}
@@ -1258,7 +1258,7 @@ def get_outstanding(args):
 		return {amount_field: abs(against_jv_amount)}
 	elif args.get("doctype") in ("Sales Invoice", "Purchase Invoice"):
 		party_type = "Customer" if args.get("doctype") == "Sales Invoice" else "Supplier"
-		invoice = frappe.db.get_value(
+		invoice = capkpi.db.get_value(
 			args["doctype"],
 			args["docname"],
 			["outstanding_amount", "conversion_rate", scrub(party_type)],
@@ -1290,10 +1290,10 @@ def get_outstanding(args):
 		}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_account_and_balance(company, party_type, party, cost_center=None):
-	if not frappe.has_permission("Account"):
-		frappe.msgprint(_("No Permission"), raise_exception=1)
+	if not capkpi.has_permission("Account"):
+		capkpi.msgprint(_("No Permission"), raise_exception=1)
 
 	account = get_party_account(party_type, party, company)
 
@@ -1306,20 +1306,20 @@ def get_party_account_and_balance(company, party_type, party, cost_center=None):
 		"account": account,
 		"balance": account_balance,
 		"party_balance": party_balance,
-		"account_currency": frappe.db.get_value("Account", account, "account_currency"),
+		"account_currency": capkpi.db.get_value("Account", account, "account_currency"),
 	}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_account_balance_and_party_type(
 	account, date, company, debit=None, credit=None, exchange_rate=None, cost_center=None
 ):
 	"""Returns dict of account balance and party type to be set in Journal Entry on selection of account."""
-	if not frappe.has_permission("Account"):
-		frappe.msgprint(_("No Permission"), raise_exception=1)
+	if not capkpi.has_permission("Account"):
+		capkpi.msgprint(_("No Permission"), raise_exception=1)
 
 	company_currency = erp.get_company_currency(company)
-	account_details = frappe.db.get_value(
+	account_details = capkpi.db.get_value(
 		"Account", account, ["account_type", "account_currency"], as_dict=1
 	)
 
@@ -1358,7 +1358,7 @@ def get_account_balance_and_party_type(
 	return grid_values
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_exchange_rate(
 	posting_date,
 	account=None,
@@ -1372,12 +1372,12 @@ def get_exchange_rate(
 ):
 	from erp.setup.utils import get_exchange_rate
 
-	account_details = frappe.db.get_value(
+	account_details = capkpi.db.get_value(
 		"Account", account, ["account_type", "root_type", "account_currency", "company"], as_dict=1
 	)
 
 	if not account_details:
-		frappe.throw(_("Please select correct account"))
+		capkpi.throw(_("Please select correct account"))
 
 	if not company:
 		company = account_details.company
@@ -1389,7 +1389,7 @@ def get_exchange_rate(
 
 	if account_currency != company_currency:
 		if reference_type in ("Sales Invoice", "Purchase Invoice") and reference_name:
-			exchange_rate = frappe.db.get_value(reference_type, reference_name, "conversion_rate")
+			exchange_rate = capkpi.db.get_value(reference_type, reference_name, "conversion_rate")
 
 		# The date used to retreive the exchange rate here is the date passed
 		# in as an argument to this function.
@@ -1402,7 +1402,7 @@ def get_exchange_rate(
 	return exchange_rate or 1
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_average_exchange_rate(account):
 	exchange_rate = 0
 	bank_balance_in_account_currency = get_balance_on(account)
@@ -1413,9 +1413,9 @@ def get_average_exchange_rate(account):
 	return exchange_rate
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_inter_company_journal_entry(name, voucher_type, company):
-	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry = capkpi.new_doc("Journal Entry")
 	journal_entry.voucher_type = voucher_type
 	journal_entry.company = company
 	journal_entry.posting_date = nowdate()
@@ -1423,9 +1423,9 @@ def make_inter_company_journal_entry(name, voucher_type, company):
 	return journal_entry.as_dict()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_reverse_journal_entry(source_name, target_doc=None):
-	from frappe.model.mapper import get_mapped_doc
+	from capkpi.model.mapper import get_mapped_doc
 
 	def post_process(source, target):
 		target.reversal_of = source.name

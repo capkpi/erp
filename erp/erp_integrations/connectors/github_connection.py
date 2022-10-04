@@ -1,6 +1,6 @@
 
-import frappe
-from frappe.data_migration.doctype.data_migration_connector.connectors.base import BaseConnection
+import capkpi
+from capkpi.data_migration.doctype.data_migration_connector.connectors.base import BaseConnection
 from github import Github
 
 
@@ -10,7 +10,7 @@ class GithubConnection(BaseConnection):
 
 		try:
 			password = self.get_password()
-		except frappe.AuthenticationError:
+		except capkpi.AuthenticationError:
 			password = None
 
 		if self.connector.username and password:

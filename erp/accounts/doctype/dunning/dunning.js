@@ -1,7 +1,7 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Dunning", {
+capkpi.ui.form.on("Dunning", {
 	setup: function (frm) {
 		frm.set_query("sales_invoice", () => {
 			return {
@@ -47,19 +47,19 @@ frappe.ui.form.on("Dunning", {
 
 		if(frm.doc.docstatus > 0) {
 			frm.add_custom_button(__('Ledger'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					"voucher_no": frm.doc.name,
 					"from_date": frm.doc.posting_date,
 					"to_date": frm.doc.posting_date,
 					"company": frm.doc.company,
 					"show_cancelled_entries": frm.doc.docstatus === 2
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			}, __('View'));
 		}
 	},
 	overdue_days: function (frm) {
-		frappe.db.get_value(
+		capkpi.db.get_value(
 			"Dunning Type",
 			{
 				start_day: ["<", frm.doc.overdue_days],
@@ -85,7 +85,7 @@ frappe.ui.form.on("Dunning", {
 	},
 	get_dunning_letter_text: function (frm) {
 		if (frm.doc.dunning_type) {
-			frappe.call({
+			capkpi.call({
 				method:
 				"erp.accounts.doctype.dunning.dunning.get_dunning_letter_text",
 				args: {
@@ -146,7 +146,7 @@ frappe.ui.form.on("Dunning", {
 		frm.set_value("grand_total", grand_total);
 	},
 	make_payment_entry: function (frm) {
-		return frappe.call({
+		return capkpi.call({
 			method:
 			"erp.accounts.doctype.payment_entry.payment_entry.get_payment_entry",
 			args: {
@@ -154,8 +154,8 @@ frappe.ui.form.on("Dunning", {
 				dn: frm.doc.name,
 			},
 			callback: function (r) {
-				var doc = frappe.model.sync(r.message);
-				frappe.set_route("Form", doc[0].doctype, doc[0].name);
+				var doc = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doc[0].doctype, doc[0].name);
 			},
 		});
 	},

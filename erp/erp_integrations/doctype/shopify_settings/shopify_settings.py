@@ -4,11 +4,11 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.model.document import Document
-from frappe.utils import get_request_session
+import capkpi
+from capkpi import _
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_fields
+from capkpi.model.document import Document
+from capkpi.utils import get_request_session
 from requests.exceptions import HTTPError
 
 from erp.erp_integrations.doctype.shopify_log.shopify_log import make_shopify_log
@@ -26,8 +26,8 @@ class ShopifySettings(Document):
 
 	def validate_access_credentials(self):
 		if not (self.get_password(raise_exception=False) and self.api_key and self.shopify_url):
-			frappe.msgprint(
-				_("Missing value for Password, API Key or Shopify URL"), raise_exception=frappe.ValidationError
+			capkpi.msgprint(
+				_("Missing value for Password, API Key or Shopify URL"), raise_exception=capkpi.ValidationError
 			)
 
 	def register_webhooks(self):
@@ -79,7 +79,7 @@ class ShopifySettings(Document):
 				make_shopify_log(status="Warning", exception=error_message, rollback=True)
 
 			except Exception as e:
-				frappe.log_error(message=e, title="Shopify Webhooks Issue")
+				capkpi.log_error(message=e, title="Shopify Webhooks Issue")
 
 		for d in deleted_webhooks:
 			self.remove(d)
@@ -103,14 +103,14 @@ def get_header(settings):
 	return header
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_series():
 	return {
-		"sales_order_series": frappe.get_meta("Sales Order").get_options("naming_series")
+		"sales_order_series": capkpi.get_meta("Sales Order").get_options("naming_series")
 		or "SO-Shopify-",
-		"sales_invoice_series": frappe.get_meta("Sales Invoice").get_options("naming_series")
+		"sales_invoice_series": capkpi.get_meta("Sales Invoice").get_options("naming_series")
 		or "SI-Shopify-",
-		"delivery_note_series": frappe.get_meta("Delivery Note").get_options("naming_series")
+		"delivery_note_series": capkpi.get_meta("Delivery Note").get_options("naming_series")
 		or "DN-Shopify-",
 	}
 

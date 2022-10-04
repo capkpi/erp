@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.selling.doctype.sales_order.test_sales_order import make_sales_order
 
@@ -11,10 +11,10 @@ test_dependencies = ["Item"]
 
 
 def test_create_test_data():
-	frappe.set_user("Administrator")
+	capkpi.set_user("Administrator")
 	# create test item
-	if not frappe.db.exists("Item", "_Test Tesla Car"):
-		item = frappe.get_doc(
+	if not capkpi.db.exists("Item", "_Test Tesla Car"):
+		item = capkpi.get_doc(
 			{
 				"description": "_Test Tesla Car",
 				"doctype": "Item",
@@ -47,13 +47,13 @@ def test_create_test_data():
 		)
 		item.insert()
 	# create test item price
-	item_price = frappe.get_list(
+	item_price = capkpi.get_list(
 		"Item Price",
 		filters={"item_code": "_Test Tesla Car", "price_list": "_Test Price List"},
 		fields=["name"],
 	)
 	if len(item_price) == 0:
-		item_price = frappe.get_doc(
+		item_price = capkpi.get_doc(
 			{
 				"doctype": "Item Price",
 				"item_code": "_Test Tesla Car",
@@ -63,8 +63,8 @@ def test_create_test_data():
 		)
 		item_price.insert()
 	# create test item pricing rule
-	if not frappe.db.exists("Pricing Rule", {"title": "_Test Pricing Rule for _Test Item"}):
-		item_pricing_rule = frappe.get_doc(
+	if not capkpi.db.exists("Pricing Rule", {"title": "_Test Pricing Rule for _Test Item"}):
+		item_pricing_rule = capkpi.get_doc(
 			{
 				"doctype": "Pricing Rule",
 				"title": "_Test Pricing Rule for _Test Item",
@@ -82,8 +82,8 @@ def test_create_test_data():
 		)
 		item_pricing_rule.insert()
 	# create test item sales partner
-	if not frappe.db.exists("Sales Partner", "_Test Coupon Partner"):
-		sales_partner = frappe.get_doc(
+	if not capkpi.db.exists("Sales Partner", "_Test Coupon Partner"):
+		sales_partner = capkpi.get_doc(
 			{
 				"doctype": "Sales Partner",
 				"partner_name": "_Test Coupon Partner",
@@ -93,11 +93,11 @@ def test_create_test_data():
 		)
 		sales_partner.insert()
 	# create test item coupon code
-	if not frappe.db.exists("Coupon Code", "SAVE30"):
-		pricing_rule = frappe.db.get_value(
+	if not capkpi.db.exists("Coupon Code", "SAVE30"):
+		pricing_rule = capkpi.db.get_value(
 			"Pricing Rule", {"title": "_Test Pricing Rule for _Test Item"}, ["name"]
 		)
-		coupon_code = frappe.get_doc(
+		coupon_code = capkpi.get_doc(
 			{
 				"doctype": "Coupon Code",
 				"coupon_name": "SAVE30",
@@ -116,10 +116,10 @@ class TestCouponCode(unittest.TestCase):
 		test_create_test_data()
 
 	def tearDown(self):
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 
 	def test_sales_order_with_coupon_code(self):
-		frappe.db.set_value("Coupon Code", "SAVE30", "used", 0)
+		capkpi.db.set_value("Coupon Code", "SAVE30", "used", 0)
 
 		so = make_sales_order(
 			company="_Test Company",
@@ -142,4 +142,4 @@ class TestCouponCode(unittest.TestCase):
 		self.assertEqual(so.items[0].rate, 3500)
 
 		so.submit()
-		self.assertEqual(frappe.db.get_value("Coupon Code", "SAVE30", "used"), 1)
+		self.assertEqual(capkpi.db.get_value("Coupon Code", "SAVE30", "used"), 1)

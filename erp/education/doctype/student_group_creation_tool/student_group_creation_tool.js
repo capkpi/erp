@@ -1,23 +1,23 @@
-frappe.ui.form.on("Student Group Creation Tool", "refresh", function(frm) {
+capkpi.ui.form.on("Student Group Creation Tool", "refresh", function(frm) {
 	frm.disable_save();
 	frm.page.set_primary_action(__("Create Student Groups"), function() {
-		frappe.call({
+		capkpi.call({
 			method: "create_student_groups",
 			doc:frm.doc
 		})
 	});
-	frappe.realtime.on("student_group_creation_progress", function(data) {
+	capkpi.realtime.on("student_group_creation_progress", function(data) {
 		if(data.progress) {
-			frappe.hide_msgprint(true);
-			frappe.show_progress(__("Creating student groups"), data.progress[0],data.progress[1]);
+			capkpi.hide_msgprint(true);
+			capkpi.show_progress(__("Creating student groups"), data.progress[0],data.progress[1]);
 		}
 	});
 });
 
-frappe.ui.form.on("Student Group Creation Tool", "get_courses", function(frm) {
+capkpi.ui.form.on("Student Group Creation Tool", "get_courses", function(frm) {
 	frm.set_value("courses",[]);
 	if (frm.doc.academic_year && frm.doc.program) {
-		frappe.call({
+		capkpi.call({
 			method: "get_courses",
 			doc:frm.doc,
 			callback: function(r) {
@@ -29,7 +29,7 @@ frappe.ui.form.on("Student Group Creation Tool", "get_courses", function(frm) {
 	}
 });
 
-frappe.ui.form.on("Student Group Creation Tool", "onload", function(frm){
+capkpi.ui.form.on("Student Group Creation Tool", "onload", function(frm){
 	cur_frm.set_query("academic_term",function(){
 		return{
 			"filters":{

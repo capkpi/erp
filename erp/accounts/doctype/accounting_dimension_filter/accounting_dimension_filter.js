@@ -1,7 +1,7 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Accounting Dimension Filter', {
+capkpi.ui.form.on('Accounting Dimension Filter', {
 	refresh: function(frm, cdt, cdn) {
 		if (frm.doc.accounting_dimension) {
 			frm.set_df_property('dimensions', 'label', frm.doc.accounting_dimension, cdn, 'dimension_value');
@@ -28,7 +28,7 @@ frappe.ui.form.on('Accounting Dimension Filter', {
 			};
 		});
 
-		frappe.db.get_list('Accounting Dimension',
+		capkpi.db.get_list('Accounting Dimension',
 			{fields: ['document_type']}).then((res) => {
 			let options = ['Cost Center', 'Project'];
 
@@ -46,12 +46,12 @@ frappe.ui.form.on('Accounting Dimension Filter', {
 		let filters = {};
 
 		if (frm.doc.accounting_dimension) {
-			frappe.model.with_doctype(frm.doc.accounting_dimension, function() {
-				if (frappe.model.is_tree(frm.doc.accounting_dimension)) {
+			capkpi.model.with_doctype(frm.doc.accounting_dimension, function() {
+				if (capkpi.model.is_tree(frm.doc.accounting_dimension)) {
 					filters['is_group'] = 0;
 				}
 
-				if (frappe.meta.has_field(frm.doc.accounting_dimension, 'company')) {
+				if (capkpi.meta.has_field(frm.doc.accounting_dimension, 'company')) {
 					filters['company'] = frm.doc.company;
 				}
 
@@ -73,7 +73,7 @@ frappe.ui.form.on('Accounting Dimension Filter', {
 	},
 });
 
-frappe.ui.form.on('Allowed Dimension', {
+capkpi.ui.form.on('Allowed Dimension', {
 	dimensions_add: function(frm, cdt, cdn) {
 		let row = locals[cdt][cdn];
 		row.accounting_dimension = frm.doc.accounting_dimension;

@@ -1,7 +1,7 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Asset Maintenance Log', {
+capkpi.ui.form.on('Asset Maintenance Log', {
 	asset_maintenance: (frm) => {
 		frm.set_query('task', function(doc) {
 			return {

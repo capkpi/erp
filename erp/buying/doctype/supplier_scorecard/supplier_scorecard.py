@@ -5,10 +5,10 @@
 import time
 from datetime import timedelta
 
-import frappe
-from frappe import _, throw
-from frappe.model.document import Document
-from frappe.utils import add_days, add_years, get_last_day, getdate, nowdate
+import capkpi
+from capkpi import _, throw
+from capkpi.model.document import Document
+from capkpi.utils import add_days, add_years, get_last_day, getdate, nowdate
 
 from erp.buying.doctype.supplier_scorecard_period.supplier_scorecard_period import (
 	make_supplier_scorecard,
@@ -54,7 +54,7 @@ class SupplierScorecard(Document):
 			throw(_("Criteria weights must add up to 100%"))
 
 	def calculate_total_score(self):
-		scorecards = frappe.db.sql(
+		scorecards = capkpi.db.sql(
 			"""
 			SELECT
 				scp.name
@@ -73,7 +73,7 @@ class SupplierScorecard(Document):
 		total_score = 0
 		total_max_score = 0
 		for scp in scorecards:
-			my_sc = frappe.get_doc("Supplier Scorecard Period", scp.name)
+			my_sc = capkpi.get_doc("Supplier Scorecard Period", scp.name)
 			my_scp_weight = self.weighting_function
 			my_scp_weight = my_scp_weight.replace("{period_number}", str(period))
 
@@ -107,16 +107,16 @@ class SupplierScorecard(Document):
 				# Update supplier standing info
 				for fieldname in ("prevent_pos", "prevent_rfqs", "warn_rfqs", "warn_pos"):
 					self.set(fieldname, standing.get(fieldname))
-					frappe.db.set_value("Supplier", self.supplier, fieldname, self.get(fieldname))
+					capkpi.db.set_value("Supplier", self.supplier, fieldname, self.get(fieldname))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_timeline_data(doctype, name):
 	# Get a list of all the associated scorecards
-	scs = frappe.get_doc(doctype, name)
+	scs = capkpi.get_doc(doctype, name)
 	out = {}
 	timeline_data = {}
-	scorecards = frappe.db.sql(
+	scorecards = capkpi.db.sql(
 		"""
 		SELECT
 			sc.name
@@ -130,7 +130,7 @@ def get_timeline_data(doctype, name):
 	)
 
 	for sc in scorecards:
-		start_date, end_date, total_score = frappe.db.get_value(
+		start_date, end_date, total_score = capkpi.db.get_value(
 			"Supplier Scorecard Period", sc.name, ["start_date", "end_date", "total_score"]
 		)
 		for single_date in daterange(start_date, end_date):
@@ -146,7 +146,7 @@ def daterange(start_date, end_date):
 
 
 def refresh_scorecards():
-	scorecards = frappe.db.sql(
+	scorecards = capkpi.db.sql(
 		"""
 		SELECT
 			sc.name
@@ -159,14 +159,14 @@ def refresh_scorecards():
 		# Check to see if any new scorecard periods are created
 		if make_all_scorecards(sc.name) > 0:
 			# Save the scorecard to update the score and standings
-			frappe.get_doc("Supplier Scorecard", sc.name).save()
+			capkpi.get_doc("Supplier Scorecard", sc.name).save()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_all_scorecards(docname):
 
-	sc = frappe.get_doc("Supplier Scorecard", docname)
-	supplier = frappe.get_doc("Supplier", sc.supplier)
+	sc = capkpi.get_doc("Supplier Scorecard", docname)
+	supplier = capkpi.get_doc("Supplier", sc.supplier)
 
 	start_date = getdate(supplier.creation)
 	end_date = get_scorecard_date(sc.period, start_date)
@@ -178,7 +178,7 @@ def make_all_scorecards(docname):
 
 	while (start_date < todays) and (end_date <= todays):
 		# check to make sure there is no scorecard period already created
-		scorecards = frappe.db.sql(
+		scorecards = capkpi.db.sql(
 			"""
 			SELECT
 				scp.name
@@ -212,7 +212,7 @@ def make_all_scorecards(docname):
 		start_date = getdate(add_days(end_date, 1))
 		end_date = get_scorecard_date(sc.period, start_date)
 	if scp_count > 0:
-		frappe.msgprint(
+		capkpi.msgprint(
 			_("Created {0} scorecards for {1} between: ").format(scp_count, sc.supplier)
 			+ str(first_start_date)
 			+ " - "
@@ -375,12 +375,12 @@ def make_default_records():
 	for d in install_variable_docs:
 		try:
 			d["doctype"] = "Supplier Scorecard Variable"
-			frappe.get_doc(d).insert()
-		except frappe.NameError:
+			capkpi.get_doc(d).insert()
+		except capkpi.NameError:
 			pass
 	for d in install_standing_docs:
 		try:
 			d["doctype"] = "Supplier Scorecard Standing"
-			frappe.get_doc(d).insert()
-		except frappe.NameError:
+			capkpi.get_doc(d).insert()
+		except capkpi.NameError:
 			pass

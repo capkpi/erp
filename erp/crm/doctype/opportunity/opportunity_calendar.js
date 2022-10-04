@@ -1,6 +1,6 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
-frappe.views.calendar["Opportunity"] = {
+capkpi.views.calendar["Opportunity"] = {
 	field_map: {
 		"start": "contact_date",
 		"end": "contact_date",

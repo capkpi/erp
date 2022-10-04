@@ -1,4 +1,4 @@
-frappe.listview_settings['Asset Maintenance Log'] = {
+capkpi.listview_settings['Asset Maintenance Log'] = {
 	add_fields: ["maintenance_status"],
 	has_indicator_for_draft: 1,
 	get_indicator: function(doc) {

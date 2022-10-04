@@ -3,13 +3,13 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.tax_rule.tax_rule import ConflictingTaxRule, get_tax_template
 from erp.crm.doctype.opportunity.opportunity import make_quotation
 from erp.crm.doctype.opportunity.test_opportunity import make_opportunity
 
-test_records = frappe.get_test_records("Tax Rule")
+test_records = capkpi.get_test_records("Tax Rule")
 
 from six import iteritems
 
@@ -17,14 +17,14 @@ from six import iteritems
 class TestTaxRule(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
-		frappe.db.set_value("Shopping Cart Settings", None, "enabled", 0)
+		capkpi.db.set_value("Shopping Cart Settings", None, "enabled", 0)
 
 	@classmethod
 	def tearDownClass(cls):
-		frappe.db.sql("delete from `tabTax Rule`")
+		capkpi.db.sql("delete from `tabTax Rule`")
 
 	def setUp(self):
-		frappe.db.sql("delete from `tabTax Rule`")
+		capkpi.db.sql("delete from `tabTax Rule`")
 
 	def test_conflict(self):
 		tax_rule1 = make_tax_rule(
@@ -293,9 +293,9 @@ class TestTaxRule(unittest.TestCase):
 
 
 def make_tax_rule(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	tax_rule = frappe.new_doc("Tax Rule")
+	tax_rule = capkpi.new_doc("Tax Rule")
 
 	for key, val in iteritems(args):
 		if key != "save":

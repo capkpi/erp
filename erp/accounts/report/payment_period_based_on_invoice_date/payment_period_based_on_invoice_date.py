@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import flt, getdate
 
 from erp.accounts.report.accounts_receivable.accounts_receivable import ReceivablePayableReport
 
@@ -21,7 +21,7 @@ def execute(filters=None):
 
 	data = []
 	for d in entries:
-		invoice = invoice_details.get(d.against_voucher) or frappe._dict()
+		invoice = invoice_details.get(d.against_voucher) or capkpi._dict()
 
 		if d.reference_type == "Purchase Invoice":
 			payment_amount = flt(d.debit) or -1 * flt(d.credit)
@@ -64,7 +64,7 @@ def validate_filters(filters):
 	if (filters.get("payment_type") == _("Incoming") and filters.get("party_type") == "Supplier") or (
 		filters.get("payment_type") == _("Outgoing") and filters.get("party_type") == "Customer"
 	):
-		frappe.throw(
+		capkpi.throw(
 			_("{0} payment entries can not be filtered by {1}").format(
 				filters.payment_type, filters.party_type
 			)
@@ -159,7 +159,7 @@ def get_conditions(filters):
 
 
 def get_entries(filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select
 		voucher_type, voucher_no, party_type, party, posting_date, debit, credit, remarks, against_voucher
 		from `tabGL Entry`
@@ -175,7 +175,7 @@ def get_entries(filters):
 def get_invoice_posting_date_map(filters):
 	invoice_details = {}
 	dt = "Sales Invoice" if filters.get("payment_type") == _("Incoming") else "Purchase Invoice"
-	for t in frappe.db.sql("select name, posting_date, due_date from `tab{0}`".format(dt), as_dict=1):
+	for t in capkpi.db.sql("select name, posting_date, due_date from `tab{0}`".format(dt), as_dict=1):
 		invoice_details[t.name] = t
 
 	return invoice_details

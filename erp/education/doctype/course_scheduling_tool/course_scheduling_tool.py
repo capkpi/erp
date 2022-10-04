@@ -4,16 +4,16 @@
 
 import calendar
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import add_days, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import add_days, getdate
 
 from erp.education.utils import OverlapError
 
 
 class CourseSchedulingTool(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def schedule_course(self):
 		"""Creates course schedules as per specified parameters"""
 
@@ -24,9 +24,9 @@ class CourseSchedulingTool(Document):
 
 		self.validate_mandatory()
 		self.validate_date()
-		self.instructor_name = frappe.db.get_value("Instructor", self.instructor, "instructor_name")
+		self.instructor_name = capkpi.db.get_value("Instructor", self.instructor, "instructor_name")
 
-		group_based_on, course = frappe.db.get_value(
+		group_based_on, course = capkpi.db.get_value(
 			"Student Group", self.student_group, ["group_based_on", "course"]
 		)
 
@@ -75,17 +75,17 @@ class CourseSchedulingTool(Document):
 		]
 		for d in fields:
 			if not self.get(d):
-				frappe.throw(_("{0} is mandatory").format(self.meta.get_label(d)))
+				capkpi.throw(_("{0} is mandatory").format(self.meta.get_label(d)))
 
 	def validate_date(self):
 		"""Validates if Course Start Date is greater than Course End Date"""
 		if self.course_start_date > self.course_end_date:
-			frappe.throw(_("Course Start Date cannot be greater than Course End Date."))
+			capkpi.throw(_("Course Start Date cannot be greater than Course End Date."))
 
 	def delete_course_schedule(self, rescheduled, reschedule_errors):
 		"""Delete all course schedule within the Date range and specified filters"""
 
-		schedules = frappe.get_list(
+		schedules = capkpi.get_list(
 			"Course Schedule",
 			fields=["name", "schedule_date"],
 			filters=[
@@ -99,7 +99,7 @@ class CourseSchedulingTool(Document):
 		for d in schedules:
 			try:
 				if self.day == calendar.day_name[getdate(d.schedule_date).weekday()]:
-					frappe.delete_doc("Course Schedule", d.name)
+					capkpi.delete_doc("Course Schedule", d.name)
 					rescheduled.append(d.name)
 			except Exception:
 				reschedule_errors.append(d.name)
@@ -109,7 +109,7 @@ class CourseSchedulingTool(Document):
 		"""Makes a new Course Schedule.
 		:param date: Date on which Course Schedule will be created."""
 
-		course_schedule = frappe.new_doc("Course Schedule")
+		course_schedule = capkpi.new_doc("Course Schedule")
 		course_schedule.student_group = self.student_group
 		course_schedule.course = self.course
 		course_schedule.instructor = self.instructor

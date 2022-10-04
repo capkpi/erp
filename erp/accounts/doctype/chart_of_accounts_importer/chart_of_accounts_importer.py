@@ -6,12 +6,12 @@ import csv
 import os
 from functools import reduce
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint, cstr
-from frappe.utils.csvutils import UnicodeWriter
-from frappe.utils.xlsxutils import (
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint, cstr
+from capkpi.utils.csvutils import UnicodeWriter
+from capkpi.utils.xlsxutils import (
 	read_xls_file_from_attached_file,
 	read_xlsx_file_from_attached_file,
 )
@@ -32,35 +32,35 @@ class ChartofAccountsImporter(Document):
 
 def validate_columns(data):
 	if not data:
-		frappe.throw(_("No data found. Seems like you uploaded a blank file"))
+		capkpi.throw(_("No data found. Seems like you uploaded a blank file"))
 
 	no_of_columns = max([len(d) for d in data])
 
 	if no_of_columns > 7:
-		frappe.throw(
+		capkpi.throw(
 			_("More columns found than expected. Please compare the uploaded file with standard template"),
 			title=(_("Wrong Template")),
 		)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def validate_company(company):
-	parent_company, allow_account_creation_against_child_company = frappe.db.get_value(
+	parent_company, allow_account_creation_against_child_company = capkpi.db.get_value(
 		"Company", {"name": company}, ["parent_company", "allow_account_creation_against_child_company"]
 	)
 
 	if parent_company and (not allow_account_creation_against_child_company):
-		msg = _("{} is a child company.").format(frappe.bold(company)) + " "
+		msg = _("{} is a child company.").format(capkpi.bold(company)) + " "
 		msg += _("Please import accounts against parent company or enable {} in company master.").format(
-			frappe.bold("Allow Account Creation Against Child Company")
+			capkpi.bold("Allow Account Creation Against Child Company")
 		)
-		frappe.throw(msg, title=_("Wrong Company"))
+		capkpi.throw(msg, title=_("Wrong Company"))
 
-	if frappe.db.get_all("GL Entry", {"company": company}, "name", limit=1):
+	if capkpi.db.get_all("GL Entry", {"company": company}, "name", limit=1):
 		return False
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def import_coa(file_name, company):
 	# delete existing data for accounts
 	unset_existing_data(company)
@@ -73,7 +73,7 @@ def import_coa(file_name, company):
 	else:
 		data = generate_data_from_excel(file_doc, extension)
 
-	frappe.local.flags.ignore_root_company_validation = True
+	capkpi.local.flags.ignore_root_company_validation = True
 	forest = build_forest(data)
 	create_charts(company, custom_chart=forest, from_coa_importer=True)
 
@@ -82,13 +82,13 @@ def import_coa(file_name, company):
 
 
 def get_file(file_name):
-	file_doc = frappe.get_doc("File", {"file_url": file_name})
+	file_doc = capkpi.get_doc("File", {"file_url": file_name})
 	parts = file_doc.get_extension()
 	extension = parts[1]
 	extension = extension.lstrip(".")
 
 	if extension not in ("csv", "xlsx", "xls"):
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"Only CSV and Excel files can be used to for importing data. Please check the file format you are trying to upload"
 			)
@@ -110,7 +110,7 @@ def generate_data_from_csv(file_doc, as_dict=False):
 
 		for row in csv_reader:
 			if as_dict:
-				data.append({frappe.scrub(header): row[index] for index, header in enumerate(headers)})
+				data.append({capkpi.scrub(header): row[index] for index, header in enumerate(headers)})
 			else:
 				if not row[1]:
 					row[1] = row[0]
@@ -135,7 +135,7 @@ def generate_data_from_excel(file_doc, extension, as_dict=False):
 
 	for row in rows:
 		if as_dict:
-			data.append({frappe.scrub(header): row[index] for index, header in enumerate(headers)})
+			data.append({capkpi.scrub(header): row[index] for index, header in enumerate(headers)})
 		else:
 			if not row[1]:
 				row[1] = row[0]
@@ -145,7 +145,7 @@ def generate_data_from_excel(file_doc, extension, as_dict=False):
 	return data
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_coa(doctype, parent, is_root=False, file_name=None, for_validate=0):
 	"""called by tree view (to fetch node's children)"""
 
@@ -197,7 +197,7 @@ def build_forest(data):
 
 	# returns the path of any node in list format
 	def return_parent(data, child):
-		from frappe import _
+		from capkpi import _
 
 		for row in data:
 			account_name, parent_account, account_number, parent_account_number = row[0:4]
@@ -212,9 +212,9 @@ def build_forest(data):
 			elif account_name == child:
 				parent_account_list = return_parent(data, parent_account)
 				if not parent_account_list and parent_account:
-					frappe.throw(
+					capkpi.throw(
 						_("The parent account {0} does not exists in the uploaded template").format(
-							frappe.bold(parent_account)
+							capkpi.bold(parent_account)
 						)
 					)
 				return [child] + parent_account_list
@@ -258,7 +258,7 @@ def build_forest(data):
 		line_no += 1
 
 	if error_messages:
-		frappe.throw("<br>".join(error_messages))
+		capkpi.throw("<br>".join(error_messages))
 
 	out = {}
 	for path in paths:
@@ -271,13 +271,13 @@ def build_forest(data):
 
 
 def build_response_as_excel(writer):
-	filename = frappe.generate_hash("", 10)
+	filename = capkpi.generate_hash("", 10)
 	with open(filename, "wb") as f:
 		f.write(cstr(writer.getvalue()).encode("utf-8"))
 	f = open(filename)
 	reader = csv.reader(f)
 
-	from frappe.utils.xlsxutils import make_xlsx
+	from capkpi.utils.xlsxutils import make_xlsx
 
 	xlsx_file = make_xlsx(reader, "Chart of Accounts Importer Template")
 
@@ -285,22 +285,22 @@ def build_response_as_excel(writer):
 	os.remove(filename)
 
 	# write out response as a xlsx type
-	frappe.response["filename"] = "coa_importer_template.xlsx"
-	frappe.response["filecontent"] = xlsx_file.getvalue()
-	frappe.response["type"] = "binary"
+	capkpi.response["filename"] = "coa_importer_template.xlsx"
+	capkpi.response["filecontent"] = xlsx_file.getvalue()
+	capkpi.response["type"] = "binary"
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def download_template(file_type, template_type):
-	data = frappe._dict(frappe.local.form_dict)
+	data = capkpi._dict(capkpi.local.form_dict)
 
 	writer = get_template(template_type)
 
 	if file_type == "CSV":
 		# download csv file
-		frappe.response["result"] = cstr(writer.getvalue())
-		frappe.response["type"] = "csv"
-		frappe.response["doctype"] = "Chart of Accounts Importer"
+		capkpi.response["result"] = cstr(writer.getvalue())
+		capkpi.response["type"] = "csv"
+		capkpi.response["doctype"] = "Chart of Accounts Importer"
 	else:
 		build_response_as_excel(writer)
 
@@ -363,7 +363,7 @@ def get_sample_template(writer):
 	return writer
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def validate_accounts(file_doc, extension):
 	if extension == "csv":
 		accounts = generate_data_from_csv(file_doc, as_dict=True)
@@ -379,7 +379,7 @@ def validate_accounts(file_doc, extension):
 			)
 			msg += "<br><br>"
 			msg += _("Alternatively, you can download the template and fill your data in.")
-			frappe.throw(msg, title=_("Parent Account Missing"))
+			capkpi.throw(msg, title=_("Parent Account Missing"))
 		if account["parent_account"] and accounts_dict.get(account["parent_account"]):
 			accounts_dict[account["parent_account"]]["is_group"] = 1
 
@@ -407,7 +407,7 @@ def validate_root(accounts):
 	validate_missing_roots(roots)
 
 	if error_messages:
-		frappe.throw("<br>".join(error_messages))
+		capkpi.throw("<br>".join(error_messages))
 
 
 def validate_missing_roots(roots):
@@ -416,7 +416,7 @@ def validate_missing_roots(roots):
 	missing = list(set(get_root_types()) - root_types_added)
 
 	if missing:
-		frappe.throw(_("Please add Root Account for - {0}").format(" , ".join(missing)))
+		capkpi.throw(_("Please add Root Account for - {0}").format(" , ".join(missing)))
 
 
 def get_root_types():
@@ -449,7 +449,7 @@ def get_mandatory_account_types():
 
 
 def unset_existing_data(company):
-	linked = frappe.db.sql(
+	linked = capkpi.db.sql(
 		'''select fieldname from tabDocField
 		where fieldtype="Link" and options="Account" and parent="Company"''',
 		as_dict=True,
@@ -457,7 +457,7 @@ def unset_existing_data(company):
 
 	# remove accounts data from company
 	update_values = {d.fieldname: "" for d in linked}
-	frappe.db.set_value("Company", company, update_values, update_values)
+	capkpi.db.set_value("Company", company, update_values, update_values)
 
 	# remove accounts data from various doctypes
 	for doctype in [
@@ -468,7 +468,7 @@ def unset_existing_data(company):
 		"Sales Taxes and Charges Template",
 		"Purchase Taxes and Charges Template",
 	]:
-		frappe.db.sql(
+		capkpi.db.sql(
 			'''delete from `tab{0}` where `company`="%s"'''.format(doctype) % (company)  # nosec
 		)
 
@@ -476,13 +476,13 @@ def unset_existing_data(company):
 def set_default_accounts(company):
 	from erp.setup.doctype.company.company import install_country_fixtures
 
-	company = frappe.get_doc("Company", company)
+	company = capkpi.get_doc("Company", company)
 	company.update(
 		{
-			"default_receivable_account": frappe.db.get_value(
+			"default_receivable_account": capkpi.db.get_value(
 				"Account", {"company": company.name, "account_type": "Receivable", "is_group": 0}
 			),
-			"default_payable_account": frappe.db.get_value(
+			"default_payable_account": capkpi.db.get_value(
 				"Account", {"company": company.name, "account_type": "Payable", "is_group": 0}
 			),
 		}

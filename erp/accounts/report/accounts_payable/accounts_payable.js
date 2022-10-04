@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["Accounts Payable"] = {
+capkpi.query_reports["Accounts Payable"] = {
 	"filters": [
 		{
 			"fieldname": "company",
@@ -9,13 +9,13 @@ frappe.query_reports["Accounts Payable"] = {
 			"fieldtype": "Link",
 			"options": "Company",
 			"reqd": 1,
-			"default": frappe.defaults.get_user_default("Company")
+			"default": capkpi.defaults.get_user_default("Company")
 		},
 		{
 			"fieldname": "report_date",
 			"label": __("Posting Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today()
+			"default": capkpi.datetime.get_today()
 		},
 		{
 			"fieldname": "finance_book",
@@ -29,7 +29,7 @@ frappe.query_reports["Accounts Payable"] = {
 			"fieldtype": "Link",
 			"options": "Cost Center",
 			get_query: () => {
-				var company = frappe.query_report.get_filter_value('company');
+				var company = capkpi.query_report.get_filter_value('company');
 				return {
 					filters: {
 						'company': company
@@ -43,13 +43,13 @@ frappe.query_reports["Accounts Payable"] = {
 			"fieldtype": "Link",
 			"options": "Supplier",
 			on_change: () => {
-				var supplier = frappe.query_report.get_filter_value('supplier');
+				var supplier = capkpi.query_report.get_filter_value('supplier');
 				if (supplier) {
-					frappe.db.get_value('Supplier', supplier, "tax_id", function(value) {
-						frappe.query_report.set_filter_value('tax_id', value["tax_id"]);
+					capkpi.db.get_value('Supplier', supplier, "tax_id", function(value) {
+						capkpi.query_report.set_filter_value('tax_id', value["tax_id"]);
 					});
 				} else {
-					frappe.query_report.set_filter_value('tax_id', "");
+					capkpi.query_report.set_filter_value('tax_id', "");
 				}
 			}
 		},
@@ -59,7 +59,7 @@ frappe.query_reports["Accounts Payable"] = {
 			"fieldtype": "Link",
 			"options": "Account",
 			get_query: () => {
-				var company = frappe.query_report.get_filter_value('company');
+				var company = capkpi.query_report.get_filter_value('company');
 				return {
 					filters: {
 						'company': company,
@@ -151,7 +151,7 @@ frappe.query_reports["Accounts Payable"] = {
 	onload: function(report) {
 		report.page.add_inner_button(__("Accounts Payable Summary"), function() {
 			var filters = report.get_values();
-			frappe.set_route('query-report', 'Accounts Payable Summary', {company: filters.company});
+			capkpi.set_route('query-report', 'Accounts Payable Summary', {company: filters.company});
 		});
 	}
 }

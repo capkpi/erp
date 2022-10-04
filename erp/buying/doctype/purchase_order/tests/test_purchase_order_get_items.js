@@ -4,9 +4,9 @@ QUnit.test("test: purchase order with get items", function(assert) {
 	assert.expect(4);
 	let done = assert.async();
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Purchase Order', [
+			return capkpi.tests.make('Purchase Order', [
 				{supplier: 'Test Supplier'},
 				{is_subcontracted: 'No'},
 				{buying_price_list: 'Test-Buying-USD'},
@@ -15,9 +15,9 @@ QUnit.test("test: purchase order with get items", function(assert) {
 					[
 						{"item_code": 'Test Product 4'},
 						{"qty": 5},
-						{"schedule_date": frappe.datetime.add_days(frappe.datetime.now_date(), 1)},
-						{"expected_delivery_date": frappe.datetime.add_days(frappe.datetime.now_date(), 5)},
-						{"warehouse": 'Stores - '+frappe.get_abbr(frappe.defaults.get_default("Company"))}
+						{"schedule_date": capkpi.datetime.add_days(capkpi.datetime.now_date(), 1)},
+						{"expected_delivery_date": capkpi.datetime.add_days(capkpi.datetime.now_date(), 5)},
+						{"warehouse": 'Stores - '+capkpi.get_abbr(capkpi.defaults.get_default("Company"))}
 					]
 				]}
 			]);
@@ -27,16 +27,16 @@ QUnit.test("test: purchase order with get items", function(assert) {
 			assert.ok(cur_frm.doc.supplier_name == 'Test Supplier', "Supplier name correct");
 		},
 
-		() => frappe.timeout(0.3),
-		() => frappe.click_button('Get items from'),
-		() => frappe.timeout(0.3),
+		() => capkpi.timeout(0.3),
+		() => capkpi.click_button('Get items from'),
+		() => capkpi.timeout(0.3),
 
-		() => frappe.click_link('Product Bundle'),
-		() => frappe.timeout(0.5),
+		() => capkpi.click_link('Product Bundle'),
+		() => capkpi.timeout(0.5),
 
 		() => cur_dialog.set_value('product_bundle', 'Computer'),
-		() => frappe.click_button('Get Items'),
-		() => frappe.timeout(1),
+		() => capkpi.click_button('Get Items'),
+		() => capkpi.timeout(1),
 
 		// Check if items are fetched from Product Bundle
 		() => {
@@ -45,16 +45,16 @@ QUnit.test("test: purchase order with get items", function(assert) {
 			assert.ok(cur_frm.doc.items[3].item_name == 'Keyboard', "Product bundle item 3 correct");
 		},
 
-		() => cur_frm.doc.items[1].warehouse = 'Stores - '+frappe.get_abbr(frappe.defaults.get_default("Company")),
-		() => cur_frm.doc.items[2].warehouse = 'Stores - '+frappe.get_abbr(frappe.defaults.get_default("Company")),
-		() => cur_frm.doc.items[3].warehouse = 'Stores - '+frappe.get_abbr(frappe.defaults.get_default("Company")),
+		() => cur_frm.doc.items[1].warehouse = 'Stores - '+capkpi.get_abbr(capkpi.defaults.get_default("Company")),
+		() => cur_frm.doc.items[2].warehouse = 'Stores - '+capkpi.get_abbr(capkpi.defaults.get_default("Company")),
+		() => cur_frm.doc.items[3].warehouse = 'Stores - '+capkpi.get_abbr(capkpi.defaults.get_default("Company")),
 
 		() => cur_frm.save(),
-		() => frappe.timeout(1),
+		() => capkpi.timeout(1),
 
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(0.3),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(0.3),
 
 		() => done()
 	]);

@@ -1,13 +1,13 @@
-import frappe
+import capkpi
 import requests
-from frappe import _
+from capkpi import _
 
 # api/method/erp.erp_integrations.exotel_integration.handle_incoming_call
 # api/method/erp.erp_integrations.exotel_integration.handle_end_call
 # api/method/erp.erp_integrations.exotel_integration.handle_missed_call
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def handle_incoming_call(**kwargs):
 	try:
 		exotel_settings = get_exotel_settings()
@@ -25,17 +25,17 @@ def handle_incoming_call(**kwargs):
 		else:
 			update_call_log(call_payload, call_log=call_log)
 	except Exception as e:
-		frappe.db.rollback()
-		frappe.log_error(title=_("Error in Exotel incoming call"))
-		frappe.db.commit()
+		capkpi.db.rollback()
+		capkpi.log_error(title=_("Error in Exotel incoming call"))
+		capkpi.db.commit()
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def handle_end_call(**kwargs):
 	update_call_log(kwargs, "Completed")
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def handle_missed_call(**kwargs):
 	status = ""
 	call_type = kwargs.get("CallType")
@@ -63,29 +63,29 @@ def update_call_log(call_payload, status="Ringing", call_log=None):
 		call_log.duration = call_payload.get("DialCallDuration") or 0
 		call_log.recording_url = call_payload.get("RecordingUrl")
 		call_log.save(ignore_permissions=True)
-		frappe.db.commit()
+		capkpi.db.commit()
 		return call_log
 
 
 def get_call_log(call_payload):
 	call_log_id = call_payload.get("CallSid")
-	if frappe.db.exists("Call Log", call_log_id):
-		return frappe.get_doc("Call Log", call_log_id)
+	if capkpi.db.exists("Call Log", call_log_id):
+		return capkpi.get_doc("Call Log", call_log_id)
 
 
 def create_call_log(call_payload):
-	call_log = frappe.new_doc("Call Log")
+	call_log = capkpi.new_doc("Call Log")
 	call_log.id = call_payload.get("CallSid")
 	call_log.to = call_payload.get("DialWhomNumber")
 	call_log.medium = call_payload.get("To")
 	call_log.status = "Ringing"
 	setattr(call_log, "from", call_payload.get("CallFrom"))
 	call_log.save(ignore_permissions=True)
-	frappe.db.commit()
+	capkpi.db.commit()
 	return call_log
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_call_status(call_id):
 	endpoint = get_exotel_endpoint("Calls/{call_id}.json".format(call_id=call_id))
 	response = requests.get(endpoint)
@@ -93,7 +93,7 @@ def get_call_status(call_id):
 	return status
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_a_call(from_number, to_number, caller_id):
 	endpoint = get_exotel_endpoint("Calls/connect.json?details=true")
 	response = requests.post(
@@ -104,7 +104,7 @@ def make_a_call(from_number, to_number, caller_id):
 
 
 def get_exotel_settings():
-	return frappe.get_single("Exotel Settings")
+	return capkpi.get_single("Exotel Settings")
 
 
 def whitelist_numbers(numbers, caller_id):

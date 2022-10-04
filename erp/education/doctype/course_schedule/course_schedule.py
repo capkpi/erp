@@ -5,14 +5,14 @@
 
 from datetime import datetime
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class CourseSchedule(Document):
 	def validate(self):
-		self.instructor_name = frappe.db.get_value("Instructor", self.instructor, "instructor_name")
+		self.instructor_name = capkpi.db.get_value("Instructor", self.instructor, "instructor_name")
 		self.set_title()
 		self.validate_course()
 		self.validate_date()
@@ -25,7 +25,7 @@ class CourseSchedule(Document):
 		)
 
 	def validate_course(self):
-		group_based_on, course = frappe.db.get_value(
+		group_based_on, course = capkpi.db.get_value(
 			"Student Group", self.student_group, ["group_based_on", "course"]
 		)
 		if group_based_on == "Course":
@@ -34,7 +34,7 @@ class CourseSchedule(Document):
 	def validate_date(self):
 		"""Validates if from_time is greater than to_time"""
 		if self.from_time > self.to_time:
-			frappe.throw(_("From Time cannot be greater than To Time."))
+			capkpi.throw(_("From Time cannot be greater than To Time."))
 
 		"""Handles specicfic case to update schedule date in calendar """
 		if isinstance(self.from_time, str):

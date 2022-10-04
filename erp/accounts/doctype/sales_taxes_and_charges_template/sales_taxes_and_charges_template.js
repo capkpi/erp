@@ -5,7 +5,7 @@ cur_frm.cscript.tax_table = "Sales Taxes and Charges";
 
 {% include "erp/public/js/controllers/accounts.js" %}
 
-frappe.tour['Sales Taxes and Charges Template'] = [
+capkpi.tour['Sales Taxes and Charges Template'] = [
 	{
 		fieldname: "title",
 		title: __("Title"),

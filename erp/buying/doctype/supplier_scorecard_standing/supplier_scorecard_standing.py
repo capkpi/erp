@@ -2,24 +2,24 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class SupplierScorecardStanding(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_scoring_standing(standing_name):
-	standing = frappe.get_doc("Supplier Scorecard Standing", standing_name)
+	standing = capkpi.get_doc("Supplier Scorecard Standing", standing_name)
 
 	return standing
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_standings_list():
-	standings = frappe.db.sql(
+	standings = capkpi.db.sql(
 		"""
 		SELECT
 			scs.name

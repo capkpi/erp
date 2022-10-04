@@ -4,9 +4,9 @@
 
 import unittest
 
-import frappe
-from frappe.tests.utils import change_settings
-from frappe.utils import add_months, cint, nowdate
+import capkpi
+from capkpi.tests.utils import change_settings
+from capkpi.utils import add_months, cint, nowdate
 
 from erp.accounts.doctype.tax_rule.tax_rule import ConflictingTaxRule
 from erp.e_commerce.doctype.website_item.website_item import make_website_item
@@ -27,23 +27,23 @@ class TestShoppingCart(unittest.TestCase):
 	"""
 
 	def setUp(self):
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		create_test_contact_and_address()
 		self.enable_shopping_cart()
-		if not frappe.db.exists("Website Item", {"item_code": "_Test Item"}):
-			make_website_item(frappe.get_cached_doc("Item", "_Test Item"))
+		if not capkpi.db.exists("Website Item", {"item_code": "_Test Item"}):
+			make_website_item(capkpi.get_cached_doc("Item", "_Test Item"))
 
-		if not frappe.db.exists("Website Item", {"item_code": "_Test Item 2"}):
-			make_website_item(frappe.get_cached_doc("Item", "_Test Item 2"))
+		if not capkpi.db.exists("Website Item", {"item_code": "_Test Item 2"}):
+			make_website_item(capkpi.get_cached_doc("Item", "_Test Item 2"))
 
 	def tearDown(self):
-		frappe.db.rollback()
-		frappe.set_user("Administrator")
+		capkpi.db.rollback()
+		capkpi.set_user("Administrator")
 		self.disable_shopping_cart()
 
 	@classmethod
 	def tearDownClass(cls):
-		frappe.db.sql("delete from `tabTax Rule`")
+		capkpi.db.sql("delete from `tabTax Rule`")
 
 	def test_get_cart_new_user(self):
 		self.login_as_new_user()
@@ -53,9 +53,9 @@ class TestShoppingCart(unittest.TestCase):
 		self.assertEqual(quotation.quotation_to, "Customer")
 		self.assertEqual(
 			quotation.contact_person,
-			frappe.db.get_value("Contact", dict(email_id="test_cart_user@example.com")),
+			capkpi.db.get_value("Contact", dict(email_id="test_cart_user@example.com")),
 		)
-		self.assertEqual(quotation.contact_email, frappe.session.user)
+		self.assertEqual(quotation.contact_email, capkpi.session.user)
 
 		return quotation
 
@@ -65,7 +65,7 @@ class TestShoppingCart(unittest.TestCase):
 			quotation = _get_cart_quotation()
 			self.assertEqual(quotation.quotation_to, "Customer")
 			self.assertEqual(quotation.party_name, "_Test Customer")
-			self.assertEqual(quotation.contact_email, frappe.session.user)
+			self.assertEqual(quotation.contact_email, capkpi.session.user)
 			return quotation
 
 		self.login_as_customer(
@@ -190,45 +190,45 @@ class TestShoppingCart(unittest.TestCase):
 		self.assertEqual(doc.get("items")[0].item_name, "Test-Tshirt-Temp-S-R")
 
 		# test if items are rendered without error
-		frappe.render_template("templates/includes/cart/cart_items.html", cart)
+		capkpi.render_template("templates/includes/cart/cart_items.html", cart)
 
 	@change_settings("E Commerce Settings", {"save_quotations_as_draft": 1})
 	def test_cart_without_checkout_and_draft_quotation(self):
 		"Test impact of 'save_quotations_as_draft' checkbox."
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 		# add item to cart
 		update_cart("_Test Item", 1)
 		quote_name = request_for_quotation()  # Request for Quote
-		quote_doctstatus = cint(frappe.db.get_value("Quotation", quote_name, "docstatus"))
+		quote_doctstatus = cint(capkpi.db.get_value("Quotation", quote_name, "docstatus"))
 
 		self.assertEqual(quote_doctstatus, 0)
 
-		frappe.db.set_value("E Commerce Settings", None, "save_quotations_as_draft", 0)
-		frappe.local.shopping_cart_settings = None
+		capkpi.db.set_value("E Commerce Settings", None, "save_quotations_as_draft", 0)
+		capkpi.local.shopping_cart_settings = None
 		update_cart("_Test Item", 1)
 		quote_name = request_for_quotation()  # Request for Quote
-		quote_doctstatus = cint(frappe.db.get_value("Quotation", quote_name, "docstatus"))
+		quote_doctstatus = cint(capkpi.db.get_value("Quotation", quote_name, "docstatus"))
 
 		self.assertEqual(quote_doctstatus, 1)
 
 	def create_tax_rule(self):
-		tax_rule = frappe.get_test_records("Tax Rule")[0]
+		tax_rule = capkpi.get_test_records("Tax Rule")[0]
 		try:
-			frappe.get_doc(tax_rule).insert()
-		except (frappe.DuplicateEntryError, ConflictingTaxRule):
+			capkpi.get_doc(tax_rule).insert()
+		except (capkpi.DuplicateEntryError, ConflictingTaxRule):
 			pass
 
 	def create_quotation(self):
-		quotation = frappe.new_doc("Quotation")
+		quotation = capkpi.new_doc("Quotation")
 
 		values = {
 			"doctype": "Quotation",
 			"quotation_to": "Customer",
 			"order_type": "Shopping Cart",
-			"party_name": get_party(frappe.session.user).name,
+			"party_name": get_party(capkpi.session.user).name,
 			"docstatus": 0,
-			"contact_email": frappe.session.user,
+			"contact_email": capkpi.session.user,
 			"selling_price_list": "_Test Price List Rest of the World",
 			"currency": "USD",
 			"taxes_and_charges": "_Test Tax 1 - _TC",
@@ -236,7 +236,7 @@ class TestShoppingCart(unittest.TestCase):
 			"transaction_date": nowdate(),
 			"valid_till": add_months(nowdate(), 1),
 			"items": [{"item_code": "_Test Item", "qty": 1}],
-			"taxes": frappe.get_doc("Sales Taxes and Charges Template", "_Test Tax 1 - _TC").taxes,
+			"taxes": capkpi.get_doc("Sales Taxes and Charges Template", "_Test Tax 1 - _TC").taxes,
 			"company": "_Test Company",
 		}
 
@@ -247,12 +247,12 @@ class TestShoppingCart(unittest.TestCase):
 		return quotation
 
 	def remove_test_quotation(self, quotation):
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 		quotation.delete()
 
 	# helper functions
 	def enable_shopping_cart(self):
-		settings = frappe.get_doc("E Commerce Settings", "E Commerce Settings")
+		settings = capkpi.get_doc("E Commerce Settings", "E Commerce Settings")
 
 		settings.update(
 			{
@@ -265,10 +265,10 @@ class TestShoppingCart(unittest.TestCase):
 		)
 
 		# insert item price
-		if not frappe.db.get_value(
+		if not capkpi.db.get_value(
 			"Item Price", {"price_list": "_Test Price List India", "item_code": "_Test Item"}
 		):
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Item Price",
 					"price_list": "_Test Price List India",
@@ -276,7 +276,7 @@ class TestShoppingCart(unittest.TestCase):
 					"price_list_rate": 10,
 				}
 			).insert()
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Item Price",
 					"price_list": "_Test Price List India",
@@ -286,26 +286,26 @@ class TestShoppingCart(unittest.TestCase):
 			).insert()
 
 		settings.save()
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 	def disable_shopping_cart(self):
-		settings = frappe.get_doc("E Commerce Settings", "E Commerce Settings")
+		settings = capkpi.get_doc("E Commerce Settings", "E Commerce Settings")
 		settings.enabled = 0
 		settings.save()
-		frappe.local.shopping_cart_settings = None
+		capkpi.local.shopping_cart_settings = None
 
 	def login_as_new_user(self):
 		self.create_user_if_not_exists("test_cart_user@example.com")
-		frappe.set_user("test_cart_user@example.com")
+		capkpi.set_user("test_cart_user@example.com")
 
 	def login_as_customer(
 		self, email="test_contact_customer@example.com", name="_Test Contact For _Test Customer"
 	):
 		self.create_user_if_not_exists(email, name)
-		frappe.set_user(email)
+		capkpi.set_user(email)
 
 	def clear_existing_quotations(self):
-		quotations = frappe.get_all(
+		quotations = capkpi.get_all(
 			"Quotation",
 			filters={"party_name": get_party().name, "order_type": "Shopping Cart", "docstatus": 0},
 			order_by="modified desc",
@@ -313,13 +313,13 @@ class TestShoppingCart(unittest.TestCase):
 		)
 
 		for quotation in quotations:
-			frappe.delete_doc("Quotation", quotation, ignore_permissions=True, force=True)
+			capkpi.delete_doc("Quotation", quotation, ignore_permissions=True, force=True)
 
 	def create_user_if_not_exists(self, email, first_name=None):
-		if frappe.db.exists("User", email):
+		if capkpi.db.exists("User", email):
 			return
 
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "User",
 				"user_type": "Website User",

@@ -4,8 +4,8 @@
 import json
 import unittest
 
-import frappe
-from frappe.utils.response import json_handler
+import capkpi
+from capkpi.utils.response import json_handler
 
 from erp.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
 from erp.erp_integrations.doctype.plaid_settings.plaid_settings import (
@@ -22,30 +22,30 @@ class TestPlaidSettings(unittest.TestCase):
 		pass
 
 	def tearDown(self):
-		for bt in frappe.get_all("Bank Transaction"):
-			doc = frappe.get_doc("Bank Transaction", bt.name)
+		for bt in capkpi.get_all("Bank Transaction"):
+			doc = capkpi.get_doc("Bank Transaction", bt.name)
 			doc.cancel()
 			doc.delete()
 
 		for doctype in ("Bank Account", "Bank Account Type", "Bank Account Subtype"):
-			for d in frappe.get_all(doctype):
-				frappe.delete_doc(doctype, d.name, force=True)
+			for d in capkpi.get_all(doctype):
+				capkpi.delete_doc(doctype, d.name, force=True)
 
 	def test_plaid_disabled(self):
-		frappe.db.set_value("Plaid Settings", None, "enabled", 0)
+		capkpi.db.set_value("Plaid Settings", None, "enabled", 0)
 		self.assertTrue(get_plaid_configuration() == "disabled")
 
 	def test_add_account_type(self):
 		add_account_type("brokerage")
-		self.assertEqual(frappe.get_doc("Bank Account Type", "brokerage").name, "brokerage")
+		self.assertEqual(capkpi.get_doc("Bank Account Type", "brokerage").name, "brokerage")
 
 	def test_add_account_subtype(self):
 		add_account_subtype("loan")
-		self.assertEqual(frappe.get_doc("Bank Account Subtype", "loan").name, "loan")
+		self.assertEqual(capkpi.get_doc("Bank Account Subtype", "loan").name, "loan")
 
 	def test_default_bank_account(self):
-		if not frappe.db.exists("Bank", "Citi"):
-			frappe.get_doc({"doctype": "Bank", "bank_name": "Citi"}).insert()
+		if not capkpi.db.exists("Bank", "Citi"):
+			capkpi.get_doc({"doctype": "Bank", "bank_name": "Citi"}).insert()
 
 		bank_accounts = {
 			"account": {
@@ -69,17 +69,17 @@ class TestPlaidSettings(unittest.TestCase):
 			"institution": {"institution_id": "ins_6", "name": "Citi"},
 		}
 
-		bank = json.dumps(frappe.get_doc("Bank", "Citi").as_dict(), default=json_handler)
-		company = frappe.db.get_single_value("Global Defaults", "default_company")
-		frappe.db.set_value("Company", company, "default_bank_account", None)
+		bank = json.dumps(capkpi.get_doc("Bank", "Citi").as_dict(), default=json_handler)
+		company = capkpi.db.get_single_value("Global Defaults", "default_company")
+		capkpi.db.set_value("Company", company, "default_bank_account", None)
 
 		self.assertRaises(
-			frappe.ValidationError, add_bank_accounts, response=bank_accounts, bank=bank, company=company
+			capkpi.ValidationError, add_bank_accounts, response=bank_accounts, bank=bank, company=company
 		)
 
 	def test_new_transaction(self):
-		if not frappe.db.exists("Bank", "Citi"):
-			frappe.get_doc({"doctype": "Bank", "bank_name": "Citi"}).insert()
+		if not capkpi.db.exists("Bank", "Citi"):
+			capkpi.get_doc({"doctype": "Bank", "bank_name": "Citi"}).insert()
 
 		bank_accounts = {
 			"account": {
@@ -103,11 +103,11 @@ class TestPlaidSettings(unittest.TestCase):
 			"institution": {"institution_id": "ins_6", "name": "Citi"},
 		}
 
-		bank = json.dumps(frappe.get_doc("Bank", "Citi").as_dict(), default=json_handler)
-		company = frappe.db.get_single_value("Global Defaults", "default_company")
+		bank = json.dumps(capkpi.get_doc("Bank", "Citi").as_dict(), default=json_handler)
+		company = capkpi.db.get_single_value("Global Defaults", "default_company")
 
-		if frappe.db.get_value("Company", company, "default_bank_account") is None:
-			frappe.db.set_value(
+		if capkpi.db.get_value("Company", company, "default_bank_account") is None:
+			capkpi.db.set_value(
 				"Company",
 				company,
 				"default_bank_account",
@@ -153,4 +153,4 @@ class TestPlaidSettings(unittest.TestCase):
 
 		new_bank_transaction(transactions)
 
-		self.assertTrue(len(frappe.get_all("Bank Transaction")) == 1)
+		self.assertTrue(len(capkpi.get_all("Bank Transaction")) == 1)

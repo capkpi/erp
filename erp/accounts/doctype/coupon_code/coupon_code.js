@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Coupon Code', {
+capkpi.ui.form.on('Coupon Code', {
 	setup: function(frm) {
 		frm.set_query("pricing_rule", function() {
 			return {
@@ -37,7 +37,7 @@ frappe.ui.form.on('Coupon Code', {
 	refresh: function(frm) {
 		if (frm.doc.pricing_rule) {
 			frm.add_custom_button(__("Add/Edit Coupon Conditions"), function(){
-				frappe.set_route("Form", "Pricing Rule", frm.doc.pricing_rule);
+				capkpi.set_route("Form", "Pricing Rule", frm.doc.pricing_rule);
 			});
 		}
 	}

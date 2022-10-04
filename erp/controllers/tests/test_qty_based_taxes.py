@@ -1,7 +1,7 @@
 import unittest
 from uuid import uuid4 as _uuid4
 
-import frappe
+import capkpi
 
 
 def uuid4():
@@ -10,7 +10,7 @@ def uuid4():
 
 class TestTaxes(unittest.TestCase):
 	def setUp(self):
-		self.company = frappe.get_doc(
+		self.company = capkpi.get_doc(
 			{
 				"doctype": "Company",
 				"company_name": uuid4(),
@@ -19,7 +19,7 @@ class TestTaxes(unittest.TestCase):
 				"country": "United States",
 			}
 		).insert()
-		self.account = frappe.get_doc(
+		self.account = capkpi.get_doc(
 			{
 				"doctype": "Account",
 				"account_name": uuid4(),
@@ -28,14 +28,14 @@ class TestTaxes(unittest.TestCase):
 				"parent_account": "Duties and Taxes - {self.company.abbr}".format(self=self),
 			}
 		).insert()
-		self.item_group = frappe.get_doc(
+		self.item_group = capkpi.get_doc(
 			{
 				"doctype": "Item Group",
 				"item_group_name": uuid4(),
 				"parent_item_group": "All Item Groups",
 			}
 		).insert()
-		self.item_tax_template = frappe.get_doc(
+		self.item_tax_template = capkpi.get_doc(
 			{
 				"doctype": "Item Tax Template",
 				"title": uuid4(),
@@ -48,7 +48,7 @@ class TestTaxes(unittest.TestCase):
 				],
 			}
 		).insert()
-		self.item = frappe.get_doc(
+		self.item = capkpi.get_doc(
 			{
 				"doctype": "Item",
 				"item_code": uuid4(),
@@ -62,14 +62,14 @@ class TestTaxes(unittest.TestCase):
 				],
 			}
 		).insert()
-		self.customer = frappe.get_doc(
+		self.customer = capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"customer_name": uuid4(),
 				"customer_group": "All Customer Groups",
 			}
 		).insert()
-		self.supplier = frappe.get_doc(
+		self.supplier = capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_name": uuid4(),
@@ -88,14 +88,14 @@ class TestTaxes(unittest.TestCase):
 			"Delivery Note",
 			"Sales Invoice",
 		]:
-			doc = frappe.get_doc(
+			doc = capkpi.get_doc(
 				{
 					"doctype": dt,
 					"company": self.company.name,
 					"supplier": self.supplier.name,
 					"currency": "USD",
-					"schedule_date": frappe.utils.nowdate(),
-					"delivery_date": frappe.utils.nowdate(),
+					"schedule_date": capkpi.utils.nowdate(),
+					"delivery_date": capkpi.utils.nowdate(),
 					"customer": self.customer.name,
 					"buying_price_list"
 					if dt.startswith("Purchase")

@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import flt
 
 
 class CForm(Document):
@@ -15,17 +15,17 @@ class CForm(Document):
 
 		for d in self.get("invoices"):
 			if d.invoice_no:
-				inv = frappe.db.sql(
+				inv = capkpi.db.sql(
 					"""select c_form_applicable, c_form_no from
 					`tabSales Invoice` where name = %s and docstatus = 1""",
 					d.invoice_no,
 				)
 
 				if inv and inv[0][0] != "Yes":
-					frappe.throw(_("C-form is not applicable for Invoice: {0}").format(d.invoice_no))
+					capkpi.throw(_("C-form is not applicable for Invoice: {0}").format(d.invoice_no))
 
 				elif inv and inv[0][1] and inv[0][1] != self.name:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"""Invoice {0} is tagged in another C-form: {1}.
 						If you want to change C-form no for this invoice,
@@ -36,7 +36,7 @@ class CForm(Document):
 					)
 
 				elif not inv:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Row {0}: Invoice {1} is invalid, it might be cancelled / does not exist. \
 						Please enter a valid Invoice".format(
@@ -54,35 +54,35 @@ class CForm(Document):
 
 	def before_cancel(self):
 		# remove cform reference
-		frappe.db.sql("""update `tabSales Invoice` set c_form_no=null where c_form_no=%s""", self.name)
+		capkpi.db.sql("""update `tabSales Invoice` set c_form_no=null where c_form_no=%s""", self.name)
 
 	def set_cform_in_sales_invoices(self):
 		inv = [d.invoice_no for d in self.get("invoices")]
 		if inv:
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""update `tabSales Invoice` set c_form_no=%s, modified=%s where name in (%s)"""
 				% ("%s", "%s", ", ".join(["%s"] * len(inv))),
 				tuple([self.name, self.modified] + inv),
 			)
 
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""update `tabSales Invoice` set c_form_no = null, modified = %s
 				where name not in (%s) and ifnull(c_form_no, '') = %s"""
 				% ("%s", ", ".join(["%s"] * len(inv)), "%s"),
 				tuple([self.modified] + inv + [self.name]),
 			)
 		else:
-			frappe.throw(_("Please enter atleast 1 invoice in the table"))
+			capkpi.throw(_("Please enter atleast 1 invoice in the table"))
 
 	def set_total_invoiced_amount(self):
 		total = sum(flt(d.grand_total) for d in self.get("invoices"))
-		frappe.db.set(self, "total_invoiced_amount", total)
+		capkpi.db.set(self, "total_invoiced_amount", total)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_invoice_details(self, invoice_no):
 		"""Pull details from invoices for referrence"""
 		if invoice_no:
-			inv = frappe.db.get_value(
+			inv = capkpi.db.get_value(
 				"Sales Invoice",
 				invoice_no,
 				["posting_date", "territory", "base_net_total", "base_grand_total"],

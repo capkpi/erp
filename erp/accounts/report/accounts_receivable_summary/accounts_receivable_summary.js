@@ -1,20 +1,20 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["Accounts Receivable Summary"] = {
+capkpi.query_reports["Accounts Receivable Summary"] = {
 	"filters": [
 		{
 			"fieldname":"company",
 			"label": __("Company"),
 			"fieldtype": "Link",
 			"options": "Company",
-			"default": frappe.defaults.get_user_default("Company")
+			"default": capkpi.defaults.get_user_default("Company")
 		},
 		{
 			"fieldname":"report_date",
 			"label": __("Posting Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today()
+			"default": capkpi.datetime.get_today()
 		},
 		{
 			"fieldname":"ageing_based_on",
@@ -63,7 +63,7 @@ frappe.query_reports["Accounts Receivable Summary"] = {
 			"fieldtype": "Link",
 			"options": "Cost Center",
 			get_query: () => {
-				var company = frappe.query_report.get_filter_value('company');
+				var company = capkpi.query_report.get_filter_value('company');
 				return {
 					filters: {
 						'company': company
@@ -127,7 +127,7 @@ frappe.query_reports["Accounts Receivable Summary"] = {
 	onload: function(report) {
 		report.page.add_inner_button(__("Accounts Receivable"), function() {
 			var filters = report.get_values();
-			frappe.set_route('query-report', 'Accounts Receivable', { company: filters.company });
+			capkpi.set_route('query-report', 'Accounts Receivable', { company: filters.company });
 		});
 	}
 }

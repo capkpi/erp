@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import flt
 
 
 class CashierClosing(Document):
@@ -17,7 +17,7 @@ class CashierClosing(Document):
 		self.make_calculations()
 
 	def get_outstanding(self):
-		values = frappe.db.sql(
+		values = capkpi.db.sql(
 			"""
 			select sum(outstanding_amount)
 			from `tabSales Invoice`
@@ -38,4 +38,4 @@ class CashierClosing(Document):
 
 	def validate_time(self):
 		if self.from_time >= self.time:
-			frappe.throw(_("From Time Should Be Less Than To Time"))
+			capkpi.throw(_("From Time Should Be Less Than To Time"))

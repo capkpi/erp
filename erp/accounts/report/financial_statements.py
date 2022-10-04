@@ -6,9 +6,9 @@ import functools
 import math
 import re
 
-import frappe
-from frappe import _
-from frappe.utils import add_days, add_months, cint, cstr, flt, formatdate, get_first_day, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import add_days, add_months, cint, cstr, flt, formatdate, get_first_day, getdate
 from past.builtins import cmp
 from six import itervalues
 
@@ -53,7 +53,7 @@ def get_period_list(
 	months = get_months(year_start_date, year_end_date)
 
 	for i in range(cint(math.ceil(months / months_to_add))):
-		period = frappe._dict({"from_date": start_date})
+		period = capkpi._dict({"from_date": start_date})
 
 		if i == 0 and filter_based_on == "Date Range":
 			to_date = add_months(get_first_day(start_date), months_to_add)
@@ -108,7 +108,7 @@ def get_period_list(
 
 
 def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
-	fiscal_year = frappe.db.sql(
+	fiscal_year = capkpi.db.sql(
 		"""select min(year_start_date) as year_start_date,
 		max(year_end_date) as year_end_date from `tabFiscal Year` where
 		name between %(from_fiscal_year)s and %(to_fiscal_year)s""",
@@ -121,18 +121,18 @@ def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
 
 def validate_fiscal_year(fiscal_year, from_fiscal_year, to_fiscal_year):
 	if not fiscal_year.get("year_start_date") or not fiscal_year.get("year_end_date"):
-		frappe.throw(_("Start Year and End Year are mandatory"))
+		capkpi.throw(_("Start Year and End Year are mandatory"))
 
 	if getdate(fiscal_year.get("year_end_date")) < getdate(fiscal_year.get("year_start_date")):
-		frappe.throw(_("End Year cannot be before Start Year"))
+		capkpi.throw(_("End Year cannot be before Start Year"))
 
 
 def validate_dates(from_date, to_date):
 	if not from_date or not to_date:
-		frappe.throw(_("From Date and To Date are mandatory"))
+		capkpi.throw(_("From Date and To Date are mandatory"))
 
 	if to_date < from_date:
-		frappe.throw(_("To Date cannot be less than From Date"))
+		capkpi.throw(_("To Date cannot be less than From Date"))
 
 
 def get_months(start_date, end_date):
@@ -174,7 +174,7 @@ def get_data(
 	company_currency = get_appropriate_currency(company, filters)
 
 	gl_entries_by_account = {}
-	for root in frappe.db.sql(
+	for root in capkpi.db.sql(
 		"""select lft, rgt from tabAccount
 			where root_type=%s and ifnull(parent_account, '') = ''""",
 		root_type,
@@ -213,7 +213,7 @@ def get_appropriate_currency(company, filters=None):
 	if filters and filters.get("presentation_currency"):
 		return filters["presentation_currency"]
 	else:
-		return frappe.get_cached_value("Company", company, "default_currency")
+		return capkpi.get_cached_value("Company", company, "default_currency")
 
 
 def calculate_values(
@@ -227,7 +227,7 @@ def calculate_values(
 		for entry in entries:
 			d = accounts_by_name.get(entry.account)
 			if not d:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("Could not retrieve information for {0}.").format(entry.account),
 					title="Error",
 					raise_exception=1,
@@ -268,7 +268,7 @@ def prepare_data(accounts, balance_must_be, period_list, company_currency):
 		# add to output
 		has_value = False
 		total = 0
-		row = frappe._dict(
+		row = capkpi._dict(
 			{
 				"account": _(d.name),
 				"parent_account": _(d.parent_account) if d.parent_account else "",
@@ -351,7 +351,7 @@ def add_total_row(out, root_type, balance_must_be, period_list, company_currency
 
 
 def get_accounts(company, root_type):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select name, account_number, parent_account, lft, rgt, root_type, report_type, account_name, include_in_gross, account_type, is_group, lft, rgt
 		from `tabAccount`
@@ -423,7 +423,7 @@ def set_gl_entries_by_account(
 
 	additional_conditions = get_additional_conditions(from_date, ignore_closing_entries, filters)
 
-	accounts = frappe.db.sql_list(
+	accounts = capkpi.db.sql_list(
 		"""select name from `tabAccount`
 		where lft >= %s and rgt <= %s and company = %s""",
 		(root_lft, root_rgt, company),
@@ -431,7 +431,7 @@ def set_gl_entries_by_account(
 
 	if accounts:
 		additional_conditions += " and account in ({})".format(
-			", ".join(frappe.db.escape(d) for d in accounts)
+			", ".join(capkpi.db.escape(d) for d in accounts)
 		)
 
 		gl_filters = {
@@ -442,7 +442,7 @@ def set_gl_entries_by_account(
 		}
 
 		if filters.get("include_default_book_entries"):
-			gl_filters["company_fb"] = frappe.db.get_value("Company", company, "default_finance_book")
+			gl_filters["company_fb"] = capkpi.db.get_value("Company", company, "default_finance_book")
 
 		for key, value in filters.items():
 			if value:
@@ -478,7 +478,7 @@ def set_gl_entries_by_account(
 				additional_conditions=additional_conditions.replace("and cost_center in %(cost_center)s ", "")
 			)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select posting_date, account, debit, credit, is_opening, fiscal_year, debit_in_account_currency, credit_in_account_currency, account_currency from `tabGL Entry`
 			where company=%(company)s
 			{additional_conditions}
@@ -515,7 +515,7 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 	if filters:
 		if filters.get("project"):
 			if not isinstance(filters.get("project"), list):
-				filters.project = frappe.parse_json(filters.get("project"))
+				filters.project = capkpi.parse_json(filters.get("project"))
 
 			additional_conditions.append("project in %(project)s")
 
@@ -533,7 +533,7 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 	if accounting_dimensions:
 		for dimension in accounting_dimensions:
 			if filters.get(dimension.fieldname):
-				if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+				if capkpi.get_cached_value("DocType", dimension.document_type, "is_tree"):
 					filters[dimension.fieldname] = get_dimension_with_children(
 						dimension.document_type, filters.get(dimension.fieldname)
 					)
@@ -550,12 +550,12 @@ def get_cost_centers_with_children(cost_centers):
 
 	all_cost_centers = []
 	for d in cost_centers:
-		if frappe.db.exists("Cost Center", d):
-			lft, rgt = frappe.db.get_value("Cost Center", d, ["lft", "rgt"])
-			children = frappe.get_all("Cost Center", filters={"lft": [">=", lft], "rgt": ["<=", rgt]})
+		if capkpi.db.exists("Cost Center", d):
+			lft, rgt = capkpi.db.get_value("Cost Center", d, ["lft", "rgt"])
+			children = capkpi.get_all("Cost Center", filters={"lft": [">=", lft], "rgt": ["<=", rgt]})
 			all_cost_centers += [c.name for c in children]
 		else:
-			frappe.throw(_("Cost Center: {0} does not exist").format(d))
+			capkpi.throw(_("Cost Center: {0} does not exist").format(d))
 
 	return list(set(all_cost_centers))
 

@@ -2,16 +2,16 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.model.naming import set_name_by_naming_series
-from frappe.utils import getdate, nowdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.model.naming import set_name_by_naming_series
+from capkpi.utils import getdate, nowdate
 
 
 class Contract(Document):
 	def autoname(self):
-		if frappe.db.get_single_value("Selling Settings", "contract_naming_by") == "Naming Series":
+		if capkpi.db.get_single_value("Selling Settings", "contract_naming_by") == "Naming Series":
 			set_name_by_naming_series(self)
 
 		else:
@@ -21,8 +21,8 @@ class Contract(Document):
 				name = f"{name} - {self.contract_template} Agreement"
 
 			# If identical, append contract name with the next number in the iteration
-			if frappe.db.exists("Contract", name):
-				count = frappe.db.count(
+			if capkpi.db.exists("Contract", name):
+				count = capkpi.db.count(
 					"Contract",
 					filters={
 						"name": ("like", f"%{name}%"),
@@ -38,7 +38,7 @@ class Contract(Document):
 		self.update_fulfilment_status()
 
 	def before_submit(self):
-		self.signed_by_company = frappe.session.user
+		self.signed_by_company = capkpi.session.user
 
 	def before_update_after_submit(self):
 		self.update_contract_status()
@@ -46,7 +46,7 @@ class Contract(Document):
 
 	def validate_dates(self):
 		if self.end_date and self.end_date < self.start_date:
-			frappe.throw(_("End Date cannot be before Start Date."))
+			capkpi.throw(_("End Date cannot be before Start Date."))
 
 	def update_contract_status(self):
 		if self.is_signed:
@@ -108,7 +108,7 @@ def update_status_for_contracts():
 	and submitted Contracts
 	"""
 
-	contracts = frappe.get_all(
+	contracts = capkpi.get_all(
 		"Contract",
 		filters={"is_signed": True, "docstatus": 1},
 		fields=["name", "start_date", "end_date"],
@@ -117,4 +117,4 @@ def update_status_for_contracts():
 	for contract in contracts:
 		status = get_status(contract.get("start_date"), contract.get("end_date"))
 
-		frappe.db.set_value("Contract", contract.get("name"), "status", status)
+		capkpi.db.set_value("Contract", contract.get("name"), "status", status)

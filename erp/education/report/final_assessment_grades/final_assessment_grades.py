@@ -4,8 +4,8 @@
 
 from collections import defaultdict
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.education.report.course_wise_assessment_report.course_wise_assessment_report import (
 	get_chart_data,
@@ -15,14 +15,14 @@ from erp.education.report.course_wise_assessment_report.course_wise_assessment_r
 
 def execute(filters=None):
 	columns, data, grades = [], [], []
-	args = frappe._dict()
+	args = capkpi._dict()
 	course_wise_analysis = defaultdict(dict)
 
 	args["academic_year"] = filters.get("academic_year")
 	assessment_group = args["assessment_group"] = filters.get("assessment_group")
 
 	student_group = filters.get("student_group")
-	args.students = frappe.db.sql_list(
+	args.students = capkpi.db.sql_list(
 		"select student from `tabStudent Group Student` where parent=%s", (student_group)
 	)
 
@@ -37,7 +37,7 @@ def execute(filters=None):
 			student_row["student"] = student
 			student_row["student_name"] = student_details[student]
 			for course in course_dict:
-				scrub_course = frappe.scrub(course)
+				scrub_course = capkpi.scrub(course)
 				if assessment_group in assessment_result[student][course]:
 					student_row["grade_" + scrub_course] = assessment_result[student][course][assessment_group][
 						"Total Score"
@@ -78,7 +78,7 @@ def get_column(course_dict):
 	for course in course_dict:
 		columns.append(
 			{
-				"fieldname": "grade_" + frappe.scrub(course),
+				"fieldname": "grade_" + capkpi.scrub(course),
 				"label": course,
 				"fieldtype": "Data",
 				"width": 110,
@@ -86,7 +86,7 @@ def get_column(course_dict):
 		)
 		columns.append(
 			{
-				"fieldname": "score_" + frappe.scrub(course),
+				"fieldname": "score_" + capkpi.scrub(course),
 				"label": "Score(" + str(course_dict[course]) + ")",
 				"fieldtype": "Float",
 				"width": 100,

@@ -5,10 +5,10 @@
 import json
 import traceback
 
-import frappe
+import capkpi
 import requests
-from frappe import _
-from frappe.model.document import Document
+from capkpi import _
+from capkpi.model.document import Document
 from requests_oauthlib import OAuth2Session
 
 from erp import encode_company_abbr
@@ -19,18 +19,18 @@ from erp import encode_company_abbr
 # Request parameters will have two parameters `code` and `realmId`
 # `code` is required to acquire refresh_token and access_token
 # `realmId` is the QuickBooks Company ID. It is Needed to actually fetch data.
-@frappe.whitelist()
+@capkpi.whitelist()
 def callback(*args, **kwargs):
-	migrator = frappe.get_doc("QuickBooks Migrator")
+	migrator = capkpi.get_doc("QuickBooks Migrator")
 	migrator.set_indicator("Connecting to QuickBooks")
 	migrator.code = kwargs.get("code")
 	migrator.quickbooks_company_id = kwargs.get("realmId")
 	migrator.save()
 	migrator.get_tokens()
-	frappe.db.commit()
+	capkpi.db.commit()
 	migrator.set_indicator("Connected to QuickBooks")
 	# We need this page to automatically close afterwards
-	frappe.respond_as_web_page("Quickbooks Authentication", html="<script>window.close()</script>")
+	capkpi.respond_as_web_page("Quickbooks Authentication", html="<script>window.close()</script>")
 
 
 class QuickBooksMigrator(Document):
@@ -45,8 +45,8 @@ class QuickBooksMigrator(Document):
 	def on_update(self):
 		if self.company:
 			# We need a Cost Center corresponding to the selected erp Company
-			self.default_cost_center = frappe.db.get_value("Company", self.company, "cost_center")
-			company_warehouses = frappe.get_all(
+			self.default_cost_center = capkpi.db.get_value("Company", self.company, "cost_center")
+			company_warehouses = capkpi.get_all(
 				"Warehouse", filters={"company": self.company, "is_group": 0}
 			)
 			if company_warehouses:
@@ -54,9 +54,9 @@ class QuickBooksMigrator(Document):
 		if self.authorization_endpoint:
 			self.authorization_url = self.oauth.authorization_url(self.authorization_endpoint)[0]
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def migrate(self):
-		frappe.enqueue_doc("QuickBooks Migrator", "QuickBooks Migrator", "_migrate", queue="long")
+		capkpi.enqueue_doc("QuickBooks Migrator", "QuickBooks Migrator", "_migrate", queue="long")
 
 	def _migrate(self):
 		try:
@@ -117,7 +117,7 @@ class QuickBooksMigrator(Document):
 			self.set_indicator("Failed")
 			self._log_error(e)
 
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	def get_tokens(self):
 		token = self.oauth.fetch_token(
@@ -157,11 +157,11 @@ class QuickBooksMigrator(Document):
 		for doctype in doctypes_for_company_field:
 			self._make_custom_company_field(doctype)
 
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	def _make_custom_quickbooks_id_field(self, doctype):
-		if not frappe.get_meta(doctype).has_field("quickbooks_id"):
-			frappe.get_doc(
+		if not capkpi.get_meta(doctype).has_field("quickbooks_id"):
+			capkpi.get_doc(
 				{
 					"doctype": "Custom Field",
 					"label": "QuickBooks ID",
@@ -172,8 +172,8 @@ class QuickBooksMigrator(Document):
 			).insert()
 
 	def _make_custom_company_field(self, doctype):
-		if not frappe.get_meta(doctype).has_field("company"):
-			frappe.get_doc(
+		if not capkpi.get_meta(doctype).has_field("company"):
+			capkpi.get_doc(
 				{
 					"doctype": "Custom Field",
 					"label": "Company",
@@ -193,14 +193,14 @@ class QuickBooksMigrator(Document):
 		roots = ["Asset", "Equity", "Expense", "Liability", "Income"]
 		for root in roots:
 			try:
-				if not frappe.db.exists(
+				if not capkpi.db.exists(
 					{
 						"doctype": "Account",
 						"name": encode_company_abbr("{} - QB".format(root), self.company),
 						"company": self.company,
 					}
 				):
-					frappe.get_doc(
+					capkpi.get_doc(
 						{
 							"doctype": "Account",
 							"account_name": "{} - QB".format(root),
@@ -211,7 +211,7 @@ class QuickBooksMigrator(Document):
 					).insert(ignore_mandatory=True)
 			except Exception as e:
 				self._log_error(e, root)
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	def _migrate_entries(self, entity):
 		try:
@@ -278,18 +278,18 @@ class QuickBooksMigrator(Document):
 			# Creates fiscal years till oldest ledger entry date is covered
 			from itertools import chain
 
-			from frappe.utils.data import add_years, getdate
+			from capkpi.utils.data import add_years, getdate
 
 			smallest_ledger_entry_date = getdate(
 				min(entry["date"] for entry in chain(*self.gl_entries.values()) if entry["date"])
 			)
-			oldest_fiscal_year = frappe.get_all(
+			oldest_fiscal_year = capkpi.get_all(
 				"Fiscal Year", fields=["year_start_date", "year_end_date"], order_by="year_start_date"
 			)[0]
 			# Keep on creating fiscal years
 			# until smallest_ledger_entry_date is no longer smaller than the oldest fiscal year's start date
 			while smallest_ledger_entry_date < oldest_fiscal_year.year_start_date:
-				new_fiscal_year = frappe.get_doc({"doctype": "Fiscal Year"})
+				new_fiscal_year = capkpi.get_doc({"doctype": "Fiscal Year"})
 				new_fiscal_year.year_start_date = add_years(oldest_fiscal_year.year_start_date, -1)
 				new_fiscal_year.year_end_date = add_years(oldest_fiscal_year.year_end_date, -1)
 				if new_fiscal_year.year_start_date.year == new_fiscal_year.year_end_date.year:
@@ -301,7 +301,7 @@ class QuickBooksMigrator(Document):
 				new_fiscal_year.save()
 				oldest_fiscal_year = new_fiscal_year
 
-			frappe.db.commit()
+			capkpi.db.commit()
 		except Exception as e:
 			self._log_error(e)
 
@@ -346,7 +346,7 @@ class QuickBooksMigrator(Document):
 				}
 			)
 			entity_method_map[entity](entry)
-		frappe.db.commit()
+		capkpi.db.commit()
 
 	def _preprocess_entries(self, entity, entries):
 		entity_method_map = {
@@ -385,8 +385,8 @@ class QuickBooksMigrator(Document):
 						"date": data[0]["value"],
 						"type": data[1]["value"],
 						"id": data[1].get("id"),
-						"credit": frappe.utils.flt(data[2]["value"]),
-						"debit": frappe.utils.flt(data[3]["value"]),
+						"credit": capkpi.utils.flt(data[2]["value"]),
+						"debit": capkpi.utils.flt(data[3]["value"]),
 					}
 				)
 			if row["type"] == "Section":
@@ -422,7 +422,7 @@ class QuickBooksMigrator(Document):
 		}
 		# Map Quickbooks Account Types to ERP root_accunts and and root_type
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Account", "quickbooks_id": account["Id"], "company": self.company}
 			):
 				is_child = account["SubAccount"]
@@ -442,7 +442,7 @@ class QuickBooksMigrator(Document):
 						"{} - QB".format(mapping[account["AccountType"]]), self.company
 					)
 
-				frappe.get_doc(
+				capkpi.get_doc(
 					{
 						"doctype": "Account",
 						"quickbooks_id": account_id,
@@ -458,7 +458,7 @@ class QuickBooksMigrator(Document):
 
 				if is_group:
 					# Create a Leaf account corresponding to the group account
-					frappe.get_doc(
+					capkpi.get_doc(
 						{
 							"doctype": "Account",
 							"quickbooks_id": account["Id"],
@@ -496,14 +496,14 @@ class QuickBooksMigrator(Document):
 
 	def _save_tax_rate(self, tax_rate):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{
 					"doctype": "Account",
 					"quickbooks_id": "TaxRate - {}".format(tax_rate["Id"]),
 					"company": self.company,
 				}
 			):
-				frappe.get_doc(
+				capkpi.get_doc(
 					{
 						"doctype": "Account",
 						"quickbooks_id": "TaxRate - {}".format(tax_rate["Id"]),
@@ -526,11 +526,11 @@ class QuickBooksMigrator(Document):
 
 	def _save_customer(self, customer):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Customer", "quickbooks_id": customer["Id"], "company": self.company}
 			):
 				try:
-					receivable_account = frappe.get_all(
+					receivable_account = capkpi.get_all(
 						"Account",
 						filters={
 							"account_type": "Receivable",
@@ -540,7 +540,7 @@ class QuickBooksMigrator(Document):
 					)[0]["name"]
 				except Exception:
 					receivable_account = None
-				erpcustomer = frappe.get_doc(
+				erpcustomer = capkpi.get_doc(
 					{
 						"doctype": "Customer",
 						"quickbooks_id": customer["Id"],
@@ -562,7 +562,7 @@ class QuickBooksMigrator(Document):
 
 	def _save_item(self, item):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Item", "quickbooks_id": item["Id"], "company": self.company}
 			):
 				if item["Type"] in ("Service", "Inventory"):
@@ -582,19 +582,19 @@ class QuickBooksMigrator(Document):
 					if "IncomeAccountRef" in item:
 						income_account = self._get_account_name_by_id(item["IncomeAccountRef"]["value"])
 						item_dict["item_defaults"][0]["income_account"] = income_account
-					frappe.get_doc(item_dict).insert()
+					capkpi.get_doc(item_dict).insert()
 		except Exception as e:
 			self._log_error(e, item)
 
 	def _allow_fraction_in_unit(self):
-		frappe.db.set_value("UOM", "Unit", "must_be_whole_number", 0)
+		capkpi.db.set_value("UOM", "Unit", "must_be_whole_number", 0)
 
 	def _save_vendor(self, vendor):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Supplier", "quickbooks_id": vendor["Id"], "company": self.company}
 			):
-				erpsupplier = frappe.get_doc(
+				erpsupplier = capkpi.get_doc(
 					{
 						"doctype": "Supplier",
 						"quickbooks_id": vendor["Id"],
@@ -650,7 +650,7 @@ class QuickBooksMigrator(Document):
 
 	def _save_sales_invoice(self, invoice, quickbooks_id, is_return=False, is_pos=False):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Sales Invoice", "quickbooks_id": quickbooks_id, "company": self.company}
 			):
 				invoice_dict = {
@@ -665,7 +665,7 @@ class QuickBooksMigrator(Document):
 					"posting_date": invoice["TxnDate"],
 					# QuickBooks doesn't make Due Date a mandatory field this is a hack
 					"due_date": invoice.get("DueDate", invoice["TxnDate"]),
-					"customer": frappe.get_all(
+					"customer": capkpi.get_all(
 						"Customer",
 						filters={
 							"quickbooks_id": invoice["CustomerRef"]["value"],
@@ -691,7 +691,7 @@ class QuickBooksMigrator(Document):
 						invoice_dict["apply_discount_on"] = "Grand Total"
 					invoice_dict["discount_amount"] = discount["Amount"]
 
-				invoice_doc = frappe.get_doc(invoice_dict)
+				invoice_doc = capkpi.get_doc(invoice_dict)
 				invoice_doc.insert()
 				invoice_doc.submit()
 		except Exception as e:
@@ -709,7 +709,7 @@ class QuickBooksMigrator(Document):
 					else:
 						tax_code = "NON"
 				if line["SalesItemLineDetail"]["ItemRef"]["value"] != "SHIPPING_ITEM_ID":
-					item = frappe.db.get_all(
+					item = capkpi.db.get_all(
 						"Item",
 						filters={
 							"quickbooks_id": line["SalesItemLineDetail"]["ItemRef"]["value"],
@@ -802,9 +802,9 @@ class QuickBooksMigrator(Document):
 					account_line["debit_in_account_currency"] = line["debit"]
 				elif line["credit"]:
 					account_line["credit_in_account_currency"] = line["credit"]
-				if frappe.db.get_value("Account", line["account"], "account_type") == "Receivable":
+				if capkpi.db.get_value("Account", line["account"], "account_type") == "Receivable":
 					account_line["party_type"] = "Customer"
-					account_line["party"] = frappe.get_all(
+					account_line["party"] = capkpi.get_all(
 						"Customer",
 						filters={"quickbooks_id": invoice["CustomerRef"]["value"], "company": self.company},
 					)[0]["name"]
@@ -848,10 +848,10 @@ class QuickBooksMigrator(Document):
 
 	def __save_journal_entry(self, quickbooks_id, accounts, posting_date):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Journal Entry", "quickbooks_id": quickbooks_id, "company": self.company}
 			):
-				je = frappe.get_doc(
+				je = capkpi.get_doc(
 					{
 						"doctype": "Journal Entry",
 						"quickbooks_id": quickbooks_id,
@@ -878,7 +878,7 @@ class QuickBooksMigrator(Document):
 
 	def __save_purchase_invoice(self, invoice, quickbooks_id, is_return=False):
 		try:
-			if not frappe.db.exists(
+			if not capkpi.db.exists(
 				{"doctype": "Purchase Invoice", "quickbooks_id": quickbooks_id, "company": self.company}
 			):
 				credit_to_account = self._get_account_name_by_id(invoice["APAccountRef"]["value"])
@@ -890,7 +890,7 @@ class QuickBooksMigrator(Document):
 					"posting_date": invoice["TxnDate"],
 					"due_date": invoice.get("DueDate", invoice["TxnDate"]),
 					"credit_to": credit_to_account,
-					"supplier": frappe.get_all(
+					"supplier": capkpi.get_all(
 						"Supplier",
 						filters={
 							"quickbooks_id": invoice["VendorRef"]["value"],
@@ -905,7 +905,7 @@ class QuickBooksMigrator(Document):
 					"udpate_stock": 0,
 					"company": self.company,
 				}
-				invoice_doc = frappe.get_doc(invoice_dict)
+				invoice_doc = capkpi.get_doc(invoice_dict)
 				invoice_doc.insert()
 				invoice_doc.submit()
 		except Exception as e:
@@ -922,7 +922,7 @@ class QuickBooksMigrator(Document):
 						tax_code = purchase_invoice["TxnTaxDetail"]["TxnTaxCodeRef"]["value"]
 					else:
 						tax_code = "NON"
-				item = frappe.db.get_all(
+				item = capkpi.db.get_all(
 					"Item",
 					filters={
 						"quickbooks_id": line["ItemBasedExpenseLineDetail"]["ItemRef"]["value"],
@@ -993,10 +993,10 @@ class QuickBooksMigrator(Document):
 				if linked_transaction["TxnType"] == "Invoice":
 					si_quickbooks_id = "Invoice - {}".format(linked_transaction["TxnId"])
 					# Invoice could have been saved as a Sales Invoice or a Journal Entry
-					if frappe.db.exists(
+					if capkpi.db.exists(
 						{"doctype": "Sales Invoice", "quickbooks_id": si_quickbooks_id, "company": self.company}
 					):
-						sales_invoice = frappe.get_all(
+						sales_invoice = capkpi.get_all(
 							"Sales Invoice",
 							filters={
 								"quickbooks_id": si_quickbooks_id,
@@ -1009,10 +1009,10 @@ class QuickBooksMigrator(Document):
 						party = sales_invoice["customer"]
 						party_account = sales_invoice["debit_to"]
 
-					if frappe.db.exists(
+					if capkpi.db.exists(
 						{"doctype": "Journal Entry", "quickbooks_id": si_quickbooks_id, "company": self.company}
 					):
-						journal_entry = frappe.get_doc(
+						journal_entry = capkpi.get_doc(
 							"Journal Entry",
 							{
 								"quickbooks_id": si_quickbooks_id,
@@ -1063,10 +1063,10 @@ class QuickBooksMigrator(Document):
 				linked_transaction = line["LinkedTxn"][0]
 				if linked_transaction["TxnType"] == "Bill":
 					pi_quickbooks_id = "Bill - {}".format(linked_transaction["TxnId"])
-					if frappe.db.exists(
+					if capkpi.db.exists(
 						{"doctype": "Purchase Invoice", "quickbooks_id": pi_quickbooks_id, "company": self.company}
 					):
-						purchase_invoice = frappe.get_all(
+						purchase_invoice = capkpi.get_all(
 							"Purchase Invoice",
 							filters={
 								"quickbooks_id": pi_quickbooks_id,
@@ -1128,7 +1128,7 @@ class QuickBooksMigrator(Document):
 					)
 				elif line["DetailType"] == "ItemBasedExpenseLineDetail":
 					account = (
-						frappe.get_doc(
+						capkpi.get_doc(
 							"Item",
 							{
 								"quickbooks_id": line["ItemBasedExpenseLineDetail"]["ItemRef"]["value"],
@@ -1310,8 +1310,8 @@ class QuickBooksMigrator(Document):
 
 	def _create_address(self, entity, doctype, address, address_type):
 		try:
-			if not frappe.db.exists({"doctype": "Address", "quickbooks_id": address["Id"]}):
-				frappe.get_doc(
+			if not capkpi.db.exists({"doctype": "Address", "quickbooks_id": address["Id"]}):
+				capkpi.get_doc(
 					{
 						"doctype": "Address",
 						"quickbooks_address_id": address["Id"],
@@ -1340,12 +1340,12 @@ class QuickBooksMigrator(Document):
 		return response
 
 	def _get_account_name_by_id(self, quickbooks_id):
-		return frappe.get_all(
+		return capkpi.get_all(
 			"Account", filters={"quickbooks_id": quickbooks_id, "company": self.company}
 		)[0]["name"]
 
 	def _publish(self, *args, **kwargs):
-		frappe.publish_realtime("quickbooks_progress_update", *args, **kwargs)
+		capkpi.publish_realtime("quickbooks_progress_update", *args, **kwargs)
 
 	def _get_unique_account_name(self, quickbooks_name, number=0):
 		if number:
@@ -1353,7 +1353,7 @@ class QuickBooksMigrator(Document):
 		else:
 			quickbooks_account_name = "{} - QB".format(quickbooks_name)
 		company_encoded_account_name = encode_company_abbr(quickbooks_account_name, self.company)
-		if frappe.db.exists(
+		if capkpi.db.exists(
 			{"doctype": "Account", "name": company_encoded_account_name, "company": self.company}
 		):
 			unique_account_name = self._get_unique_account_name(quickbooks_name, number + 1)
@@ -1362,7 +1362,7 @@ class QuickBooksMigrator(Document):
 		return unique_account_name
 
 	def _log_error(self, execption, data=""):
-		frappe.log_error(
+		capkpi.log_error(
 			title="QuickBooks Migration Error",
 			message="\n".join(
 				[
@@ -1377,4 +1377,4 @@ class QuickBooksMigrator(Document):
 	def set_indicator(self, status):
 		self.status = status
 		self.save()
-		frappe.db.commit()
+		capkpi.db.commit()

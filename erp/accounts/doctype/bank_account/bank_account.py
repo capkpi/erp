@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.contacts.address_and_contact import (
+import capkpi
+from capkpi import _
+from capkpi.contacts.address_and_contact import (
 	delete_contact_and_address,
 	load_address_and_contact,
 )
-from frappe.model.document import Document
+from capkpi.model.document import Document
 
 
 class BankAccount(Document):
@@ -28,7 +28,7 @@ class BankAccount(Document):
 
 	def validate_company(self):
 		if self.is_company_account and not self.company:
-			frappe.throw(_("Company is manadatory for company account"))
+			capkpi.throw(_("Company is manadatory for company account"))
 
 	def validate_iban(self):
 		"""
@@ -54,15 +54,15 @@ class BankAccount(Document):
 		try:
 			to_check = int("".join(encoded))
 		except ValueError:
-			frappe.throw(_("IBAN is not valid"))
+			capkpi.throw(_("IBAN is not valid"))
 
 		if to_check % 97 != 1:
-			frappe.throw(_("IBAN is not valid"))
+			capkpi.throw(_("IBAN is not valid"))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_bank_account(doctype, docname):
-	doc = frappe.new_doc("Bank Account")
+	doc = capkpi.new_doc("Bank Account")
 	doc.party_type = doctype
 	doc.party = docname
 	doc.is_default = 1
@@ -70,13 +70,13 @@ def make_bank_account(doctype, docname):
 	return doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_bank_account(party_type, party):
-	return frappe.db.get_value(party_type, party, "default_bank_account")
+	return capkpi.db.get_value(party_type, party, "default_bank_account")
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_bank_account_details(bank_account):
-	return frappe.db.get_value(
+	return capkpi.db.get_value(
 		"Bank Account", bank_account, ["account", "bank", "bank_account_no"], as_dict=1
 	)

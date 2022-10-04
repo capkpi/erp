@@ -1,7 +1,7 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Asset Movement', {
+capkpi.ui.form.on('Asset Movement', {
 	setup: (frm) => {
 		frm.set_query("to_employee", "assets", (doc) => {
 			return {
@@ -86,14 +86,14 @@ frappe.ui.form.on('Asset Movement', {
 	}
 });
 
-frappe.ui.form.on('Asset Movement Item', {
+capkpi.ui.form.on('Asset Movement Item', {
 	asset: function(frm, cdt, cdn) {
 		// on manual entry of an asset auto sets their source location / employee
 		const asset_name = locals[cdt][cdn].asset;
 		if (asset_name){
-			frappe.db.get_doc('Asset', asset_name).then((asset_doc) => {
-				if(asset_doc.location) frappe.model.set_value(cdt, cdn, 'source_location', asset_doc.location);
-				if(asset_doc.custodian) frappe.model.set_value(cdt, cdn, 'from_employee', asset_doc.custodian);
+			capkpi.db.get_doc('Asset', asset_name).then((asset_doc) => {
+				if(asset_doc.location) capkpi.model.set_value(cdt, cdn, 'source_location', asset_doc.location);
+				if(asset_doc.custodian) capkpi.model.set_value(cdt, cdn, 'from_employee', asset_doc.custodian);
 			}).catch((err) => {
 				console.log(err); // eslint-disable-line
 			});

@@ -1,5 +1,5 @@
-import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+import capkpi
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def create_custom_pos_fields():
@@ -22,7 +22,7 @@ def create_custom_pos_fields():
 			},
 		]
 	}
-	if not frappe.get_meta("POS Invoice").has_field("request_for_payment"):
+	if not capkpi.get_meta("POS Invoice").has_field("request_for_payment"):
 		create_custom_fields(pos_field)
 
 	record_dict = [
@@ -51,6 +51,6 @@ def create_custom_pos_fields():
 
 def create_pos_settings(record_dict):
 	for record in record_dict:
-		if frappe.db.exists("POS Field", {"fieldname": record.get("fieldname")}):
+		if capkpi.db.exists("POS Field", {"fieldname": record.get("fieldname")}):
 			continue
-		frappe.get_doc(record).insert()
+		capkpi.get_doc(record).insert()

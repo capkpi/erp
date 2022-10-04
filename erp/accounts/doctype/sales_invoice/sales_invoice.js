@@ -2,7 +2,7 @@
 // License: GNU General Public License v3. See license.txt
 
 {% include 'erp/selling/sales_common.js' %};
-frappe.provide("erp.accounts");
+capkpi.provide("erp.accounts");
 
 
 erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
@@ -15,7 +15,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 		erp.accounts.dimensions.update_dimension(this.frm, this.frm.doctype);
 		let me = this;
 		if (this.frm.doc.company) {
-			frappe.call({
+			capkpi.call({
 				method:
 					"erp.accounts.party.get_party_account",
 				args: {
@@ -117,7 +117,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 					cur_frm.events.create_invoice_discounting(cur_frm);
 				}, __('Create'));
 
-				if (doc.due_date < frappe.datetime.get_today()) {
+				if (doc.due_date < capkpi.datetime.get_today()) {
 					cur_frm.add_custom_button(__('Dunning'), function() {
 						cur_frm.events.create_dunning(cur_frm);
 					}, __('Create'));
@@ -159,7 +159,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	},
 
 	make_maintenance_schedule: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.sales_invoice.sales_invoice.make_maintenance_schedule",
 			frm: cur_frm
 		})
@@ -168,12 +168,12 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	on_submit: function(doc, dt, dn) {
 		var me = this;
 
-		if (frappe.get_route()[0] != 'Form') {
+		if (capkpi.get_route()[0] != 'Form') {
 			return
 		}
 
 		$.each(doc["items"], function(i, row) {
-			if(row.delivery_note) frappe.model.clear_doc("Delivery Note", row.delivery_note)
+			if(row.delivery_note) capkpi.model.clear_doc("Delivery Note", row.delivery_note)
 		})
 	},
 
@@ -298,7 +298,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 			});
 
 		if(this.frm.doc.customer) {
-			frappe.call({
+			capkpi.call({
 				"method": "erp.accounts.doctype.sales_invoice.sales_invoice.get_loyalty_programs",
 				"args": {
 					"customer": this.frm.doc.customer
@@ -313,7 +313,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	},
 
 	make_inter_company_invoice: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_purchase_invoice",
 			frm: me.frm
 		});
@@ -323,7 +323,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 		var me = this;
 		if(this.frm.doc.debit_to) {
 			me.frm.call({
-				method: "frappe.client.get_value",
+				method: "capkpi.client.get_value",
 				args: {
 					doctype: "Account",
 					fieldname: "account_currency",
@@ -346,7 +346,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 
 	write_off_outstanding_amount_automatically() {
 		if (cint(this.frm.doc.write_off_outstanding_amount_automatically)) {
-			frappe.model.round_floats_in(this.frm.doc, ["grand_total", "paid_amount"]);
+			capkpi.model.round_floats_in(this.frm.doc, ["grand_total", "paid_amount"]);
 			// this will make outstanding amount 0
 			this.frm.set_value("write_off_amount",
 				flt(this.frm.doc.grand_total - this.frm.doc.paid_amount - this.frm.doc.total_advance, precision("write_off_amount"))
@@ -363,7 +363,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	},
 
 	items_add: function(doc, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
+		var row = capkpi.get_doc(cdt, cdn);
 		this.frm.script_manager.copy_from_first_row("items", row, ["income_account", "discount_account", "cost_center"]);
 	},
 
@@ -381,7 +381,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	},
 
 	make_sales_return: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.sales_invoice.sales_invoice.make_sales_return",
 			frm: cur_frm
 		})
@@ -390,14 +390,14 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 	asset: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 		if(row.asset) {
-			frappe.call({
+			capkpi.call({
 				method: erp.assets.doctype.asset.depreciation.get_disposal_account_and_cost_center,
 				args: {
 					"company": frm.doc.company
 				},
 				callback: function(r, rt) {
-					frappe.model.set_value(cdt, cdn, "income_account", r.message[0]);
-					frappe.model.set_value(cdt, cdn, "cost_center", r.message[1]);
+					capkpi.model.set_value(cdt, cdn, "income_account", r.message[0]);
+					capkpi.model.set_value(cdt, cdn, "cost_center", r.message[1]);
 				}
 			})
 		}
@@ -417,7 +417,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 			this.frm.set_value("allocate_advances_automatically", 0);
 			if(!this.frm.doc.company) {
 				this.frm.set_value("is_pos", 0);
-				frappe.msgprint(__("Please specify Company to proceed"));
+				capkpi.msgprint(__("Please specify Company to proceed"));
 			} else {
 				var me = this;
 				return this.frm.call({
@@ -433,7 +433,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 								me.frm.script_manager.trigger("taxes_and_charges");
 							}
 
-							frappe.model.set_default_values(me.frm.doc);
+							capkpi.model.set_default_values(me.frm.doc);
 							me.set_dynamic_labels();
 							me.calculate_taxes_and_totals();
 						}
@@ -471,7 +471,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 		this._super();
 		if (this.frm.doc.timesheets) {
 			this.frm.doc.timesheets.forEach((d) => {
-				let row = frappe.get_doc(d.doctype, d.name)
+				let row = capkpi.get_doc(d.doctype, d.name)
 				set_timesheet_detail_rate(row.doctype, row.name, me.frm.doc.currency, row.timesheet_detail)
 			});
 			this.frm.trigger("calculate_timesheet_totals");
@@ -495,7 +495,7 @@ erp.accounts.SalesInvoiceController = erp.selling.SellingController.extend({
 $.extend(cur_frm.cscript, new erp.accounts.SalesInvoiceController({frm: cur_frm}));
 
 cur_frm.cscript['Make Delivery Note'] = function() {
-	frappe.model.open_mapped_doc({
+	capkpi.model.open_mapped_doc({
 		method: "erp.accounts.doctype.sales_invoice.sales_invoice.make_delivery_note",
 		frm: cur_frm
 	})
@@ -587,7 +587,7 @@ cur_frm.set_query("asset", "items", function(doc, cdt, cdn) {
 	}
 });
 
-frappe.ui.form.on('Sales Invoice', {
+capkpi.ui.form.on('Sales Invoice', {
 	setup: function(frm){
 		frm.add_fetch('customer', 'tax_id', 'tax_id');
 		frm.add_fetch('payment_term', 'invoice_portion', 'invoice_portion');
@@ -685,11 +685,11 @@ frappe.ui.form.on('Sales Invoice', {
 
 		frm.set_query('company_address', function(doc) {
 			if(!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {
-				query: 'frappe.contacts.doctype.address.address.address_query',
+				query: 'capkpi.contacts.doctype.address.address.address_query',
 				filters: {
 					link_doctype: 'Company',
 					link_name: doc.company
@@ -699,7 +699,7 @@ frappe.ui.form.on('Sales Invoice', {
 
 		frm.set_query('pos_profile', function(doc) {
 			if(!doc.company) {
-				frappe.throw(_('Please set Company'));
+				capkpi.throw(_('Please set Company'));
 			}
 
 			return {
@@ -733,7 +733,7 @@ frappe.ui.form.on('Sales Invoice', {
 	// When multiple companies are set up. in case company name is changed set default company address
 	company: function(frm){
 		if (frm.doc.company) {
-			frappe.call({
+			capkpi.call({
 				method: "erp.setup.doctype.company.company.get_default_company_address",
 				args: {name:frm.doc.company, existing_address: frm.doc.company_address || ""},
 				debounce: 2000,
@@ -767,7 +767,7 @@ frappe.ui.form.on('Sales Invoice', {
 		if (frm.redemption_conversion_factor) {
 			frm.events.set_loyalty_points(frm);
 		} else {
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.loyalty_program.loyalty_program.get_redeemption_factor",
 				args: {
 					"loyalty_program": frm.doc.loyalty_program
@@ -791,13 +791,13 @@ frappe.ui.form.on('Sales Invoice', {
 			hide_field(parent_fields);
 		} else {
 			for (var i in parent_fields) {
-				var docfield = frappe.meta.docfield_map[doc.doctype][parent_fields[i]];
+				var docfield = capkpi.meta.docfield_map[doc.doctype][parent_fields[i]];
 				if(!docfield.hidden) unhide_field(parent_fields[i]);
 			}
 		}
 
 		// India related fields
-		if (frappe.boot.sysdefaults.country == 'India') unhide_field(['c_form_applicable', 'c_form_no']);
+		if (capkpi.boot.sysdefaults.country == 'India') unhide_field(['c_form_applicable', 'c_form_no']);
 		else hide_field(['c_form_applicable', 'c_form_no']);
 
 		frm.refresh_fields();
@@ -805,7 +805,7 @@ frappe.ui.form.on('Sales Invoice', {
 
 	get_loyalty_details: function(frm) {
 		if (frm.doc.customer && frm.doc.redeem_loyalty_points) {
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.loyalty_program.loyalty_program.get_loyalty_program_details",
 				args: {
 					"customer": frm.doc.customer,
@@ -830,7 +830,7 @@ frappe.ui.form.on('Sales Invoice', {
 			var remaining_amount = flt(frm.doc.grand_total) - flt(frm.doc.total_advance) - flt(frm.doc.write_off_amount);
 			if (frm.doc.grand_total && (remaining_amount < loyalty_amount)) {
 				let redeemable_points = parseInt(remaining_amount/frm.redemption_conversion_factor);
-				frappe.throw(__("You can only redeem max {0} points in this order.",[redeemable_points]));
+				capkpi.throw(__("You can only redeem max {0} points in this order.",[redeemable_points]));
 			}
 			frm.set_value("loyalty_amount", loyalty_amount);
 		}
@@ -838,10 +838,10 @@ frappe.ui.form.on('Sales Invoice', {
 
 	// Healthcare
 	patient: function(frm) {
-		if (frappe.boot.active_domains.includes("Healthcare")){
+		if (capkpi.boot.active_domains.includes("Healthcare")){
 			if(frm.doc.patient){
-				frappe.call({
-					method: "frappe.client.get_value",
+				capkpi.call({
+					method: "capkpi.client.get_value",
 					args:{
 						doctype: "Patient",
 						filters: {
@@ -882,7 +882,7 @@ frappe.ui.form.on('Sales Invoice', {
 	},
 
 	async get_timesheet_data(frm, kwargs) {
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.projects.doctype.timesheet.timesheet.get_projectwise_timesheet_data",
 			args: kwargs
 		}).then(r => {
@@ -917,7 +917,7 @@ frappe.ui.form.on('Sales Invoice', {
 			return frm.exchange_rates[from_currency][to_currency];
 		}
 
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.setup.utils.get_exchange_rate",
 			args: {
 				from_currency,
@@ -960,7 +960,7 @@ frappe.ui.form.on('Sales Invoice', {
 	refresh: function(frm) {
 		if (frm.doc.docstatus===0 && !frm.doc.is_return) {
 			frm.add_custom_button(__("Fetch Timesheet"), function() {
-				let d = new frappe.ui.Dialog({
+				let d = new capkpi.ui.Dialog({
 					title: __("Fetch Timesheet"),
 					fields: [
 						{
@@ -1006,7 +1006,7 @@ frappe.ui.form.on('Sales Invoice', {
 			frm.set_df_property('return_against', 'label', __('Adjustment Against'));
 		}
 
-		if (frappe.boot.active_domains.includes("Healthcare")) {
+		if (capkpi.boot.active_domains.includes("Healthcare")) {
 			frm.set_df_property("patient", "hidden", 0);
 			frm.set_df_property("patient_name", "hidden", 0);
 			frm.set_df_property("ref_practitioner", "hidden", 0);
@@ -1027,14 +1027,14 @@ frappe.ui.form.on('Sales Invoice', {
 	},
 
 	create_invoice_discounting: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.sales_invoice.sales_invoice.create_invoice_discounting",
 			frm: frm
 		});
 	},
 
 	create_dunning: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.sales_invoice.sales_invoice.create_dunning",
 			frm: frm
 		});
@@ -1042,7 +1042,7 @@ frappe.ui.form.on('Sales Invoice', {
 });
 
 
-frappe.ui.form.on("Sales Invoice Timesheet", {
+capkpi.ui.form.on("Sales Invoice Timesheet", {
 	timesheets_remove(frm) {
 		frm.trigger("calculate_timesheet_totals");
 	}
@@ -1050,7 +1050,7 @@ frappe.ui.form.on("Sales Invoice Timesheet", {
 
 
 var set_timesheet_detail_rate = function(cdt, cdn, currency, timelog) {
-	frappe.call({
+	capkpi.call({
 		method: "erp.projects.doctype.timesheet.timesheet.get_timesheet_detail_rate",
 		args: {
 			timelog: timelog,
@@ -1058,14 +1058,14 @@ var set_timesheet_detail_rate = function(cdt, cdn, currency, timelog) {
 		},
 		callback: function(r) {
 			if (!r.exc && r.message) {
-				frappe.model.set_value(cdt, cdn, 'billing_amount', r.message);
+				capkpi.model.set_value(cdt, cdn, 'billing_amount', r.message);
 			}
 		}
 	});
 }
 
 var select_loyalty_program = function(frm, loyalty_programs) {
-	var dialog = new frappe.ui.Dialog({
+	var dialog = new capkpi.ui.Dialog({
 		title: __("Select Loyalty Program"),
 		fields: [
 			{
@@ -1080,8 +1080,8 @@ var select_loyalty_program = function(frm, loyalty_programs) {
 
 	dialog.set_primary_action(__("Set"), function() {
 		dialog.hide();
-		return frappe.call({
-			method: "frappe.client.set_value",
+		return capkpi.call({
+			method: "capkpi.client.set_value",
 			args: {
 				doctype: "Customer",
 				name: frm.doc.customer,
@@ -1099,7 +1099,7 @@ var select_loyalty_program = function(frm, loyalty_programs) {
 var get_healthcare_services_to_invoice = function(frm) {
 	var me = this;
 	let selected_patient = '';
-	var dialog = new frappe.ui.Dialog({
+	var dialog = new capkpi.ui.Dialog({
 		title: __("Get Items from Healthcare Services"),
 		fields:[
 			{
@@ -1154,7 +1154,7 @@ var get_healthcare_services_to_invoice = function(frm) {
 var get_healthcare_items = function(frm, invoice_healthcare_services, $results, $placeholder, method, args, columns) {
 	var me = this;
 	$results.empty();
-	frappe.call({
+	capkpi.call({
 		method: method,
 		args: args,
 		callback: function(data) {
@@ -1178,7 +1178,7 @@ var make_list_row= function(columns, invoice_healthcare_services, result={}) {
 	columns.forEach(function(column) {
 		contents += `<div class="list-item__content ellipsis">
 			${
-				head ? `<span class="ellipsis">${__(frappe.model.unscrub(column))}</span>`
+				head ? `<span class="ellipsis">${__(capkpi.model.unscrub(column))}</span>`
 
 				:(column !== "name" ? `<span class="ellipsis">${__(result[column])}</span>`
 					: `<a class="list-id ellipsis">
@@ -1212,10 +1212,10 @@ var set_primary_action= function(frm, dialog, $results, invoice_healthcare_servi
 		}
 		else{
 			if(invoice_healthcare_services){
-				frappe.msgprint(__("Please select Healthcare Service"));
+				capkpi.msgprint(__("Please select Healthcare Service"));
 			}
 			else{
-				frappe.msgprint(__("Please select Drug"));
+				capkpi.msgprint(__("Please select Drug"));
 			}
 		}
 	});
@@ -1260,7 +1260,7 @@ var get_checked_values= function($results) {
 var get_drugs_to_invoice = function(frm) {
 	var me = this;
 	let selected_encounter = '';
-	var dialog = new frappe.ui.Dialog({
+	var dialog = new capkpi.ui.Dialog({
 		title: __("Get Items from Prescriptions"),
 		fields:[
 			{ fieldtype: 'Link', options: 'Patient', label: 'Patient', fieldname: "patient", reqd: true },
@@ -1343,7 +1343,7 @@ var list_row_data_items = function(head, $row, result, invoice_healthcare_servic
 
 var add_to_item_line = function(frm, checked_values, invoice_healthcare_services){
 	if(invoice_healthcare_services){
-		frappe.call({
+		capkpi.call({
 			doc: frm.doc,
 			method: "set_healthcare_services",
 			args:{
@@ -1357,11 +1357,11 @@ var add_to_item_line = function(frm, checked_values, invoice_healthcare_services
 	}
 	else{
 		for(let i=0; i<checked_values.length; i++){
-			var si_item = frappe.model.add_child(frm.doc, 'Sales Invoice Item', 'items');
-			frappe.model.set_value(si_item.doctype, si_item.name, 'item_code', checked_values[i]['item']);
-			frappe.model.set_value(si_item.doctype, si_item.name, 'qty', 1);
+			var si_item = capkpi.model.add_child(frm.doc, 'Sales Invoice Item', 'items');
+			capkpi.model.set_value(si_item.doctype, si_item.name, 'item_code', checked_values[i]['item']);
+			capkpi.model.set_value(si_item.doctype, si_item.name, 'qty', 1);
 			if(checked_values[i]['qty'] > 1){
-				frappe.model.set_value(si_item.doctype, si_item.name, 'qty', parseFloat(checked_values[i]['qty']));
+				capkpi.model.set_value(si_item.doctype, si_item.name, 'qty', parseFloat(checked_values[i]['qty']));
 			}
 		}
 		frm.refresh_fields();

@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-from frappe.contacts.address_and_contact import (
+from capkpi.contacts.address_and_contact import (
 	delete_contact_and_address,
 	load_address_and_contact,
 )
-from frappe.model.document import Document
+from capkpi.model.document import Document
 
 
 class Shareholder(Document):

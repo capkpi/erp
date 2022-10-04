@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.account.test_account import create_account
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import (
@@ -38,7 +38,7 @@ class TestProcessDeferredAccounting(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		process_deferred_accounting = doc = frappe.get_doc(
+		process_deferred_accounting = doc = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date="2019-01-01",
@@ -59,7 +59,7 @@ class TestProcessDeferredAccounting(unittest.TestCase):
 		check_gl_entries(self, si.name, expected_gle, "2019-01-10")
 
 	def test_pda_submission_and_cancellation(self):
-		pda = frappe.get_doc(
+		pda = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date="2019-01-01",

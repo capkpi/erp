@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, nowdate, today
+import capkpi
+from capkpi.utils import add_days, nowdate, today
 
 from erp.accounts.doctype.dunning.dunning import calculate_interest_and_amount
 from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
@@ -48,7 +48,7 @@ class TestDunning(unittest.TestCase):
 	def test_gl_entries(self):
 		dunning = create_dunning()
 		dunning.submit()
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Dunning' and voucher_no=%s
 			order by account asc""",
@@ -76,7 +76,7 @@ class TestDunning(unittest.TestCase):
 		pe.target_exchange_rate = 1
 		pe.insert()
 		pe.submit()
-		si_doc = frappe.get_doc("Sales Invoice", dunning.sales_invoice)
+		si_doc = capkpi.get_doc("Sales Invoice", dunning.sales_invoice)
 		self.assertEqual(si_doc.outstanding_amount, 0)
 
 
@@ -86,8 +86,8 @@ def create_dunning():
 	sales_invoice = create_sales_invoice_against_cost_center(
 		posting_date=posting_date, due_date=due_date, status="Overdue"
 	)
-	dunning_type = frappe.get_doc("Dunning Type", "First Notice")
-	dunning = frappe.new_doc("Dunning")
+	dunning_type = capkpi.get_doc("Dunning Type", "First Notice")
+	dunning = capkpi.new_doc("Dunning")
 	dunning.sales_invoice = sales_invoice.name
 	dunning.customer_name = sales_invoice.customer_name
 	dunning.outstanding_amount = sales_invoice.outstanding_amount
@@ -109,8 +109,8 @@ def create_dunning_with_zero_interest_rate():
 	sales_invoice = create_sales_invoice_against_cost_center(
 		posting_date=posting_date, due_date=due_date, status="Overdue"
 	)
-	dunning_type = frappe.get_doc("Dunning Type", "First Notice with 0% Rate of Interest")
-	dunning = frappe.new_doc("Dunning")
+	dunning_type = capkpi.get_doc("Dunning Type", "First Notice with 0% Rate of Interest")
+	dunning = capkpi.new_doc("Dunning")
 	dunning.sales_invoice = sales_invoice.name
 	dunning.customer_name = sales_invoice.customer_name
 	dunning.outstanding_amount = sales_invoice.outstanding_amount
@@ -127,7 +127,7 @@ def create_dunning_with_zero_interest_rate():
 
 
 def create_dunning_type():
-	dunning_type = frappe.new_doc("Dunning Type")
+	dunning_type = capkpi.new_doc("Dunning Type")
 	dunning_type.dunning_type = "First Notice"
 	dunning_type.start_day = 10
 	dunning_type.end_day = 20
@@ -145,7 +145,7 @@ def create_dunning_type():
 
 
 def create_dunning_type_with_zero_interest_rate():
-	dunning_type = frappe.new_doc("Dunning Type")
+	dunning_type = capkpi.new_doc("Dunning Type")
 	dunning_type.dunning_type = "First Notice with 0% Rate of Interest"
 	dunning_type.start_day = 10
 	dunning_type.end_day = 20

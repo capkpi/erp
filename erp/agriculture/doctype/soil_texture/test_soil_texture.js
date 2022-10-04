@@ -8,9 +8,9 @@ QUnit.test("test: Soil Texture", function (assert) {
 	// number of asserts
 	assert.expect(2);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Soil Texture
-		() => frappe.tests.make('Soil Texture', [
+		() => capkpi.tests.make('Soil Texture', [
 			// values to be set
 			{location: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[72.882185,19.076395]}}]}'},
 			{collection_datetime: '2017-11-08'},

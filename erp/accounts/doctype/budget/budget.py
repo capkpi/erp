@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.model.naming import make_autoname
-from frappe.utils import add_months, flt, fmt_money, get_last_day, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.model.naming import make_autoname
+from capkpi.utils import add_months, flt, fmt_money, get_last_day, getdate
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
@@ -14,34 +14,34 @@ from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 from erp.accounts.utils import get_fiscal_year
 
 
-class BudgetError(frappe.ValidationError):
+class BudgetError(capkpi.ValidationError):
 	pass
 
 
-class DuplicateBudgetError(frappe.ValidationError):
+class DuplicateBudgetError(capkpi.ValidationError):
 	pass
 
 
 class Budget(Document):
 	def autoname(self):
 		self.name = make_autoname(
-			self.get(frappe.scrub(self.budget_against)) + "/" + self.fiscal_year + "/.###"
+			self.get(capkpi.scrub(self.budget_against)) + "/" + self.fiscal_year + "/.###"
 		)
 
 	def validate(self):
-		if not self.get(frappe.scrub(self.budget_against)):
-			frappe.throw(_("{0} is mandatory").format(self.budget_against))
+		if not self.get(capkpi.scrub(self.budget_against)):
+			capkpi.throw(_("{0} is mandatory").format(self.budget_against))
 		self.validate_duplicate()
 		self.validate_accounts()
 		self.set_null_value()
 		self.validate_applicable_for()
 
 	def validate_duplicate(self):
-		budget_against_field = frappe.scrub(self.budget_against)
+		budget_against_field = capkpi.scrub(self.budget_against)
 		budget_against = self.get(budget_against_field)
 
 		accounts = [d.account for d in self.accounts] or []
-		existing_budget = frappe.db.sql(
+		existing_budget = capkpi.db.sql(
 			"""
 			select
 				b.name, ba.account from `tabBudget` b, `tabBudget Account` ba
@@ -54,7 +54,7 @@ class Budget(Document):
 		)
 
 		for d in existing_budget:
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Another Budget record '{0}' already exists against {1} '{2}' and account '{3}' for fiscal year {4}"
 				).format(d.name, self.budget_against, budget_against, d.account, self.fiscal_year),
@@ -65,23 +65,23 @@ class Budget(Document):
 		account_list = []
 		for d in self.get("accounts"):
 			if d.account:
-				account_details = frappe.db.get_value(
+				account_details = capkpi.db.get_value(
 					"Account", d.account, ["is_group", "company", "report_type"], as_dict=1
 				)
 
 				if account_details.is_group:
-					frappe.throw(_("Budget cannot be assigned against Group Account {0}").format(d.account))
+					capkpi.throw(_("Budget cannot be assigned against Group Account {0}").format(d.account))
 				elif account_details.company != self.company:
-					frappe.throw(_("Account {0} does not belongs to company {1}").format(d.account, self.company))
+					capkpi.throw(_("Account {0} does not belongs to company {1}").format(d.account, self.company))
 				elif account_details.report_type != "Profit and Loss":
-					frappe.throw(
+					capkpi.throw(
 						_("Budget cannot be assigned against {0}, as it's not an Income or Expense account").format(
 							d.account
 						)
 					)
 
 				if d.account in account_list:
-					frappe.throw(_("Account {0} has been entered multiple times").format(d.account))
+					capkpi.throw(_("Account {0} has been entered multiple times").format(d.account))
 				else:
 					account_list.append(d.account)
 
@@ -95,12 +95,12 @@ class Budget(Document):
 		if self.applicable_on_material_request and not (
 			self.applicable_on_purchase_order and self.applicable_on_booking_actual_expenses
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Please enable Applicable on Purchase Order and Applicable on Booking Actual Expenses")
 			)
 
 		elif self.applicable_on_purchase_order and not (self.applicable_on_booking_actual_expenses):
-			frappe.throw(_("Please enable Applicable on Booking Actual Expenses"))
+			capkpi.throw(_("Please enable Applicable on Booking Actual Expenses"))
 
 		elif not (
 			self.applicable_on_material_request
@@ -111,11 +111,11 @@ class Budget(Document):
 
 
 def validate_expense_against_budget(args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
 	if args.get("company") and not args.fiscal_year:
 		args.fiscal_year = get_fiscal_year(args.get("posting_date"), company=args.get("company"))[0]
-		frappe.flags.exception_approver_role = frappe.get_cached_value(
+		capkpi.flags.exception_approver_role = capkpi.get_cached_value(
 			"Company", args.get("company"), "exception_budget_approver_role"
 		)
 
@@ -132,13 +132,13 @@ def validate_expense_against_budget(args):
 		if (
 			args.get(budget_against)
 			and args.account
-			and frappe.db.get_value("Account", {"name": args.account, "root_type": "Expense"})
+			and capkpi.db.get_value("Account", {"name": args.account, "root_type": "Expense"})
 		):
 
-			doctype = frappe.unscrub(budget_against)
+			doctype = capkpi.unscrub(budget_against)
 
-			if frappe.get_cached_value("DocType", doctype, "is_tree"):
-				lft, rgt = frappe.db.get_value(doctype, args.get(budget_against), ["lft", "rgt"])
+			if capkpi.get_cached_value("DocType", doctype, "is_tree"):
+				lft, rgt = capkpi.db.get_value(doctype, args.get(budget_against), ["lft", "rgt"])
 				condition = """and exists(select name from `tab%s`
 					where lft<=%s and rgt>=%s and name=b.%s)""" % (
 					doctype,
@@ -148,13 +148,13 @@ def validate_expense_against_budget(args):
 				)  # nosec
 				args.is_tree = True
 			else:
-				condition = "and b.%s=%s" % (budget_against, frappe.db.escape(args.get(budget_against)))
+				condition = "and b.%s=%s" % (budget_against, capkpi.db.escape(args.get(budget_against)))
 				args.is_tree = False
 
 			args.budget_against_field = budget_against
 			args.budget_against_doctype = doctype
 
-			budget_records = frappe.db.sql(
+			budget_records = capkpi.db.sql(
 				"""
 				select
 					b.{budget_against_field} as budget_against, ba.budget_amount, b.monthly_distribution,
@@ -212,27 +212,27 @@ def compare_expense_with_budget(args, budget_amount, action_for, action, budget_
 	actual_expense = amount or get_actual_expense(args)
 	if actual_expense > budget_amount:
 		diff = actual_expense - budget_amount
-		currency = frappe.get_cached_value("Company", args.company, "default_currency")
+		currency = capkpi.get_cached_value("Company", args.company, "default_currency")
 
 		msg = _("{0} Budget for Account {1} against {2} {3} is {4}. It will exceed by {5}").format(
 			_(action_for),
-			frappe.bold(args.account),
+			capkpi.bold(args.account),
 			args.budget_against_field,
-			frappe.bold(budget_against),
-			frappe.bold(fmt_money(budget_amount, currency=currency)),
-			frappe.bold(fmt_money(diff, currency=currency)),
+			capkpi.bold(budget_against),
+			capkpi.bold(fmt_money(budget_amount, currency=currency)),
+			capkpi.bold(fmt_money(diff, currency=currency)),
 		)
 
 		if (
-			frappe.flags.exception_approver_role
-			and frappe.flags.exception_approver_role in frappe.get_roles(frappe.session.user)
+			capkpi.flags.exception_approver_role
+			and capkpi.flags.exception_approver_role in capkpi.get_roles(capkpi.session.user)
 		):
 			action = "Warn"
 
 		if action == "Stop":
-			frappe.throw(msg, BudgetError)
+			capkpi.throw(msg, BudgetError)
 		else:
-			frappe.msgprint(msg, indicator="orange")
+			capkpi.msgprint(msg, indicator="orange")
 
 
 def get_actions(args, budget):
@@ -268,7 +268,7 @@ def get_requested_amount(args, budget):
 	item_code = args.get("item_code")
 	condition = get_other_condition(args, budget, "Material Request")
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		""" select ifnull((sum(child.stock_qty - child.ordered_qty) * rate), 0) as amount
 		from `tabMaterial Request Item` child, `tabMaterial Request` parent where parent.name = child.parent and
 		child.item_code = %s and parent.docstatus = 1 and child.stock_qty > child.ordered_qty and {0} and
@@ -286,7 +286,7 @@ def get_ordered_amount(args, budget):
 	item_code = args.get("item_code")
 	condition = get_other_condition(args, budget, "Purchase Order")
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		""" select ifnull(sum(child.amount - child.billed_amt), 0) as amount
 		from `tabPurchase Order Item` child, `tabPurchase Order` parent where
 		parent.name = child.parent and child.item_code = %s and parent.docstatus = 1 and child.amount > child.billed_amt
@@ -309,7 +309,7 @@ def get_other_condition(args, budget, for_doc):
 
 	if args.get("fiscal_year"):
 		date_field = "schedule_date" if for_doc == "Material Request" else "transaction_date"
-		start_date, end_date = frappe.db.get_value(
+		start_date, end_date = capkpi.db.get_value(
 			"Fiscal Year", args.get("fiscal_year"), ["year_start_date", "year_end_date"]
 		)
 
@@ -325,13 +325,13 @@ def get_other_condition(args, budget, for_doc):
 
 def get_actual_expense(args):
 	if not args.budget_against_doctype:
-		args.budget_against_doctype = frappe.unscrub(args.budget_against_field)
+		args.budget_against_doctype = capkpi.unscrub(args.budget_against_field)
 
 	budget_against_field = args.get("budget_against_field")
 	condition1 = " and gle.posting_date <= %(month_end_date)s" if args.get("month_end_date") else ""
 
 	if args.is_tree:
-		lft_rgt = frappe.db.get_value(
+		lft_rgt = capkpi.db.get_value(
 			args.budget_against_doctype, args.get(budget_against_field), ["lft", "rgt"], as_dict=1
 		)
 
@@ -350,7 +350,7 @@ def get_actual_expense(args):
 		)
 
 	amount = flt(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""
 		select sum(gle.debit) - sum(gle.credit)
 		from `tabGL Entry` gle
@@ -373,7 +373,7 @@ def get_actual_expense(args):
 def get_accumulated_monthly_budget(monthly_distribution, posting_date, fiscal_year, annual_budget):
 	distribution = {}
 	if monthly_distribution:
-		for d in frappe.db.sql(
+		for d in capkpi.db.sql(
 			"""select mdp.month, mdp.percentage_allocation
 			from `tabMonthly Distribution Percentage` mdp, `tabMonthly Distribution` md
 			where mdp.parent=md.name and md.fiscal_year=%s""",
@@ -382,7 +382,7 @@ def get_accumulated_monthly_budget(monthly_distribution, posting_date, fiscal_ye
 		):
 			distribution.setdefault(d.month, d.percentage_allocation)
 
-	dt = frappe.db.get_value("Fiscal Year", fiscal_year, "year_start_date")
+	dt = capkpi.db.get_value("Fiscal Year", fiscal_year, "year_start_date")
 	accumulated_percentage = 0.0
 
 	while dt <= getdate(posting_date):
@@ -403,7 +403,7 @@ def get_item_details(args):
 		return cost_center, expense_account
 
 	if args.item_code:
-		item_defaults = frappe.db.get_value(
+		item_defaults = capkpi.db.get_value(
 			"Item Default",
 			{"parent": args.item_code, "company": args.get("company")},
 			["buying_cost_center", "expense_account"],
@@ -429,12 +429,12 @@ def get_item_details(args):
 
 def get_expense_cost_center(doctype, args):
 	if doctype == "Item Group":
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			"Item Default",
-			{"parent": args.get(frappe.scrub(doctype)), "company": args.get("company")},
+			{"parent": args.get(capkpi.scrub(doctype)), "company": args.get("company")},
 			["buying_cost_center", "expense_account"],
 		)
 	else:
-		return frappe.db.get_value(
-			doctype, args.get(frappe.scrub(doctype)), ["cost_center", "default_expense_account"]
+		return capkpi.db.get_value(
+			doctype, args.get(capkpi.scrub(doctype)), ["cost_center", "default_expense_account"]
 		)

@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import cint, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import cint, getdate
 
 
 class TaxWithholdingCategory(Document):
@@ -17,18 +17,18 @@ class TaxWithholdingCategory(Document):
 		last_date = None
 		for d in self.get("rates"):
 			if getdate(d.from_date) >= getdate(d.to_date):
-				frappe.throw(_("Row #{0}: From Date cannot be before To Date").format(d.idx))
+				capkpi.throw(_("Row #{0}: From Date cannot be before To Date").format(d.idx))
 
 			# validate overlapping of dates
 			if last_date and getdate(d.to_date) < getdate(last_date):
-				frappe.throw(_("Row #{0}: Dates overlapping with other row").format(d.idx))
+				capkpi.throw(_("Row #{0}: Dates overlapping with other row").format(d.idx))
 
 	def validate_thresholds(self):
 		for d in self.get("rates"):
 			if (
 				d.cumulative_threshold and d.single_threshold and d.cumulative_threshold < d.single_threshold
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: Cumulative threshold cannot be less than Single Transaction threshold").format(
 						d.idx
 					)
@@ -46,7 +46,7 @@ def get_party_details(inv):
 		party = inv.supplier
 
 	if not party:
-		frappe.throw(_("Please select {0} first").format(party_type))
+		capkpi.throw(_("Please select {0} first").format(party_type))
 
 	return party_type, party
 
@@ -55,7 +55,7 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 	pan_no = ""
 	parties = []
 	party_type, party = get_party_details(inv)
-	has_pan_field = frappe.get_meta(party_type).has_field("pan")
+	has_pan_field = capkpi.get_meta(party_type).has_field("pan")
 
 	if not tax_withholding_category:
 		if has_pan_field:
@@ -63,7 +63,7 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 		else:
 			fields = ["tax_withholding_category"]
 
-		tax_withholding_details = frappe.db.get_value(party_type, party, fields, as_dict=1)
+		tax_withholding_details = capkpi.db.get_value(party_type, party, fields, as_dict=1)
 
 		tax_withholding_category = tax_withholding_details.get("tax_withholding_category")
 		pan_no = tax_withholding_details.get("pan")
@@ -73,11 +73,11 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 
 	# if tax_withholding_category passed as an argument but not pan_no
 	if not pan_no and has_pan_field:
-		pan_no = frappe.db.get_value(party_type, party, "pan")
+		pan_no = capkpi.db.get_value(party_type, party, "pan")
 
 	# Get others suppliers with the same PAN No
 	if pan_no:
-		parties = frappe.get_all(party_type, filters={"pan": pan_no}, pluck="name")
+		parties = capkpi.get_all(party_type, filters={"pan": pan_no}, pluck="name")
 
 	if not parties:
 		parties.append(party)
@@ -86,7 +86,7 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 	tax_details = get_tax_withholding_details(tax_withholding_category, posting_date, inv.company)
 
 	if not tax_details:
-		frappe.throw(
+		capkpi.throw(
 			_("Please set associated account in Tax Withholding Category {0} against Company {1}").format(
 				tax_withholding_category, inv.company
 			)
@@ -94,7 +94,7 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 
 	if party_type == "Customer" and not tax_details.cumulative_threshold:
 		# TCS is only chargeable on sum of invoiced value
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"Tax Withholding Category {} against Company {} for Customer {} should have Cumulative Threshold value."
 			).format(tax_withholding_category, inv.company, party)
@@ -116,13 +116,13 @@ def get_party_tax_withholding_details(inv, tax_withholding_category=None):
 
 
 def get_tax_withholding_details(tax_withholding_category, posting_date, company):
-	tax_withholding = frappe.get_doc("Tax Withholding Category", tax_withholding_category)
+	tax_withholding = capkpi.get_doc("Tax Withholding Category", tax_withholding_category)
 
 	tax_rate_detail = get_tax_withholding_rates(tax_withholding, posting_date)
 
 	for account_detail in tax_withholding.accounts:
 		if company == account_detail.company:
-			return frappe._dict(
+			return capkpi._dict(
 				{
 					"tax_withholding_category": tax_withholding_category,
 					"account_head": account_detail.account,
@@ -147,7 +147,7 @@ def get_tax_withholding_rates(tax_withholding, posting_date):
 		if getdate(rate.from_date) <= getdate(posting_date) <= getdate(rate.to_date):
 			return rate
 
-	frappe.throw(_("No Tax Withholding data found for the current posting date."))
+	capkpi.throw(_("No Tax Withholding data found for the current posting date."))
 
 
 def get_tax_row_for_tcs(inv, tax_details, tax_amount, tax_deducted):
@@ -192,7 +192,7 @@ def get_tax_row_for_tds(tax_details, tax_amount):
 
 
 def get_lower_deduction_certificate(tax_details, pan_no):
-	ldc_name = frappe.db.get_value(
+	ldc_name = capkpi.db.get_value(
 		"Lower Deduction Certificate",
 		{
 			"pan_no": pan_no,
@@ -204,7 +204,7 @@ def get_lower_deduction_certificate(tax_details, pan_no):
 	)
 
 	if ldc_name:
-		return frappe.get_doc("Lower Deduction Certificate", ldc_name)
+		return capkpi.get_doc("Lower Deduction Certificate", ldc_name)
 
 
 def get_tax_amount(party_type, parties, inv, tax_details, posting_date, pan_no=None):
@@ -265,7 +265,7 @@ def get_invoice_vouchers(parties, tax_details, company, party_type="Supplier"):
 
 	filters = {
 		"company": company,
-		frappe.scrub(party_type): ["in", parties],
+		capkpi.scrub(party_type): ["in", parties],
 		"posting_date": ["between", (tax_details.from_date, tax_details.to_date)],
 		"is_opening": "No",
 		"docstatus": 1,
@@ -276,13 +276,13 @@ def get_invoice_vouchers(parties, tax_details, company, party_type="Supplier"):
 			{"apply_tds": 1, "tax_withholding_category": tax_details.get("tax_withholding_category")}
 		)
 
-	invoices_details = frappe.get_all(doctype, filters=filters, fields=["name", "base_net_total"])
+	invoices_details = capkpi.get_all(doctype, filters=filters, fields=["name", "base_net_total"])
 
 	for d in invoices_details:
 		vouchers.append(d.name)
 		voucher_wise_amount.update({d.name: {"amount": d.base_net_total, "voucher_type": doctype}})
 
-	journal_entries_details = frappe.db.sql(
+	journal_entries_details = capkpi.db.sql(
 		"""
 		SELECT j.name, ja.credit - ja.debit AS amount
 			FROM `tabJournal Entry` j, `tabJournal Entry Account` ja
@@ -331,7 +331,7 @@ def get_advance_vouchers(
 	if from_date and to_date:
 		filters["posting_date"] = ["between", (from_date, to_date)]
 
-	return frappe.get_all("GL Entry", filters=filters, distinct=1, pluck="voucher_no") or [""]
+	return capkpi.get_all("GL Entry", filters=filters, distinct=1, pluck="voucher_no") or [""]
 
 
 def get_taxes_deducted_on_advances_allocated(inv, tax_details):
@@ -341,11 +341,11 @@ def get_taxes_deducted_on_advances_allocated(inv, tax_details):
 		advances = [d.reference_name for d in inv.get("advances")]
 
 		if advances:
-			pe = frappe.qb.DocType("Payment Entry").as_("pe")
-			at = frappe.qb.DocType("Advance Taxes and Charges").as_("at")
+			pe = capkpi.qb.DocType("Payment Entry").as_("pe")
+			at = capkpi.qb.DocType("Advance Taxes and Charges").as_("at")
 
 			tax_info = (
-				frappe.qb.from_(at)
+				capkpi.qb.from_(at)
 				.inner_join(pe)
 				.on(pe.name == at.parent)
 				.select(at.parent, at.name, at.tax_amount, at.allocated_amount)
@@ -369,7 +369,7 @@ def get_deducted_tax(taxable_vouchers, tax_details):
 	}
 	field = "credit"
 
-	entries = frappe.db.get_all("GL Entry", filters, pluck=field)
+	entries = capkpi.db.get_all("GL Entry", filters, pluck=field)
 	return sum(entries)
 
 
@@ -387,10 +387,10 @@ def get_tds_amount(ldc, parties, inv, tax_details, tax_deducted, vouchers):
 		field = "sum(grand_total)"
 
 	if vouchers:
-		supp_credit_amt = frappe.db.get_value("Purchase Invoice", invoice_filters, field) or 0.0
+		supp_credit_amt = capkpi.db.get_value("Purchase Invoice", invoice_filters, field) or 0.0
 
 		supp_jv_credit_amt = (
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"Journal Entry Account",
 				{
 					"parent": ("in", vouchers),
@@ -416,7 +416,7 @@ def get_tds_amount(ldc, parties, inv, tax_details, tax_deducted, vouchers):
 		):
 			# Get net total again as TDS is calculated on net total
 			# Grand is used to just check for threshold breach
-			net_total = frappe.db.get_value("Purchase Invoice", invoice_filters, "sum(net_total)") or 0.0
+			net_total = capkpi.db.get_value("Purchase Invoice", invoice_filters, "sum(net_total)") or 0.0
 			net_total += inv.net_total
 			supp_credit_amt = net_total - cumulative_threshold
 
@@ -443,7 +443,7 @@ def get_tcs_amount(parties, inv, tax_details, vouchers, adv_vouchers):
 	# sum of debit entries made from sales invoices
 	if vouchers:
 		invoiced_amt = (
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"GL Entry",
 				{
 					"is_cancelled": 0,
@@ -459,7 +459,7 @@ def get_tcs_amount(parties, inv, tax_details, vouchers, adv_vouchers):
 	# sum of credit entries made from PE / JV with unset 'against voucher'
 	if advance_amt:
 		advance_amt = (
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"GL Entry",
 				{
 					"is_cancelled": 0,
@@ -474,7 +474,7 @@ def get_tcs_amount(parties, inv, tax_details, vouchers, adv_vouchers):
 
 	# sum of credit entries made from sales invoice
 	credit_note_amt = sum(
-		frappe.db.get_all(
+		capkpi.db.get_all(
 			"GL Entry",
 			{
 				"is_cancelled": 0,
@@ -509,7 +509,7 @@ def get_invoice_total_without_tcs(inv, tax_details):
 
 def get_tds_amount_from_ldc(ldc, parties, pan_no, tax_details, posting_date, net_total):
 	tds_amount = 0
-	limit_consumed = frappe.db.get_value(
+	limit_consumed = capkpi.db.get_value(
 		"Purchase Invoice",
 		{"supplier": ("in", parties), "apply_tds": 1, "docstatus": 1},
 		"sum(net_total)",

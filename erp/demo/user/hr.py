@@ -1,9 +1,9 @@
 import datetime
 import random
 
-import frappe
-from frappe.utils import add_days, get_last_day, getdate, random_string
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils import add_days, get_last_day, getdate, random_string
+from capkpi.utils.make_random import get_random
 
 import erp
 from erp.hr.doctype.expense_claim.expense_claim import make_bank_entry
@@ -18,14 +18,14 @@ from erp.projects.doctype.timesheet.timesheet import make_salary_slip, make_sale
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_hr_user"))
-	year, month = frappe.flags.current_date.strftime("%Y-%m").split("-")
+	capkpi.set_user(capkpi.db.get_global("demo_hr_user"))
+	year, month = capkpi.flags.current_date.strftime("%Y-%m").split("-")
 	setup_department_approvers()
 	mark_attendance()
 	make_leave_application()
 
 	# payroll entry
-	if not frappe.db.sql(
+	if not capkpi.db.sql(
 		"select name from `tabSalary Slip` where month(adddate(start_date, interval 1 month))=month(curdate())"
 	):
 		# based on frequency
@@ -36,7 +36,7 @@ def work():
 		payroll_entry.submit_salary_slips()
 		payroll_entry.make_accrual_jv_entry()
 		payroll_entry.submit()
-		# payroll_entry.make_journal_entry(reference_date=frappe.flags.current_date,
+		# payroll_entry.make_journal_entry(reference_date=capkpi.flags.current_date,
 		# 	reference_number=random_string(10))
 
 		# based on timesheet
@@ -47,20 +47,20 @@ def work():
 		payroll_entry.submit_salary_slips()
 		payroll_entry.make_accrual_jv_entry()
 		payroll_entry.submit()
-		# payroll_entry.make_journal_entry(reference_date=frappe.flags.current_date,
+		# payroll_entry.make_journal_entry(reference_date=capkpi.flags.current_date,
 		# 	reference_number=random_string(10))
 
-	if frappe.db.get_global("demo_hr_user"):
+	if capkpi.db.get_global("demo_hr_user"):
 		make_timesheet_records()
 
 		# expense claim
-		expense_claim = frappe.new_doc("Expense Claim")
+		expense_claim = capkpi.new_doc("Expense Claim")
 		expense_claim.extend("expenses", get_expenses())
 		expense_claim.employee = get_random("Employee")
-		expense_claim.company = frappe.flags.company
+		expense_claim.company = capkpi.flags.company
 		expense_claim.payable_account = get_payable_account(expense_claim.company)
-		expense_claim.posting_date = frappe.flags.current_date
-		expense_claim.expense_approver = frappe.db.get_global("demo_hr_user")
+		expense_claim.posting_date = capkpi.flags.current_date
+		expense_claim.expense_approver = capkpi.db.get_global("demo_hr_user")
 		expense_claim.save()
 
 		rand = random.random()
@@ -72,25 +72,25 @@ def work():
 
 			if random.randint(0, 1):
 				# make journal entry against expense claim
-				je = frappe.get_doc(make_bank_entry("Expense Claim", expense_claim.name))
-				je.posting_date = frappe.flags.current_date
+				je = capkpi.get_doc(make_bank_entry("Expense Claim", expense_claim.name))
+				je.posting_date = capkpi.flags.current_date
 				je.cheque_no = random_string(10)
-				je.cheque_date = frappe.flags.current_date
+				je.cheque_date = capkpi.flags.current_date
 				je.flags.ignore_permissions = 1
 				je.submit()
 
 
 def get_payroll_entry():
 	# process payroll for previous month
-	payroll_entry = frappe.new_doc("Payroll Entry")
-	payroll_entry.company = frappe.flags.company
+	payroll_entry = capkpi.new_doc("Payroll Entry")
+	payroll_entry.company = capkpi.flags.company
 	payroll_entry.payroll_frequency = "Monthly"
 
 	# select a posting date from the previous month
 	payroll_entry.posting_date = get_last_day(
-		getdate(frappe.flags.current_date) - datetime.timedelta(days=10)
+		getdate(capkpi.flags.current_date) - datetime.timedelta(days=10)
 	)
-	payroll_entry.payment_account = frappe.get_value(
+	payroll_entry.payment_account = capkpi.get_value(
 		"Account",
 		{"account_type": "Cash", "company": erp.get_default_company(), "is_group": 0},
 		"name",
@@ -102,11 +102,11 @@ def get_payroll_entry():
 
 def get_expenses():
 	expenses = []
-	expese_types = frappe.db.sql(
+	expese_types = capkpi.db.sql(
 		"""select ect.name, eca.default_account from `tabExpense Claim Type` ect,
 		`tabExpense Claim Account` eca where eca.parent=ect.name
 		and eca.company=%s """,
-		frappe.flags.company,
+		capkpi.flags.company,
 		as_dict=1,
 	)
 
@@ -115,7 +115,7 @@ def get_expenses():
 
 		expenses.append(
 			{
-				"expense_date": frappe.flags.current_date,
+				"expense_date": capkpi.flags.current_date,
 				"expense_type": expense_type.name,
 				"default_account": expense_type.default_account or "Miscellaneous Expenses - WPL",
 				"amount": claim_amount,
@@ -135,14 +135,14 @@ def update_sanctioned_amount(expense_claim):
 
 
 def get_timesheet_based_salary_slip_employee():
-	sal_struct = frappe.db.sql(
+	sal_struct = capkpi.db.sql(
 		"""
 			select name from `tabSalary Structure`
 			where salary_slip_based_on_timesheet = 1
 			and docstatus != 2"""
 	)
 	if sal_struct:
-		employees = frappe.db.sql(
+		employees = capkpi.db.sql(
 			"""
 				select employee from `tabSalary Structure Assignment`
 				where salary_structure IN %(sal_struct)s""",
@@ -162,9 +162,9 @@ def make_timesheet_records():
 			simulate=True,
 			billable=1,
 			activity_type=get_random("Activity Type"),
-			company=frappe.flags.company,
+			company=capkpi.flags.company,
 		)
-		frappe.db.commit()
+		capkpi.db.commit()
 
 		rand = random.random()
 		if rand >= 0.3:
@@ -179,7 +179,7 @@ def make_salary_slip_for_timesheet(name):
 	salary_slip = make_salary_slip(name)
 	salary_slip.insert()
 	salary_slip.submit()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def make_sales_invoice_for_timesheet(name):
@@ -198,30 +198,30 @@ def make_sales_invoice_for_timesheet(name):
 	sales_invoice.calculate_taxes_and_totals()
 	sales_invoice.insert()
 	sales_invoice.submit()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def make_leave_application():
-	allocated_leaves = frappe.get_all("Leave Allocation", fields=["employee", "leave_type"])
+	allocated_leaves = capkpi.get_all("Leave Allocation", fields=["employee", "leave_type"])
 
 	for allocated_leave in allocated_leaves:
 		leave_balance = get_leave_balance_on(
 			allocated_leave.employee,
 			allocated_leave.leave_type,
-			frappe.flags.current_date,
+			capkpi.flags.current_date,
 			consider_all_leaves_in_the_allocation_period=True,
 		)
 		if leave_balance != 0:
 			if leave_balance == 1:
-				to_date = frappe.flags.current_date
+				to_date = capkpi.flags.current_date
 			else:
-				to_date = add_days(frappe.flags.current_date, random.randint(0, leave_balance - 1))
+				to_date = add_days(capkpi.flags.current_date, random.randint(0, leave_balance - 1))
 
-			leave_application = frappe.get_doc(
+			leave_application = capkpi.get_doc(
 				{
 					"doctype": "Leave Application",
 					"employee": allocated_leave.employee,
-					"from_date": frappe.flags.current_date,
+					"from_date": capkpi.flags.current_date,
 					"to_date": to_date,
 					"leave_type": allocated_leave.leave_type,
 				}
@@ -229,23 +229,23 @@ def make_leave_application():
 			try:
 				leave_application.insert()
 				leave_application.submit()
-				frappe.db.commit()
+				capkpi.db.commit()
 			except (OverlapError, AttendanceAlreadyMarkedError):
-				frappe.db.rollback()
+				capkpi.db.rollback()
 
 
 def mark_attendance():
-	attendance_date = frappe.flags.current_date
-	for employee in frappe.get_all("Employee", fields=["name"], filters={"status": "Active"}):
+	attendance_date = capkpi.flags.current_date
+	for employee in capkpi.get_all("Employee", fields=["name"], filters={"status": "Active"}):
 
-		if not frappe.db.get_value(
+		if not capkpi.db.get_value(
 			"Attendance", {"employee": employee.name, "attendance_date": attendance_date}
 		):
-			attendance = frappe.get_doc(
+			attendance = capkpi.get_doc(
 				{"doctype": "Attendance", "employee": employee.name, "attendance_date": attendance_date}
 			)
 
-			leave = frappe.db.sql(
+			leave = capkpi.db.sql(
 				"""select name from `tabLeave Application`
 				where employee = %s and %s between from_date and to_date
 				and docstatus = 1""",
@@ -258,13 +258,13 @@ def mark_attendance():
 				attendance.status = "Present"
 			attendance.save()
 			attendance.submit()
-			frappe.db.commit()
+			capkpi.db.commit()
 
 
 def setup_department_approvers():
-	for d in frappe.get_all("Department", filters={"department_name": ["!=", "All Departments"]}):
-		doc = frappe.get_doc("Department", d.name)
-		doc.append("leave_approvers", {"approver": frappe.session.user})
-		doc.append("expense_approvers", {"approver": frappe.session.user})
+	for d in capkpi.get_all("Department", filters={"department_name": ["!=", "All Departments"]}):
+		doc = capkpi.get_doc("Department", d.name)
+		doc.append("leave_approvers", {"approver": capkpi.session.user})
+		doc.append("expense_approvers", {"approver": capkpi.session.user})
 		doc.flags.ignore_mandatory = True
 		doc.save()

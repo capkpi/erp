@@ -1,12 +1,12 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('POS Opening Entry', {
+capkpi.ui.form.on('POS Opening Entry', {
 	setup(frm) {
 		if (frm.doc.docstatus == 0) {
 			frm.trigger('set_posting_date_read_only');
-			frm.set_value('period_start_date', frappe.datetime.now_datetime());
-			frm.set_value('user', frappe.session.user);
+			frm.set_value('period_start_date', capkpi.datetime.now_datetime());
+			frm.set_value('user', capkpi.session.user);
 		}
 
 		frm.set_query("user", function(doc) {
@@ -21,7 +21,7 @@ frappe.ui.form.on('POS Opening Entry', {
 		// set default posting date / time
 		if(frm.doc.docstatus == 0) {
 			if(!frm.doc.posting_date) {
-				frm.set_value('posting_date', frappe.datetime.nowdate());
+				frm.set_value('posting_date', capkpi.datetime.nowdate());
 			}
 			frm.trigger('set_posting_date_read_only');
 		}
@@ -41,7 +41,7 @@ frappe.ui.form.on('POS Opening Entry', {
 
 	pos_profile: (frm) => {
 		if (frm.doc.pos_profile) {
-			frappe.db.get_doc("POS Profile", frm.doc.pos_profile)
+			capkpi.db.get_doc("POS Profile", frm.doc.pos_profile)
 				.then(({ payments }) => {
 					if (payments.length) {
 						frm.doc.balance_details = [];

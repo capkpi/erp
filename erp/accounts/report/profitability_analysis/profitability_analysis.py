@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cstr, flt
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr, flt
 
 from erp.accounts.report.financial_statements import (
 	filter_accounts,
@@ -29,23 +29,23 @@ def execute(filters=None):
 
 def get_accounts_data(based_on, company):
 	if based_on == "cost_center":
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name, parent_cost_center as parent_account, cost_center_name as account_name, lft, rgt
 			from `tabCost Center` where company=%s order by name""",
 			company,
 			as_dict=True,
 		)
 	elif based_on == "project":
-		return frappe.get_all("Project", fields=["name"], filters={"company": company}, order_by="name")
+		return capkpi.get_all("Project", fields=["name"], filters={"company": company}, order_by="name")
 	else:
 		filters = {}
-		doctype = frappe.unscrub(based_on)
-		has_company = frappe.db.has_column(doctype, "company")
+		doctype = capkpi.unscrub(based_on)
+		has_company = capkpi.db.has_column(doctype, "company")
 
 		if has_company:
 			filters.update({"company": company})
 
-		return frappe.get_all(doctype, fields=["name"], filters=filters, order_by="name")
+		return capkpi.get_all(doctype, fields=["name"], filters=filters, order_by="name")
 
 
 def get_data(accounts, filters, based_on):
@@ -124,7 +124,7 @@ def accumulate_values_into_parents(accounts, accounts_by_name):
 def prepare_data(accounts, filters, total_row, parent_children_map, based_on):
 	data = []
 	new_accounts = accounts
-	company_currency = frappe.get_cached_value("Company", filters.get("company"), "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.get("company"), "default_currency")
 
 	for d in accounts:
 		has_value = False
@@ -138,9 +138,9 @@ def prepare_data(accounts, filters, total_row, parent_children_map, based_on):
 			"based_on": based_on,
 		}
 		if based_on == "cost_center":
-			cost_center_doc = frappe.get_doc("Cost Center", d.name)
+			cost_center_doc = capkpi.get_doc("Cost Center", d.name)
 			if not cost_center_doc.enable_distributed_cost_center:
-				DCC_allocation = frappe.db.sql(
+				DCC_allocation = capkpi.db.sql(
 					"""SELECT parent, sum(percentage_allocation) as percentage_allocation
 					FROM `tabDistributed Cost Center`
 					WHERE cost_center IN %(cost_center)s
@@ -221,7 +221,7 @@ def set_gl_entries_by_account(
 	if from_date:
 		additional_conditions.append("and posting_date >= %(from_date)s")
 
-	gl_entries = frappe.db.sql(
+	gl_entries = capkpi.db.sql(
 		"""select posting_date, {based_on} as based_on, debit, credit,
 		is_opening, (select root_type from `tabAccount` where name = account) as type
 		from `tabGL Entry` where company=%(company)s

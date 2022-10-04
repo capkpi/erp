@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.meta import get_field_precision
-from frappe.utils import cint, cstr, flt, formatdate, getdate, now
+import capkpi
+from capkpi import _
+from capkpi.model.meta import get_field_precision
+from capkpi.utils import cint, cstr, flt, formatdate, getdate, now
 
 import erp
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -14,7 +14,7 @@ from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 from erp.accounts.doctype.budget.budget import validate_expense_against_budget
 
 
-class ClosedAccountingPeriod(frappe.ValidationError):
+class ClosedAccountingPeriod(capkpi.ValidationError):
 	pass
 
 
@@ -35,7 +35,7 @@ def make_gl_entries(
 				save_entries(gl_map, adv_adj, update_outstanding, from_repost)
 			# Post GL Map proccess there may no be any GL Entries
 			elif gl_map:
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Incorrect number of General Ledger Entries found. You might have selected a wrong Account in the transaction."
 					)
@@ -47,25 +47,25 @@ def make_gl_entries(
 def validate_disabled_accounts(gl_map):
 	accounts = [d.account for d in gl_map if d.account]
 
-	Account = frappe.qb.DocType("Account")
+	Account = capkpi.qb.DocType("Account")
 
 	disabled_accounts = (
-		frappe.qb.from_(Account)
+		capkpi.qb.from_(Account)
 		.where(Account.name.isin(accounts) & Account.disabled == 1)
 		.select(Account.name, Account.disabled)
 	).run(as_dict=True)
 
 	if disabled_accounts:
 		account_list = "<br>"
-		account_list += ", ".join([frappe.bold(d.name) for d in disabled_accounts])
-		frappe.throw(
+		account_list += ", ".join([capkpi.bold(d.name) for d in disabled_accounts])
+		capkpi.throw(
 			_("Cannot create accounting entries against disabled accounts: {0}").format(account_list),
 			title=_("Disabled Account Selected"),
 		)
 
 
 def validate_accounting_period(gl_map):
-	accounting_periods = frappe.db.sql(
+	accounting_periods = capkpi.db.sql(
 		""" SELECT
 			ap.name as name
 		FROM
@@ -86,10 +86,10 @@ def validate_accounting_period(gl_map):
 	)
 
 	if accounting_periods:
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"You cannot create or cancel any accounting entries with in the closed Accounting Period {0}"
-			).format(frappe.bold(accounting_periods[0].name)),
+			).format(capkpi.bold(accounting_periods[0].name)),
 			ClosedAccountingPeriod,
 		)
 
@@ -169,7 +169,7 @@ def merge_similar_entries(gl_map, precision=None):
 	company_currency = erp.get_company_currency(company)
 
 	if not precision:
-		precision = get_field_precision(frappe.get_meta("GL Entry").get_field("debit"), company_currency)
+		precision = get_field_precision(capkpi.get_meta("GL Entry").get_field("debit"), company_currency)
 
 	# filter zero debit and credit entries
 	merged_gl_map = filter(
@@ -224,7 +224,7 @@ def save_entries(gl_map, adv_adj, update_outstanding, from_repost=False):
 
 
 def make_entry(args, adv_adj, update_outstanding, from_repost=False):
-	gle = frappe.new_doc("GL Entry")
+	gle = capkpi.new_doc("GL Entry")
 	gle.update(args)
 	gle.flags.ignore_permissions = 1
 	gle.flags.from_repost = from_repost
@@ -244,12 +244,12 @@ def validate_cwip_accounts(gl_map):
 
 	cwip_enabled = any(
 		cint(ac.enable_cwip_accounting)
-		for ac in frappe.db.get_all("Asset Category", "enable_cwip_accounting")
+		for ac in capkpi.db.get_all("Asset Category", "enable_cwip_accounting")
 	)
 	if cwip_enabled:
 		cwip_accounts = [
 			d[0]
-			for d in frappe.db.sql(
+			for d in capkpi.db.sql(
 				"""select name from tabAccount
 			where account_type = 'Capital Work in Progress' and is_group=0"""
 			)
@@ -257,7 +257,7 @@ def validate_cwip_accounts(gl_map):
 
 		for entry in gl_map:
 			if entry.account in cwip_accounts:
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Account: <b>{0}</b> is capital Work in progress and can not be updated by Journal Entry"
 					).format(entry.account)
@@ -266,8 +266,8 @@ def validate_cwip_accounts(gl_map):
 
 def round_off_debit_credit(gl_map):
 	precision = get_field_precision(
-		frappe.get_meta("GL Entry").get_field("debit"),
-		currency=frappe.get_cached_value("Company", gl_map[0].company, "default_currency"),
+		capkpi.get_meta("GL Entry").get_field("debit"),
+		currency=capkpi.get_cached_value("Company", gl_map[0].company, "default_currency"),
 	)
 
 	debit_credit_diff = 0.0
@@ -284,7 +284,7 @@ def round_off_debit_credit(gl_map):
 		allowance = 0.5
 
 	if abs(debit_credit_diff) > allowance:
-		frappe.throw(
+		capkpi.throw(
 			_("Debit and Credit not equal for {0} #{1}. Difference is {2}.").format(
 				gl_map[0].voucher_type, gl_map[0].voucher_no, debit_credit_diff
 			)
@@ -299,7 +299,7 @@ def make_round_off_gle(gl_map, debit_credit_diff, precision):
 		gl_map[0].company, gl_map[0].voucher_type, gl_map[0].voucher_no
 	)
 	round_off_account_exists = False
-	round_off_gle = frappe._dict()
+	round_off_gle = capkpi._dict()
 	for d in gl_map:
 		if d.account == round_off_account:
 			round_off_gle = d
@@ -341,7 +341,7 @@ def make_round_off_gle(gl_map, debit_credit_diff, precision):
 
 def update_accounting_dimensions(round_off_gle):
 	dimensions = get_accounting_dimensions()
-	meta = frappe.get_meta(round_off_gle["voucher_type"])
+	meta = capkpi.get_meta(round_off_gle["voucher_type"])
 	has_all_dimensions = True
 
 	for dimension in dimensions:
@@ -349,7 +349,7 @@ def update_accounting_dimensions(round_off_gle):
 			has_all_dimensions = False
 
 	if dimensions and has_all_dimensions:
-		dimension_values = frappe.db.get_value(
+		dimension_values = capkpi.db.get_value(
 			round_off_gle["voucher_type"], round_off_gle["voucher_no"], dimensions, as_dict=1
 		)
 
@@ -358,23 +358,23 @@ def update_accounting_dimensions(round_off_gle):
 
 
 def get_round_off_account_and_cost_center(company, voucher_type, voucher_no):
-	round_off_account, round_off_cost_center = frappe.get_cached_value(
+	round_off_account, round_off_cost_center = capkpi.get_cached_value(
 		"Company", company, ["round_off_account", "round_off_cost_center"]
 	) or [None, None]
 
-	meta = frappe.get_meta(voucher_type)
+	meta = capkpi.get_meta(voucher_type)
 
 	# Give first preference to parent cost center for round off GLE
 	if meta.has_field("cost_center"):
-		parent_cost_center = frappe.db.get_value(voucher_type, voucher_no, "cost_center")
+		parent_cost_center = capkpi.db.get_value(voucher_type, voucher_no, "cost_center")
 		if parent_cost_center:
 			round_off_cost_center = parent_cost_center
 
 	if not round_off_account:
-		frappe.throw(_("Please mention Round Off Account in Company"))
+		capkpi.throw(_("Please mention Round Off Account in Company"))
 
 	if not round_off_cost_center:
-		frappe.throw(_("Please mention Round Off Cost Center in Company"))
+		capkpi.throw(_("Please mention Round Off Cost Center in Company"))
 
 	return round_off_account, round_off_cost_center
 
@@ -388,7 +388,7 @@ def make_reverse_gl_entries(
 	"""
 
 	if not gl_entries:
-		gl_entries = frappe.get_all(
+		gl_entries = capkpi.get_all(
 			"GL Entry",
 			fields=["*"],
 			filters={"voucher_type": voucher_type, "voucher_no": voucher_no, "is_cancelled": 0},
@@ -428,15 +428,15 @@ def check_freezing_date(posting_date, adv_adj=False):
 	Hence stop admin to bypass if accounts are freezed
 	"""
 	if not adv_adj:
-		acc_frozen_upto = frappe.db.get_value("Accounts Settings", None, "acc_frozen_upto")
+		acc_frozen_upto = capkpi.db.get_value("Accounts Settings", None, "acc_frozen_upto")
 		if acc_frozen_upto:
-			frozen_accounts_modifier = frappe.db.get_value(
+			frozen_accounts_modifier = capkpi.db.get_value(
 				"Accounts Settings", None, "frozen_accounts_modifier"
 			)
 			if getdate(posting_date) <= getdate(acc_frozen_upto) and (
-				frozen_accounts_modifier not in frappe.get_roles() or frappe.session.user == "Administrator"
+				frozen_accounts_modifier not in capkpi.get_roles() or capkpi.session.user == "Administrator"
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("You are not authorized to add or update entries before {0}").format(
 						formatdate(acc_frozen_upto)
 					)
@@ -447,9 +447,9 @@ def set_as_cancel(voucher_type, voucher_no):
 	"""
 	Set is_cancelled=1 in all original gl entries for the voucher
 	"""
-	frappe.db.sql(
+	capkpi.db.sql(
 		"""UPDATE `tabGL Entry` SET is_cancelled = 1,
 		modified=%s, modified_by=%s
 		where voucher_type=%s and voucher_no=%s and is_cancelled = 0""",
-		(now(), frappe.session.user, voucher_type, voucher_no),
+		(now(), capkpi.session.user, voucher_type, voucher_no),
 	)

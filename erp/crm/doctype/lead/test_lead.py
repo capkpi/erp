@@ -4,16 +4,16 @@
 
 import unittest
 
-import frappe
+import capkpi
 
-test_records = frappe.get_test_records("Lead")
+test_records = capkpi.get_test_records("Lead")
 
 
 class TestLead(unittest.TestCase):
 	def test_make_customer(self):
 		from erp.crm.doctype.lead.lead import make_customer
 
-		frappe.delete_doc_if_exists("Customer", "_Test Lead")
+		capkpi.delete_doc_if_exists("Customer", "_Test Lead")
 
 		customer = make_customer("_T-Lead-00001")
 		self.assertEqual(customer.doctype, "Customer")

@@ -1,4 +1,4 @@
-from frappe import _
+from capkpi import _
 
 
 def get_data():

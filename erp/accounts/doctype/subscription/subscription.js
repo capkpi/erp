@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Subscription', {
+capkpi.ui.form.on('Subscription', {
 	setup: function(frm) {
 		frm.set_query('party_type', function() {
 			return {
@@ -43,10 +43,10 @@ frappe.ui.form.on('Subscription', {
 
 	cancel_this_subscription: function(frm) {
 		const doc = frm.doc;
-		frappe.confirm(
+		capkpi.confirm(
 			__('This action will stop future billing. Are you sure you want to cancel this subscription?'),
 			function() {
-				frappe.call({
+				capkpi.call({
 					method:
 					"erp.accounts.doctype.subscription.subscription.cancel_subscription",
 					args: {name: doc.name},
@@ -62,10 +62,10 @@ frappe.ui.form.on('Subscription', {
 
 	renew_this_subscription: function(frm) {
 		const doc = frm.doc;
-		frappe.confirm(
+		capkpi.confirm(
 			__('You will lose records of previously generated invoices. Are you sure you want to restart this subscription?'),
 			function() {
-				frappe.call({
+				capkpi.call({
 					method:
 					"erp.accounts.doctype.subscription.subscription.restart_subscription",
 					args: {name: doc.name},
@@ -81,7 +81,7 @@ frappe.ui.form.on('Subscription', {
 
 	get_subscription_updates: function(frm) {
 		const doc = frm.doc;
-		frappe.call({
+		capkpi.call({
 			method:
 			"erp.accounts.doctype.subscription.subscription.get_subscription_updates",
 			args: {name: doc.name},

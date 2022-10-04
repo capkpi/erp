@@ -1,31 +1,31 @@
 // Copyright (c) 2020, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Process Statement Of Accounts', {
+capkpi.ui.form.on('Process Statement Of Accounts', {
 	view_properties: function(frm) {
-		frappe.route_options = {doc_type: 'Customer'};
-		frappe.set_route("Form", "Customize Form");
+		capkpi.route_options = {doc_type: 'Customer'};
+		capkpi.set_route("Form", "Customize Form");
 	},
 	refresh: function(frm){
 		if(!frm.doc.__islocal) {
 			frm.add_custom_button('Send Emails',function(){
-				frappe.call({
+				capkpi.call({
 					method: "erp.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.send_emails",
 					args: {
 						"document_name": frm.doc.name,
 					},
 					callback: function(r) {
 						if(r && r.message) {
-							frappe.show_alert({message: __('Emails Queued'), indicator: 'blue'});
+							capkpi.show_alert({message: __('Emails Queued'), indicator: 'blue'});
 						}
 						else{
-							frappe.msgprint(__('No Records for these settings.'))
+							capkpi.msgprint(__('No Records for these settings.'))
 						}
 					}
 				});
 			});
 			frm.add_custom_button('Download',function(){
-				var url = frappe.urllib.get_full_url(
+				var url = capkpi.urllib.get_full_url(
 					'/api/method/erp.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.download_statements?'
 					+ 'document_name='+encodeURIComponent(frm.doc.name))
 				$.ajax({
@@ -33,7 +33,7 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 					type: 'GET',
 					success: function(result) {
 						if(jQuery.isEmptyObject(result)){
-							frappe.msgprint(__('No Records for these settings.'));
+							capkpi.msgprint(__('No Records for these settings.'));
 						}
 						else{
 							window.location = url;
@@ -59,8 +59,8 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 			};
 		});
 		if(frm.doc.__islocal){
-			frm.set_value('from_date', frappe.datetime.add_months(frappe.datetime.get_today(), -1));
-			frm.set_value('to_date', frappe.datetime.get_today());
+			frm.set_value('from_date', capkpi.datetime.add_months(capkpi.datetime.get_today(), -1));
+			frm.set_value('to_date', capkpi.datetime.get_today());
 		}
 	},
 	customer_collection: function(frm){
@@ -71,7 +71,7 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 	},
 	frequency: function(frm){
 		if(frm.doc.frequency != ''){
-			frm.set_value('start_date', frappe.datetime.get_today());
+			frm.set_value('start_date', capkpi.datetime.get_today());
 		}
 		else{
 			frm.set_value('start_date', '');
@@ -79,7 +79,7 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 	},
 	fetch_customers: function(frm){
 		if(frm.doc.collection_name){
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.fetch_customers",
 				args: {
 					'customer_collection': frm.doc.customer_collection,
@@ -99,25 +99,25 @@ frappe.ui.form.on('Process Statement Of Accounts', {
 							frm.refresh_field('customers');
 						}
 						else{
-							frappe.throw(__('No Customers found with selected options.'));
+							capkpi.throw(__('No Customers found with selected options.'));
 						}
 					}
 				}
 			});
 		}
 		else {
-			frappe.throw('Enter ' + frm.doc.customer_collection + ' name.');
+			capkpi.throw('Enter ' + frm.doc.customer_collection + ' name.');
 		}
 	}
 });
 
-frappe.ui.form.on('Process Statement Of Accounts Customer', {
+capkpi.ui.form.on('Process Statement Of Accounts Customer', {
 	customer: function(frm, cdt, cdn){
 		var row = locals[cdt][cdn];
 		if (!row.customer){
 			return;
 		}
-		frappe.call({
+		capkpi.call({
 			method: 'erp.accounts.doctype.process_statement_of_accounts.process_statement_of_accounts.get_customer_emails',
 			args: {
 				'customer_name': row.customer,
@@ -126,8 +126,8 @@ frappe.ui.form.on('Process Statement Of Accounts Customer', {
 			callback: function(r){
 				if(!r.exe){
 					if(r.message.length){
-						frappe.model.set_value(cdt, cdn, "primary_email", r.message[0])
-						frappe.model.set_value(cdt, cdn, "billing_email", r.message[1])
+						capkpi.model.set_value(cdt, cdn, "primary_email", r.message[0])
+						capkpi.model.set_value(cdt, cdn, "billing_email", r.message[1])
 					}
 					else {
 						return

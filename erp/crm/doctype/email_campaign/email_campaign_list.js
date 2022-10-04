@@ -1,4 +1,4 @@
-frappe.listview_settings['Email Campaign'] = {
+capkpi.listview_settings['Email Campaign'] = {
 	get_indicator: function(doc) {
 		var colors = {
 			"Unsubscribed": "red",

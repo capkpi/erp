@@ -4,9 +4,9 @@
 
 import copy
 
-import frappe
-from frappe import _
-from frappe.utils import date_diff, flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import date_diff, flt, getdate
 
 
 def execute(filters=None):
@@ -32,9 +32,9 @@ def validate_filters(filters):
 	from_date, to_date = filters.get("from_date"), filters.get("to_date")
 
 	if not from_date and to_date:
-		frappe.throw(_("From and To Dates are required."))
+		capkpi.throw(_("From and To Dates are required."))
 	elif date_diff(to_date, from_date) < 0:
-		frappe.throw(_("To Date cannot be before From Date."))
+		capkpi.throw(_("To Date cannot be before From Date."))
 
 
 def get_conditions(filters):
@@ -56,7 +56,7 @@ def get_conditions(filters):
 
 
 def get_data(conditions, filters):
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		SELECT
 			po.transaction_date as date,

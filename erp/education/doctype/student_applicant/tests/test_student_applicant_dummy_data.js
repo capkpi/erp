@@ -7,10 +7,10 @@ QUnit.test('Make Students', function(assert){
 	let loop = [1,2,3,4];
 	let fname;
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// Making School House to be used in this test and later
-		() => frappe.set_route('Form', 'School House/New School House'),
-		() => frappe.timeout(0.5),
+		() => capkpi.set_route('Form', 'School House/New School House'),
+		() => capkpi.timeout(0.5),
 		() => cur_frm.doc.house_name = 'Test_house',
 		() => cur_frm.save(),
 
@@ -20,7 +20,7 @@ QUnit.test('Make Students', function(assert){
 				tasks.push(() => {
 					fname = "Fname" + index;
 
-					return frappe.tests.make('Student Applicant', [
+					return capkpi.tests.make('Student Applicant', [
 						{first_name: fname},
 						{middle_name: "Mname"},
 						{last_name: "Lname"},
@@ -39,21 +39,21 @@ QUnit.test('Make Students', function(assert){
 					]);
 				});
 			});
-			return frappe.run_serially(tasks);
+			return capkpi.run_serially(tasks);
 		},
 
 		// Using Program Enrollment Tool to enroll all dummy student at once
-		() => frappe.set_route('Form', 'Program Enrollment Tool'),
+		() => capkpi.set_route('Form', 'Program Enrollment Tool'),
 		() => {
 			cur_frm.set_value("get_students_from", "Student Applicants");
 			cur_frm.set_value("academic_year", "2016-17");
 			cur_frm.set_value("program", "Standard Test");
 		},
-		() => frappe.tests.click_button("Get Students"),
-		() => frappe.timeout(1),
-		() => frappe.tests.click_button("Enroll Students"),
-		() => frappe.timeout(1.5),
-		() => frappe.tests.click_button("Close"),
+		() => capkpi.tests.click_button("Get Students"),
+		() => capkpi.timeout(1),
+		() => capkpi.tests.click_button("Enroll Students"),
+		() => capkpi.timeout(1.5),
+		() => capkpi.tests.click_button("Close"),
 
 		// Submitting required data for each enrolled Student
 		() => {
@@ -61,10 +61,10 @@ QUnit.test('Make Students', function(assert){
 			loop.forEach(index => {
 				tasks.push(
 					() => {fname = "Fname" + index + " Mname Lname";},
-					() => frappe.set_route('List', 'Program Enrollment/List'),
-					() => frappe.timeout(0.6),
-					() => frappe.tests.click_link(fname),
-					() => frappe.timeout(0.4),
+					() => capkpi.set_route('List', 'Program Enrollment/List'),
+					() => capkpi.timeout(0.6),
+					() => capkpi.tests.click_link(fname),
+					() => capkpi.timeout(0.4),
 					() => {
 						cur_frm.set_value('program', 'Standard Test');
 						cur_frm.set_value('student_category', 'Reservation');
@@ -74,13 +74,13 @@ QUnit.test('Make Students', function(assert){
 						cur_frm.set_value('school_house', 'Test_house');
 					},
 					() => cur_frm.save(),
-					() => frappe.timeout(0.5),
-					() => frappe.tests.click_button('Submit'),
-					() => frappe.tests.click_button('Yes'),
-					() => frappe.timeout(0.5)
+					() => capkpi.timeout(0.5),
+					() => capkpi.tests.click_button('Submit'),
+					() => capkpi.tests.click_button('Yes'),
+					() => capkpi.timeout(0.5)
 				);
 			});
-			return frappe.run_serially(tasks);
+			return capkpi.run_serially(tasks);
 		},
 		() => done()
 	]);

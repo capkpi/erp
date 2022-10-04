@@ -4,10 +4,10 @@
 import copy
 import unittest
 
-import frappe
-from frappe.model.dynamic_links import get_dynamic_link_map
-from frappe.model.naming import make_autoname
-from frappe.utils import add_days, flt, getdate, nowdate
+import capkpi
+from capkpi.model.dynamic_links import get_dynamic_link_map
+from capkpi.model.naming import make_autoname
+from capkpi.utils import add_days, flt, getdate, nowdate
 from six import iteritems
 
 from erp.accounts.doctype.account.test_account import create_account, get_inventory_account
@@ -36,7 +36,7 @@ from erp.stock.utils import get_incoming_rate
 
 class TestSalesInvoice(unittest.TestCase):
 	def make(self):
-		w = frappe.copy_doc(test_records[0])
+		w = capkpi.copy_doc(test_records[0])
 		w.is_pos = 0
 		w.insert()
 		w.submit()
@@ -51,11 +51,11 @@ class TestSalesInvoice(unittest.TestCase):
 		unlink_payment_on_cancel_of_invoice(0)
 
 	def test_timestamp_change(self):
-		w = frappe.copy_doc(test_records[0])
+		w = capkpi.copy_doc(test_records[0])
 		w.docstatus = 0
 		w.insert()
 
-		w2 = frappe.get_doc(w.doctype, w.name)
+		w2 = capkpi.get_doc(w.doctype, w.name)
 
 		import time
 
@@ -65,30 +65,30 @@ class TestSalesInvoice(unittest.TestCase):
 		import time
 
 		time.sleep(1)
-		self.assertRaises(frappe.TimestampMismatchError, w2.save)
+		self.assertRaises(capkpi.TimestampMismatchError, w2.save)
 
 	def test_sales_invoice_change_naming_series(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		si.insert()
 		si.naming_series = "TEST-"
 
-		self.assertRaises(frappe.CannotChangeConstantError, si.save)
+		self.assertRaises(capkpi.CannotChangeConstantError, si.save)
 
-		si = frappe.copy_doc(test_records[1])
+		si = capkpi.copy_doc(test_records[1])
 		si.insert()
 		si.naming_series = "TEST-"
 
-		self.assertRaises(frappe.CannotChangeConstantError, si.save)
+		self.assertRaises(capkpi.CannotChangeConstantError, si.save)
 
 	def test_add_terms_after_save(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		si.insert()
 
 		self.assertTrue(si.payment_schedule)
 		self.assertEqual(getdate(si.payment_schedule[0].due_date), getdate(si.due_date))
 
 	def test_sales_invoice_calculation_base_currency(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		si.insert()
 
 		expected_values = {
@@ -140,7 +140,7 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_payment_entry_unlink_against_invoice(self):
 		from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.is_pos = 0
 		si.insert()
 		si.submit()
@@ -157,8 +157,8 @@ class TestSalesInvoice(unittest.TestCase):
 		pe.submit()
 
 		unlink_payment_on_cancel_of_invoice(0)
-		si = frappe.get_doc("Sales Invoice", si.name)
-		self.assertRaises(frappe.LinkExistsError, si.cancel)
+		si = capkpi.get_doc("Sales Invoice", si.name)
+		self.assertRaises(capkpi.LinkExistsError, si.cancel)
 		unlink_payment_on_cancel_of_invoice()
 
 	def test_payment_entry_unlink_against_standalone_credit_note(self):
@@ -203,7 +203,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertRaises(PaymentEntryUnlinkError, si1.cancel)
 
 	def test_sales_invoice_calculation_export_currency(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		si.currency = "USD"
 		si.conversion_rate = 50
 		si.get("items")[0].rate = 1
@@ -321,7 +321,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(si.grand_total, 4900.00)
 
 	def test_sales_invoice_discount_amount(self):
-		si = frappe.copy_doc(test_records[3])
+		si = capkpi.copy_doc(test_records[3])
 		si.discount_amount = 104.94
 		si.append(
 			"taxes",
@@ -402,8 +402,8 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(si.rounding_adjustment, -0.01)
 
 	def test_discount_amount_gl_entry(self):
-		frappe.db.set_value("Company", "_Test Company", "round_off_account", "Round Off - _TC")
-		si = frappe.copy_doc(test_records[3])
+		capkpi.db.set_value("Company", "_Test Company", "round_off_account", "Round Off - _TC")
+		si = capkpi.copy_doc(test_records[3])
 		si.discount_amount = 104.94
 		si.append(
 			"taxes",
@@ -420,7 +420,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.insert()
 		si.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -456,7 +456,7 @@ class TestSalesInvoice(unittest.TestCase):
 		# cancel
 		si.cancel()
 
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select * from `tabGL Entry`
 			where voucher_type='Sales Invoice' and voucher_no=%s""",
 			si.name,
@@ -592,7 +592,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(si.grand_total, 1116.0)
 
 	def test_inclusive_rate_validations(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		for i, tax in enumerate(si.get("taxes")):
 			tax.idx = i + 1
 
@@ -602,15 +602,15 @@ class TestSalesInvoice(unittest.TestCase):
 			si.get("taxes")[i].included_in_print_rate = 1
 
 		# tax type "Actual" cannot be inclusive
-		self.assertRaises(frappe.ValidationError, si.insert)
+		self.assertRaises(capkpi.ValidationError, si.insert)
 
 		# taxes above included type 'On Previous Row Total' should also be included
 		si.get("taxes")[0].included_in_print_rate = 0
-		self.assertRaises(frappe.ValidationError, si.insert)
+		self.assertRaises(capkpi.ValidationError, si.insert)
 
 	def test_sales_invoice_calculation_base_currency_with_tax_inclusive_price(self):
 		# prepare
-		si = frappe.copy_doc(test_records[3])
+		si = capkpi.copy_doc(test_records[3])
 		si.insert()
 
 		expected_values = {
@@ -683,7 +683,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 	def test_sales_invoice_calculation_export_currency_with_tax_inclusive_price(self):
 		# prepare
-		si = frappe.copy_doc(test_records[3])
+		si = capkpi.copy_doc(test_records[3])
 		si.currency = "USD"
 		si.conversion_rate = 50
 		si.get("items")[0].price_list_rate = 55.56
@@ -773,13 +773,13 @@ class TestSalesInvoice(unittest.TestCase):
 			test_records as jv_test_records,
 		)
 
-		jv = frappe.get_doc(frappe.copy_doc(jv_test_records[0]))
+		jv = capkpi.get_doc(capkpi.copy_doc(jv_test_records[0]))
 		jv.get("accounts")[0].reference_type = w.doctype
 		jv.get("accounts")[0].reference_name = w.name
 		jv.insert()
 		jv.submit()
 
-		self.assertEqual(frappe.db.get_value("Sales Invoice", w.name, "outstanding_amount"), 162.0)
+		self.assertEqual(capkpi.db.get_value("Sales Invoice", w.name, "outstanding_amount"), 162.0)
 
 		link_data = get_dynamic_link_map().get("Sales Invoice", [])
 		link_doctypes = [d.parent for d in link_data]
@@ -788,14 +788,14 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertTrue(link_doctypes.index("GL Entry") > link_doctypes.index("Journal Entry Account"))
 
 		jv.cancel()
-		self.assertEqual(frappe.db.get_value("Sales Invoice", w.name, "outstanding_amount"), 562.0)
+		self.assertEqual(capkpi.db.get_value("Sales Invoice", w.name, "outstanding_amount"), 562.0)
 
 	def test_sales_invoice_gl_entry_without_perpetual_inventory(self):
-		si = frappe.copy_doc(test_records[1])
+		si = capkpi.copy_doc(test_records[1])
 		si.insert()
 		si.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -823,7 +823,7 @@ class TestSalesInvoice(unittest.TestCase):
 		# cancel
 		si.cancel()
 
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select * from `tabGL Entry`
 			where voucher_type='Sales Invoice' and voucher_no=%s""",
 			si.name,
@@ -872,7 +872,7 @@ class TestSalesInvoice(unittest.TestCase):
 		for tax in taxes:
 			pos.append("taxes", tax)
 
-		si = frappe.copy_doc(pos)
+		si = capkpi.copy_doc(pos)
 		si.insert()
 		si.submit()
 		self.assertEqual(si.paid_amount, 100.0)
@@ -995,7 +995,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(pos.write_off_amount, 10)
 
 	def test_pos_with_no_gl_entry_for_change_amount(self):
-		frappe.db.set_value("Accounts Settings", None, "post_change_gl_entries", 0)
+		capkpi.db.set_value("Accounts Settings", None, "post_change_gl_entries", 0)
 
 		make_pos_profile(
 			company="_Test Company with perpetual inventory",
@@ -1045,14 +1045,14 @@ class TestSalesInvoice(unittest.TestCase):
 
 		self.validate_pos_gl_entry(pos, pos, 60, validate_without_change_gle=True)
 
-		frappe.db.set_value("Accounts Settings", None, "post_change_gl_entries", 1)
+		capkpi.db.set_value("Accounts Settings", None, "post_change_gl_entries", 1)
 
 	def validate_pos_gl_entry(self, si, pos, cash_amount, validate_without_change_gle=False):
 		if validate_without_change_gle:
 			cash_amount -= pos.change_amount
 
 		# check stock ledger entries
-		sle = frappe.db.sql(
+		sle = capkpi.db.sql(
 			"""select * from `tabStock Ledger Entry`
 			where voucher_type = 'Sales Invoice' and voucher_no = %s""",
 			si.name,
@@ -1064,7 +1064,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		# check gl entries
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc, debit asc, credit asc""",
@@ -1096,7 +1096,7 @@ class TestSalesInvoice(unittest.TestCase):
 			self.assertEqual(expected_gl_entries[i][2], gle.credit)
 
 		si.cancel()
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select * from `tabGL Entry`
 			where voucher_type='Sales Invoice' and voucher_no=%s""",
 			si.name,
@@ -1104,7 +1104,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		self.assertTrue(gle)
 
-		frappe.db.sql("delete from `tabPOS Profile`")
+		capkpi.db.sql("delete from `tabPOS Profile`")
 
 	def test_pos_si_without_payment(self):
 		make_pos_profile()
@@ -1113,11 +1113,11 @@ class TestSalesInvoice(unittest.TestCase):
 		pos["is_pos"] = 1
 		pos["update_stock"] = 1
 
-		si = frappe.copy_doc(pos)
+		si = capkpi.copy_doc(pos)
 		si.insert()
 
 		# Check that the invoice cannot be submitted without payments
-		self.assertRaises(frappe.ValidationError, si.submit)
+		self.assertRaises(capkpi.ValidationError, si.submit)
 
 	def test_sales_invoice_gl_entry_with_perpetual_inventory_no_item_code(self):
 		si = create_sales_invoice(
@@ -1131,7 +1131,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.insert()
 		si.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -1151,7 +1151,7 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_sales_invoice_gl_entry_with_perpetual_inventory_non_stock_item(self):
 		si = create_sales_invoice(item="_Test Non Stock Item")
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -1177,7 +1177,7 @@ class TestSalesInvoice(unittest.TestCase):
 			test_records as pr_test_records,
 		)
 
-		pr = frappe.copy_doc(pr_test_records[0])
+		pr = capkpi.copy_doc(pr_test_records[0])
 		pr.naming_series = "_T-Purchase Receipt-"
 		pr.insert()
 		pr.submit()
@@ -1187,7 +1187,7 @@ class TestSalesInvoice(unittest.TestCase):
 			test_records as dn_test_records,
 		)
 
-		dn = frappe.copy_doc(dn_test_records[0])
+		dn = capkpi.copy_doc(dn_test_records[0])
 		dn.naming_series = "_T-Delivery Note-"
 		dn.insert()
 		dn.submit()
@@ -1198,11 +1198,11 @@ class TestSalesInvoice(unittest.TestCase):
 			test_records as jv_test_records,
 		)
 
-		jv = frappe.copy_doc(jv_test_records[0])
+		jv = capkpi.copy_doc(jv_test_records[0])
 		jv.insert()
 		jv.submit()
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.allocate_advances_automatically = 0
 		si.append(
 			"advances",
@@ -1221,7 +1221,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.load_from_db()
 
 		self.assertTrue(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select name from `tabJournal Entry Account`
 			where reference_name=%s""",
 				si.name,
@@ -1229,7 +1229,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		self.assertTrue(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select name from `tabJournal Entry Account`
 			where reference_name=%s and credit_in_account_currency=300""",
 				si.name,
@@ -1247,7 +1247,7 @@ class TestSalesInvoice(unittest.TestCase):
 		se = make_serialized_item()
 		serial_nos = get_serial_nos(se.get("items")[0].serial_no)
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.update_stock = 1
 		si.get("items")[0].item_code = "_Test Serialized Item With Series"
 		si.get("items")[0].qty = 1
@@ -1255,9 +1255,9 @@ class TestSalesInvoice(unittest.TestCase):
 		si.insert()
 		si.submit()
 
-		self.assertFalse(frappe.db.get_value("Serial No", serial_nos[0], "warehouse"))
+		self.assertFalse(capkpi.db.get_value("Serial No", serial_nos[0], "warehouse"))
 		self.assertEqual(
-			frappe.db.get_value("Serial No", serial_nos[0], "delivery_document_no"), si.name
+			capkpi.db.get_value("Serial No", serial_nos[0], "delivery_document_no"), si.name
 		)
 
 		return si
@@ -1271,13 +1271,13 @@ class TestSalesInvoice(unittest.TestCase):
 		serial_nos = get_serial_nos(si.get("items")[0].serial_no)
 
 		self.assertEqual(
-			frappe.db.get_value("Serial No", serial_nos[0], "warehouse"), "_Test Warehouse - _TC"
+			capkpi.db.get_value("Serial No", serial_nos[0], "warehouse"), "_Test Warehouse - _TC"
 		)
-		self.assertFalse(frappe.db.get_value("Serial No", serial_nos[0], "delivery_document_no"))
-		self.assertFalse(frappe.db.get_value("Serial No", serial_nos[0], "sales_invoice"))
+		self.assertFalse(capkpi.db.get_value("Serial No", serial_nos[0], "delivery_document_no"))
+		self.assertFalse(capkpi.db.get_value("Serial No", serial_nos[0], "sales_invoice"))
 
 	def test_serialize_status(self):
-		serial_no = frappe.get_doc(
+		serial_no = capkpi.get_doc(
 			{
 				"doctype": "Serial No",
 				"item_code": "_Test Serialized Item With Series",
@@ -1286,7 +1286,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 		serial_no.save()
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.update_stock = 1
 		si.get("items")[0].item_code = "_Test Serialized Item With Series"
 		si.get("items")[0].qty = 1
@@ -1339,7 +1339,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		# outgoing_rate
 		outgoing_rate = (
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"Stock Ledger Entry",
 				{"voucher_type": "Sales Invoice", "voucher_no": si.name},
 				"stock_value_difference",
@@ -1366,7 +1366,7 @@ class TestSalesInvoice(unittest.TestCase):
 		actual_qty_2 = get_qty_after_transaction(item_code="_Test Item", warehouse="Stores - TCP1")
 		self.assertEqual(actual_qty_1 + 2, actual_qty_2)
 
-		incoming_rate, stock_value_difference = frappe.db.get_value(
+		incoming_rate, stock_value_difference = capkpi.db.get_value(
 			"Stock Ledger Entry",
 			{"voucher_type": "Sales Invoice", "voucher_no": si1.name},
 			["incoming_rate", "stock_value_difference"],
@@ -1378,7 +1378,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		# Check gl entry
-		gle_warehouse_amount = frappe.db.get_value(
+		gle_warehouse_amount = capkpi.db.get_value(
 			"GL Entry",
 			{"voucher_type": "Sales Invoice", "voucher_no": si1.name, "account": stock_in_hand_account},
 			"debit",
@@ -1386,7 +1386,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		self.assertEqual(gle_warehouse_amount, stock_value_difference)
 
-		party_credited = frappe.db.get_value(
+		party_credited = capkpi.db.get_value(
 			"GL Entry",
 			{
 				"voucher_type": "Sales Invoice",
@@ -1401,12 +1401,12 @@ class TestSalesInvoice(unittest.TestCase):
 
 		# Check outstanding amount
 		self.assertFalse(si1.outstanding_amount)
-		self.assertEqual(frappe.db.get_value("Sales Invoice", si.name, "outstanding_amount"), 1500)
+		self.assertEqual(capkpi.db.get_value("Sales Invoice", si.name, "outstanding_amount"), 1500)
 
 	def test_gle_made_when_asset_is_returned(self):
 		create_asset_data()
 
-		pi = frappe.new_doc("Purchase Invoice")
+		pi = capkpi.new_doc("Purchase Invoice")
 		pi.supplier = "_Test Supplier"
 		pi.append("items", {"item_code": "Macbook Pro", "qty": 1})
 		pi.set_missing_values()
@@ -1423,16 +1423,16 @@ class TestSalesInvoice(unittest.TestCase):
 			rate=90000,
 		)
 
-		disposal_account = frappe.get_cached_value("Company", "_Test Company", "disposal_account")
+		disposal_account = capkpi.get_cached_value("Company", "_Test Company", "disposal_account")
 
 		# Asset value is 100,000 but it was sold for 90,000, so there should be a loss of 10,000
-		loss_for_si = frappe.get_all(
+		loss_for_si = capkpi.get_all(
 			"GL Entry",
 			filters={"voucher_no": si.name, "account": disposal_account},
 			fields=["credit", "debit"],
 		)[0]
 
-		loss_for_return_si = frappe.get_all(
+		loss_for_return_si = capkpi.get_all(
 			"GL Entry",
 			filters={"voucher_no": return_si.name, "account": disposal_account},
 			fields=["credit", "debit"],
@@ -1456,10 +1456,10 @@ class TestSalesInvoice(unittest.TestCase):
 			cost_center="Main - TCP1",
 		)
 
-		incoming_rate = frappe.db.get_value(
+		incoming_rate = capkpi.db.get_value(
 			"Stock Ledger Entry", {"voucher_no": return_si.name}, "incoming_rate"
 		)
-		debit_amount = frappe.db.get_value(
+		debit_amount = capkpi.db.get_value(
 			"GL Entry", {"voucher_no": return_si.name, "account": "Stock In Hand - TCP1"}, "debit"
 		)
 
@@ -1481,10 +1481,10 @@ class TestSalesInvoice(unittest.TestCase):
 			cost_center="Main - TCP1",
 		)
 
-		incoming_rate = frappe.db.get_value(
+		incoming_rate = capkpi.db.get_value(
 			"Stock Ledger Entry", {"voucher_no": return_si.name}, "incoming_rate"
 		)
-		debit_amount = frappe.db.get_value(
+		debit_amount = capkpi.db.get_value(
 			"GL Entry", {"voucher_no": return_si.name, "account": "Stock In Hand - TCP1"}, "debit"
 		)
 
@@ -1492,7 +1492,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(incoming_rate, 10.0)
 
 	def test_discount_on_net_total(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 		si.apply_discount_on = "Net Total"
 		si.discount_amount = 625
 		si.insert()
@@ -1563,7 +1563,7 @@ class TestSalesInvoice(unittest.TestCase):
 			conversion_rate=50,
 		)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
@@ -1604,7 +1604,7 @@ class TestSalesInvoice(unittest.TestCase):
 		# cancel
 		si.cancel()
 
-		gle = frappe.db.sql(
+		gle = capkpi.db.sql(
 			"""select name from `tabGL Entry`
 			where voucher_type='Sales Invoice' and voucher_no=%s""",
 			si.name,
@@ -1621,7 +1621,7 @@ class TestSalesInvoice(unittest.TestCase):
 			do_not_save=1,
 		)
 
-		self.assertRaises(frappe.ValidationError, si.save)
+		self.assertRaises(capkpi.ValidationError, si.save)
 
 	def test_invalid_currency(self):
 		# Customer currency = USD
@@ -1692,12 +1692,12 @@ class TestSalesInvoice(unittest.TestCase):
 			test_records as jv_test_records,
 		)
 
-		jv = frappe.copy_doc(jv_test_records[0])
+		jv = capkpi.copy_doc(jv_test_records[0])
 		jv.accounts[0].is_advance = "Yes"
 		jv.insert()
 		jv.submit()
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.append(
 			"advances",
 			{
@@ -1721,7 +1721,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		# added to avoid Document has been modified exception
-		jv = frappe.get_doc("Journal Entry", jv.name)
+		jv = capkpi.get_doc("Journal Entry", jv.name)
 		jv.cancel()
 
 		si.load_from_db()
@@ -1732,7 +1732,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 	def test_outstanding_amount_after_advance_payment_entry_cancelation(self):
-		pe = frappe.get_doc(
+		pe = capkpi.get_doc(
 			{
 				"doctype": "Payment Entry",
 				"payment_type": "Receive",
@@ -1754,7 +1754,7 @@ class TestSalesInvoice(unittest.TestCase):
 		pe.insert()
 		pe.submit()
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.is_pos = 0
 		si.append(
 			"advances",
@@ -1779,7 +1779,7 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		# added to avoid Document has been modified exception
-		pe = frappe.get_doc("Payment Entry", pe.name)
+		pe = capkpi.get_doc("Payment Entry", pe.name)
 		pe.cancel()
 
 		si.load_from_db()
@@ -1790,17 +1790,17 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 	def test_multiple_uom_in_selling(self):
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""delete from `tabItem Price`
 			where price_list='_Test Price List' and item_code='_Test Item'"""
 		)
-		item_price = frappe.new_doc("Item Price")
+		item_price = capkpi.new_doc("Item Price")
 		item_price.price_list = "_Test Price List"
 		item_price.item_code = "_Test Item"
 		item_price.price_list_rate = 100
 		item_price.insert()
 
-		si = frappe.copy_doc(test_records[1])
+		si = capkpi.copy_doc(test_records[1])
 		si.items[0].uom = "_Test UOM 1"
 		si.items[0].conversion_factor = None
 		si.items[0].price_list_rate = None
@@ -1827,7 +1827,7 @@ class TestSalesInvoice(unittest.TestCase):
 				self.assertEqual(d.get(k), expected_values[d.item_code][i])
 
 	def test_item_wise_tax_breakup_india(self):
-		frappe.flags.country = "India"
+		capkpi.flags.country = "India"
 
 		si = self.create_si_to_test_tax_breakup()
 		itemised_tax, itemised_taxable_amount = get_itemised_tax_breakup_data(si)
@@ -1841,10 +1841,10 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(itemised_tax, expected_itemised_tax)
 		self.assertEqual(itemised_taxable_amount, expected_itemised_taxable_amount)
 
-		frappe.flags.country = None
+		capkpi.flags.country = None
 
 	def test_item_wise_tax_breakup_outside_india(self):
-		frappe.flags.country = "United States"
+		capkpi.flags.country = "United States"
 
 		si = self.create_si_to_test_tax_breakup()
 
@@ -1859,7 +1859,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(itemised_tax, expected_itemised_tax)
 		self.assertEqual(itemised_taxable_amount, expected_itemised_taxable_amount)
 
-		frappe.flags.country = None
+		capkpi.flags.country = None
 
 	def create_si_to_test_tax_breakup(self):
 		si = create_sales_invoice(qty=100, rate=50, do_not_save=True)
@@ -1904,16 +1904,16 @@ class TestSalesInvoice(unittest.TestCase):
 		return si
 
 	def test_company_monthly_sales(self):
-		existing_current_month_sales = frappe.get_cached_value(
+		existing_current_month_sales = capkpi.get_cached_value(
 			"Company", "_Test Company", "total_monthly_sales"
 		)
 
 		si = create_sales_invoice()
-		current_month_sales = frappe.get_cached_value("Company", "_Test Company", "total_monthly_sales")
+		current_month_sales = capkpi.get_cached_value("Company", "_Test Company", "total_monthly_sales")
 		self.assertEqual(current_month_sales, existing_current_month_sales + si.base_grand_total)
 
 		si.cancel()
-		current_month_sales = frappe.get_cached_value("Company", "_Test Company", "total_monthly_sales")
+		current_month_sales = capkpi.get_cached_value("Company", "_Test Company", "total_monthly_sales")
 		self.assertEqual(current_month_sales, existing_current_month_sales)
 
 	def test_rounding_adjustment(self):
@@ -1947,7 +1947,7 @@ class TestSalesInvoice(unittest.TestCase):
 			]
 		)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -2004,7 +2004,7 @@ class TestSalesInvoice(unittest.TestCase):
 			]
 		)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -2074,7 +2074,7 @@ class TestSalesInvoice(unittest.TestCase):
 			]
 		)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
 			order by account asc""",
@@ -2091,7 +2091,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		self.assertEqual(debit_credit_diff, 0)
 
-		round_off_gle = frappe.db.get_value(
+		round_off_gle = capkpi.db.get_value(
 			"GL Entry",
 			{"voucher_type": "Sales Invoice", "voucher_no": si.name, "account": "Round Off - _TC"},
 			["cost_center", "location"],
@@ -2110,7 +2110,7 @@ class TestSalesInvoice(unittest.TestCase):
 			shipping_rule_type="Selling", shipping_rule_name="Shipping Rule - Sales Invoice Test"
 		)
 
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 
 		si.shipping_rule = shipping_rule.name
 		si.insert()
@@ -2137,7 +2137,7 @@ class TestSalesInvoice(unittest.TestCase):
 			"payment_schedule", dict(due_date="2017-01-01", invoice_portion=50.00, payment_amount=50)
 		)
 
-		self.assertRaises(frappe.ValidationError, si.insert)
+		self.assertRaises(capkpi.ValidationError, si.insert)
 
 	def test_credit_note(self):
 		from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
@@ -2161,7 +2161,7 @@ class TestSalesInvoice(unittest.TestCase):
 		pe.insert()
 		pe.submit()
 
-		si_doc = frappe.get_doc("Sales Invoice", si.name)
+		si_doc = capkpi.get_doc("Sales Invoice", si.name)
 		self.assertEqual(si_doc.outstanding_amount, 0)
 
 	def test_sales_invoice_with_cost_center(self):
@@ -2178,7 +2178,7 @@ class TestSalesInvoice(unittest.TestCase):
 			"Sales - _TC": {"cost_center": cost_center},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
@@ -2221,7 +2221,7 @@ class TestSalesInvoice(unittest.TestCase):
 			"Sales - _TC": {"project": item_project.name},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, project, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
@@ -2244,7 +2244,7 @@ class TestSalesInvoice(unittest.TestCase):
 			"Sales - _TC": {"cost_center": cost_center},
 		}
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, cost_center, account_currency, debit, credit,
 			debit_in_account_currency, credit_in_account_currency
 			from `tabGL Entry` where voucher_type='Sales Invoice' and voucher_no=%s
@@ -2279,7 +2279,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		pda1 = frappe.get_doc(
+		pda1 = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date=nowdate(),
@@ -2310,7 +2310,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.items[0].service_start_date = "2019-01-10"
 		si.items[0].service_end_date = "2019-03-15"
 
-		self.assertRaises(frappe.ValidationError, si.save)
+		self.assertRaises(capkpi.ValidationError, si.save)
 
 	def test_fixed_deferred_revenue(self):
 		deferred_account = create_account(
@@ -2319,7 +2319,7 @@ class TestSalesInvoice(unittest.TestCase):
 			company="_Test Company",
 		)
 
-		acc_settings = frappe.get_doc("Accounts Settings", "Accounts Settings")
+		acc_settings = capkpi.get_doc("Accounts Settings", "Accounts Settings")
 		acc_settings.book_deferred_entries_based_on = "Months"
 		acc_settings.save()
 
@@ -2339,7 +2339,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		pda1 = frappe.get_doc(
+		pda1 = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date="2019-03-31",
@@ -2364,7 +2364,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		check_gl_entries(self, si.name, expected_gle, "2019-01-30")
 
-		acc_settings = frappe.get_doc("Accounts Settings", "Accounts Settings")
+		acc_settings = capkpi.get_doc("Accounts Settings", "Accounts Settings")
 		acc_settings.book_deferred_entries_based_on = "Days"
 		acc_settings.save()
 
@@ -2377,8 +2377,8 @@ class TestSalesInvoice(unittest.TestCase):
 			allowed_to_interact_with="Wind Power LLC",
 		)
 
-		if not frappe.db.exists("Supplier", "_Test Internal Supplier"):
-			supplier = frappe.get_doc(
+		if not capkpi.db.exists("Supplier", "_Test Internal Supplier"):
+			supplier = capkpi.get_doc(
 				{
 					"supplier_group": "_Test Supplier Group",
 					"supplier_name": "_Test Internal Supplier",
@@ -2429,7 +2429,7 @@ class TestSalesInvoice(unittest.TestCase):
 			basic_rate=500,
 		)
 
-		si = frappe.copy_doc(test_records[0])
+		si = capkpi.copy_doc(test_records[0])
 		si.update_stock = 1
 		si.set_warehouse = "Finished Goods - _TC"
 		si.set_target_warehouse = "Stores - _TC"
@@ -2438,7 +2438,7 @@ class TestSalesInvoice(unittest.TestCase):
 		si.insert()
 		si.submit()
 
-		sles = frappe.get_all(
+		sles = capkpi.get_all(
 			"Stock Ledger Entry", filters={"voucher_no": si.name}, fields=["name", "actual_qty"]
 		)
 
@@ -2460,7 +2460,7 @@ class TestSalesInvoice(unittest.TestCase):
 			company="_Test Company with perpetual inventory",
 		)
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Company", "_Test Company with perpetual inventory", "unrealized_profit_loss_account", account
 		)
 
@@ -2570,7 +2570,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 	def test_einvoice_submission_without_irn(self):
 		# init
-		einvoice_settings = frappe.get_doc("E Invoice Settings")
+		einvoice_settings = capkpi.get_doc("E Invoice Settings")
 		einvoice_settings.enable = 1
 		einvoice_settings.applicable_from = nowdate()
 		einvoice_settings.append(
@@ -2584,20 +2584,20 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 		einvoice_settings.save()
 
-		country = frappe.flags.country
-		frappe.flags.country = "India"
+		country = capkpi.flags.country
+		capkpi.flags.country = "India"
 
 		si = make_sales_invoice_for_ewaybill()
-		self.assertRaises(frappe.ValidationError, si.submit)
+		self.assertRaises(capkpi.ValidationError, si.submit)
 
 		si.irn = "test_irn"
 		si.submit()
 
 		# reset
-		einvoice_settings = frappe.get_doc("E Invoice Settings")
+		einvoice_settings = capkpi.get_doc("E Invoice Settings")
 		einvoice_settings.enable = 0
 		einvoice_settings.save()
-		frappe.flags.country = country
+		capkpi.flags.country = country
 
 	def test_einvoice_json(self):
 		from erp.regional.india.e_invoice.utils import make_einvoice, validate_totals
@@ -2623,7 +2623,7 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_einvoice_discounts(self):
 		from erp.regional.india.e_invoice.utils import make_einvoice, validate_totals
 
-		frappe.db.set_single_value("E Invoice Settings", "dont_show_discounts_in_e_invoice", False)
+		capkpi.db.set_single_value("E Invoice Settings", "dont_show_discounts_in_e_invoice", False)
 
 		# Normal Itemized Discount
 		si = get_sales_invoice_for_e_invoice()
@@ -2728,7 +2728,7 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_einvoice_without_discounts(self):
 		from erp.regional.india.e_invoice.utils import make_einvoice, validate_totals
 
-		frappe.db.set_single_value("E Invoice Settings", "dont_show_discounts_in_e_invoice", True)
+		capkpi.db.set_single_value("E Invoice Settings", "dont_show_discounts_in_e_invoice", True)
 
 		# Normal Itemized Discount
 		si = get_sales_invoice_for_e_invoice()
@@ -3030,7 +3030,7 @@ class TestSalesInvoice(unittest.TestCase):
 		party_link = create_party_link("Supplier", supplier, customer)
 
 		# enable common party accounting
-		frappe.db.set_value("Accounts Settings", None, "enable_common_party_accounting", 1)
+		capkpi.db.set_value("Accounts Settings", None, "enable_common_party_accounting", 1)
 
 		# create a sales invoice
 		si = create_sales_invoice(customer=customer, parent_cost_center="_Test Cost Center - _TC")
@@ -3041,7 +3041,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(flt(si.outstanding_amount), 0.0)
 
 		# check creation of journal entry
-		jv = frappe.get_all(
+		jv = capkpi.get_all(
 			"Journal Entry Account",
 			{
 				"account": si.debit_to,
@@ -3057,7 +3057,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(jv[0], si.grand_total)
 
 		party_link.delete()
-		frappe.db.set_value("Accounts Settings", None, "enable_common_party_accounting", 0)
+		capkpi.db.set_value("Accounts Settings", None, "enable_common_party_accounting", 0)
 
 	def test_payment_statuses(self):
 		from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
@@ -3089,7 +3089,7 @@ class TestSalesInvoice(unittest.TestCase):
 		self.assertEqual(si.status, "Overdue")
 
 		# Test Partly Paid
-		pe = frappe.copy_doc(pe)
+		pe = capkpi.copy_doc(pe)
 		pe.paid_amount = si.grand_total / 2
 		pe.references[0].allocated_amount = pe.paid_amount
 		pe.submit()
@@ -3142,10 +3142,10 @@ class TestSalesInvoice(unittest.TestCase):
 			self.assertEqual(invoice.status, "Overdue and Discounted")
 
 	def test_sales_commission(self):
-		si = frappe.copy_doc(test_records[2])
+		si = capkpi.copy_doc(test_records[2])
 
-		frappe.db.set_value("Item", si.get("items")[0].item_code, "grant_commission", 1)
-		frappe.db.set_value("Item", si.get("items")[1].item_code, "grant_commission", 0)
+		capkpi.db.set_value("Item", si.get("items")[0].item_code, "grant_commission", 1)
+		capkpi.db.set_value("Item", si.get("items")[1].item_code, "grant_commission", 0)
 
 		item = copy.deepcopy(si.get("items")[0])
 		item.update(
@@ -3174,19 +3174,19 @@ class TestSalesInvoice(unittest.TestCase):
 		for commission_rate in (101, -1):
 			si.reload()
 			si.commission_rate = commission_rate
-			self.assertRaises(frappe.ValidationError, si.save)
+			self.assertRaises(capkpi.ValidationError, si.save)
 
 	def test_sales_invoice_submission_post_account_freezing_date(self):
-		frappe.db.set_value("Accounts Settings", None, "acc_frozen_upto", add_days(getdate(), 1))
+		capkpi.db.set_value("Accounts Settings", None, "acc_frozen_upto", add_days(getdate(), 1))
 		si = create_sales_invoice(do_not_save=True)
 		si.posting_date = add_days(getdate(), 1)
 		si.save()
 
-		self.assertRaises(frappe.ValidationError, si.submit)
+		self.assertRaises(capkpi.ValidationError, si.submit)
 		si.posting_date = getdate()
 		si.submit()
 
-		frappe.db.set_value("Accounts Settings", None, "acc_frozen_upto", None)
+		capkpi.db.set_value("Accounts Settings", None, "acc_frozen_upto", None)
 
 	def test_over_billing_case_against_delivery_note(self):
 		"""
@@ -3195,26 +3195,26 @@ class TestSalesInvoice(unittest.TestCase):
 		"""
 		from erp.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
 
-		over_billing_allowance = frappe.db.get_single_value(
+		over_billing_allowance = capkpi.db.get_single_value(
 			"Accounts Settings", "over_billing_allowance"
 		)
-		frappe.db.set_value("Accounts Settings", None, "over_billing_allowance", 0)
+		capkpi.db.set_value("Accounts Settings", None, "over_billing_allowance", 0)
 
 		dn = create_delivery_note()
 		dn.submit()
 
 		si = make_sales_invoice(dn.name)
 		# make a copy of first item and add it to invoice
-		item_copy = frappe.copy_doc(si.items[0])
+		item_copy = capkpi.copy_doc(si.items[0])
 		si.append("items", item_copy)
 		si.save()
 
-		with self.assertRaises(frappe.ValidationError) as err:
+		with self.assertRaises(capkpi.ValidationError) as err:
 			si.submit()
 
 		self.assertTrue("cannot overbill" in str(err.exception).lower())
 
-		frappe.db.set_value("Accounts Settings", None, "over_billing_allowance", over_billing_allowance)
+		capkpi.db.set_value("Accounts Settings", None, "over_billing_allowance", over_billing_allowance)
 
 	def test_multi_currency_deferred_revenue_via_journal_entry(self):
 		deferred_account = create_account(
@@ -3223,7 +3223,7 @@ class TestSalesInvoice(unittest.TestCase):
 			company="_Test Company",
 		)
 
-		acc_settings = frappe.get_single("Accounts Settings")
+		acc_settings = capkpi.get_single("Accounts Settings")
 		acc_settings.book_deferred_entries_via_journal_entry = 1
 		acc_settings.submit_journal_entries = 1
 		acc_settings.save()
@@ -3253,9 +3253,9 @@ class TestSalesInvoice(unittest.TestCase):
 		si.save()
 		si.submit()
 
-		frappe.db.set_value("Accounts Settings", None, "acc_frozen_upto", getdate("2019-01-31"))
+		capkpi.db.set_value("Accounts Settings", None, "acc_frozen_upto", getdate("2019-01-31"))
 
-		pda1 = frappe.get_doc(
+		pda1 = capkpi.get_doc(
 			dict(
 				doctype="Process Deferred Accounting",
 				posting_date=nowdate(),
@@ -3278,7 +3278,7 @@ class TestSalesInvoice(unittest.TestCase):
 			[deferred_account, 2022.47, 0.0, "2019-03-15"],
 		]
 
-		gl_entries = gl_entries = frappe.db.sql(
+		gl_entries = gl_entries = capkpi.db.sql(
 			"""select account, debit, credit, posting_date
 			from `tabGL Entry`
 			where voucher_type='Journal Entry' and voucher_detail_no=%s and posting_date <= %s
@@ -3293,12 +3293,12 @@ class TestSalesInvoice(unittest.TestCase):
 			self.assertEqual(expected_gle[i][2], gle.debit)
 			self.assertEqual(getdate(expected_gle[i][3]), gle.posting_date)
 
-		acc_settings = frappe.get_single("Accounts Settings")
+		acc_settings = capkpi.get_single("Accounts Settings")
 		acc_settings.book_deferred_entries_via_journal_entry = 0
 		acc_settings.submit_journal_entries = 0
 		acc_settings.save()
 
-		frappe.db.set_value("Accounts Settings", None, "acc_frozen_upto", None)
+		capkpi.db.set_value("Accounts Settings", None, "acc_frozen_upto", None)
 
 	def test_standalone_serial_no_return(self):
 		si = create_sales_invoice(
@@ -3309,7 +3309,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 	def test_sales_invoice_with_disabled_account(self):
 		try:
-			account = frappe.get_doc("Account", "VAT 5% - _TC")
+			account = capkpi.get_doc("Account", "VAT 5% - _TC")
 			account.disabled = 1
 			account.save()
 
@@ -3329,7 +3329,7 @@ class TestSalesInvoice(unittest.TestCase):
 			)
 			si.save()
 
-			with self.assertRaises(frappe.ValidationError) as err:
+			with self.assertRaises(capkpi.ValidationError) as err:
 				si.submit()
 
 			self.assertTrue(
@@ -3343,11 +3343,11 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_gain_loss_with_advance_entry(self):
 		from erp.accounts.doctype.journal_entry.test_journal_entry import make_journal_entry
 
-		unlink_enabled = frappe.db.get_value(
+		unlink_enabled = capkpi.db.get_value(
 			"Accounts Settings", "Accounts Settings", "unlink_payment_on_cancel_of_invoice"
 		)
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Accounts Settings", "Accounts Settings", "unlink_payment_on_cancel_of_invoice", 1
 		)
 
@@ -3392,7 +3392,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		check_gl_entries(self, si.name, expected_gle, nowdate())
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Accounts Settings", "Accounts Settings", "unlink_payment_on_cancel_of_invoice", unlink_enabled
 		)
 
@@ -3463,8 +3463,8 @@ def get_sales_invoice_for_e_invoice():
 
 
 def make_test_address_for_ewaybill():
-	if not frappe.db.exists("Address", "_Test Address for Eway bill-Billing"):
-		address = frappe.get_doc(
+	if not capkpi.db.exists("Address", "_Test Address for Eway bill-Billing"):
+		address = capkpi.get_doc(
 			{
 				"address_line1": "_Test Address Line 1",
 				"address_title": "_Test Address for Eway bill",
@@ -3486,8 +3486,8 @@ def make_test_address_for_ewaybill():
 
 		address.save()
 
-	if not frappe.db.exists("Address", "_Test Customer-Address for Eway bill-Shipping"):
-		address = frappe.get_doc(
+	if not capkpi.db.exists("Address", "_Test Customer-Address for Eway bill-Shipping"):
+		address = capkpi.get_doc(
 			{
 				"address_line1": "_Test Address Line 1",
 				"address_title": "_Test Customer-Address for Eway bill",
@@ -3509,8 +3509,8 @@ def make_test_address_for_ewaybill():
 
 		address.save()
 
-	if not frappe.db.exists("Address", "_Test Dispatch-Address for Eway bill-Shipping"):
-		address = frappe.get_doc(
+	if not capkpi.db.exists("Address", "_Test Dispatch-Address for Eway bill-Shipping"):
+		address = capkpi.get_doc(
 			{
 				"address_line1": "_Test Dispatch Address Line 1",
 				"address_title": "_Test Dispatch-Address for Eway bill",
@@ -3534,8 +3534,8 @@ def make_test_address_for_ewaybill():
 
 
 def make_test_transporter_for_ewaybill():
-	if not frappe.db.exists("Supplier", "_Test Transporter"):
-		frappe.get_doc(
+	if not capkpi.db.exists("Supplier", "_Test Transporter"):
+		capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_name": "_Test Transporter",
@@ -3551,9 +3551,9 @@ def make_sales_invoice_for_ewaybill():
 	make_test_address_for_ewaybill()
 	make_test_transporter_for_ewaybill()
 
-	gst_settings = frappe.get_doc("GST Settings")
+	gst_settings = capkpi.get_doc("GST Settings")
 
-	gst_account = frappe.get_all(
+	gst_account = capkpi.get_all(
 		"GST Account",
 		fields=["cgst_account", "sgst_account", "igst_account"],
 		filters={"company": "_Test Company"},
@@ -3609,7 +3609,7 @@ def make_sales_invoice_for_ewaybill():
 
 
 def check_gl_entries(doc, voucher_no, expected_gle, posting_date):
-	gl_entries = frappe.db.sql(
+	gl_entries = capkpi.db.sql(
 		"""select account, debit, credit, posting_date
 		from `tabGL Entry`
 		where voucher_type='Sales Invoice' and voucher_no=%s and posting_date > %s
@@ -3626,8 +3626,8 @@ def check_gl_entries(doc, voucher_no, expected_gle, posting_date):
 
 
 def create_sales_invoice(**args):
-	si = frappe.new_doc("Sales Invoice")
-	args = frappe._dict(args)
+	si = capkpi.new_doc("Sales Invoice")
+	args = capkpi._dict(args)
 	if args.posting_date:
 		si.set_posting_time = 1
 	si.posting_date = args.posting_date or nowdate()
@@ -3682,8 +3682,8 @@ def create_sales_invoice(**args):
 
 
 def create_sales_invoice_against_cost_center(**args):
-	si = frappe.new_doc("Sales Invoice")
-	args = frappe._dict(args)
+	si = capkpi.new_doc("Sales Invoice")
+	args = capkpi._dict(args)
 	if args.posting_date:
 		si.set_posting_time = 1
 	si.posting_date = args.posting_date or nowdate()
@@ -3727,12 +3727,12 @@ def create_sales_invoice_against_cost_center(**args):
 
 
 test_dependencies = ["Journal Entry", "Contact", "Address"]
-test_records = frappe.get_test_records("Sales Invoice")
+test_records = capkpi.get_test_records("Sales Invoice")
 
 
 def get_outstanding_amount(against_voucher_type, against_voucher, account, party, party_type):
 	bal = flt(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""
 		select sum(debit_in_account_currency) - sum(credit_in_account_currency)
 		from `tabGL Entry`
@@ -3778,8 +3778,8 @@ def get_taxes_and_charges():
 
 
 def create_internal_supplier(supplier_name, represents_company, allowed_to_interact_with):
-	if not frappe.db.exists("Supplier", supplier_name):
-		supplier = frappe.get_doc(
+	if not capkpi.db.exists("Supplier", supplier_name):
+		supplier = capkpi.get_doc(
 			{
 				"supplier_group": "_Test Supplier Group",
 				"supplier_name": supplier_name,
@@ -3794,7 +3794,7 @@ def create_internal_supplier(supplier_name, represents_company, allowed_to_inter
 		supplier.insert()
 		supplier_name = supplier.name
 	else:
-		supplier_name = frappe.db.exists("Supplier", supplier_name)
+		supplier_name = capkpi.db.exists("Supplier", supplier_name)
 
 	return supplier_name
 

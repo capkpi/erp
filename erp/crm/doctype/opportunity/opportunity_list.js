@@ -1,7 +1,7 @@
-frappe.listview_settings['Opportunity'] = {
+capkpi.listview_settings['Opportunity'] = {
 	add_fields: ["customer_name", "opportunity_type", "opportunity_from", "status"],
 	get_indicator: function(doc) {
-		var indicator = [__(doc.status), frappe.utils.guess_colour(doc.status), "status,=," + doc.status];
+		var indicator = [__(doc.status), capkpi.utils.guess_colour(doc.status), "status,=," + doc.status];
 		if(doc.status=="Quotation") {
 			indicator[1] = "green";
 		}

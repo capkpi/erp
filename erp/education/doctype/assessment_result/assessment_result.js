@@ -1,7 +1,7 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Assessment Result', {
+capkpi.ui.form.on('Assessment Result', {
 	refresh: function(frm) {
 		if (!frm.doc.__islocal) {
 			frm.trigger('setup_chart');
@@ -39,14 +39,14 @@ frappe.ui.form.on('Assessment Result', {
 
 	assessment_plan: function(frm) {
 		if (frm.doc.assessment_plan) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.education.api.get_assessment_details',
 				args: {
 					assessment_plan: frm.doc.assessment_plan
 				},
 				callback: function(r) {
 					if (r.message) {
-						frappe.model.clear_table(frm.doc, 'details');
+						capkpi.model.clear_table(frm.doc, 'details');
 						$.each(r.message, function(i, d) {
 							var row = frm.add_child('details');
 							row.assessment_criteria = d.assessment_criteria;
@@ -71,7 +71,7 @@ frappe.ui.form.on('Assessment Result', {
 
 		if (labels.length && maximum_scores.length && scores.length) {
 			frm.dashboard.chart_area.empty().removeClass('hidden');
-			new frappe.Chart('.form-graph', {
+			new capkpi.Chart('.form-graph', {
 				title: 'Assessment Results',
 				data: {
 					labels: labels,
@@ -95,20 +95,20 @@ frappe.ui.form.on('Assessment Result', {
 	}
 });
 
-frappe.ui.form.on('Assessment Result Detail', {
+capkpi.ui.form.on('Assessment Result Detail', {
 	score: function(frm, cdt, cdn) {
 		var d  = locals[cdt][cdn];
 
 		if (!d.maximum_score || !frm.doc.grading_scale) {
 			d.score = '';
-			frappe.throw(__('Please fill in all the details to generate Assessment Result.'));
+			capkpi.throw(__('Please fill in all the details to generate Assessment Result.'));
 		}
 
 		if (d.score > d.maximum_score) {
-			frappe.throw(__('Score cannot be greater than Maximum Score'));
+			capkpi.throw(__('Score cannot be greater than Maximum Score'));
 		}
 		else {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.education.api.get_grade',
 				args: {
 					grading_scale: frm.doc.grading_scale,
@@ -116,7 +116,7 @@ frappe.ui.form.on('Assessment Result Detail', {
 				},
 				callback: function(r) {
 					if (r.message) {
-						frappe.model.set_value(cdt, cdn, 'grade', r.message);
+						capkpi.model.set_value(cdt, cdn, 'grade', r.message);
 					}
 				}
 			});

@@ -4,7 +4,7 @@
 import copy
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.pos_invoice.pos_invoice import make_sales_return
 from erp.accounts.doctype.pos_profile.test_pos_profile import make_pos_profile
@@ -18,21 +18,21 @@ class TestPOSInvoice(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		make_stock_entry(target="_Test Warehouse - _TC", item_code="_Test Item", qty=800, basic_rate=100)
-		frappe.db.sql("delete from `tabTax Rule`")
+		capkpi.db.sql("delete from `tabTax Rule`")
 
 	def tearDown(self):
-		if frappe.session.user != "Administrator":
-			frappe.set_user("Administrator")
+		if capkpi.session.user != "Administrator":
+			capkpi.set_user("Administrator")
 
-		if frappe.db.get_single_value("Selling Settings", "validate_selling_price"):
-			frappe.db.set_value("Selling Settings", None, "validate_selling_price", 0)
+		if capkpi.db.get_single_value("Selling Settings", "validate_selling_price"):
+			capkpi.db.set_value("Selling Settings", None, "validate_selling_price", 0)
 
 	def test_timestamp_change(self):
 		w = create_pos_invoice(do_not_save=1)
 		w.docstatus = 0
 		w.insert()
 
-		w2 = frappe.get_doc(w.doctype, w.name)
+		w2 = capkpi.get_doc(w.doctype, w.name)
 
 		import time
 
@@ -42,13 +42,13 @@ class TestPOSInvoice(unittest.TestCase):
 		import time
 
 		time.sleep(1)
-		self.assertRaises(frappe.TimestampMismatchError, w2.save)
+		self.assertRaises(capkpi.TimestampMismatchError, w2.save)
 
 	def test_change_naming_series(self):
 		inv = create_pos_invoice(do_not_submit=1)
 		inv.naming_series = "TEST-"
 
-		self.assertRaises(frappe.CannotChangeConstantError, inv.save)
+		self.assertRaises(capkpi.CannotChangeConstantError, inv.save)
 
 	def test_discount_and_inclusive_tax(self):
 		inv = create_pos_invoice(qty=100, rate=50, do_not_save=1)
@@ -355,7 +355,7 @@ class TestPOSInvoice(unittest.TestCase):
 		inv = create_pos_invoice(do_not_save=1)
 		# Check that the invoice cannot be submitted without payments
 		inv.payments = []
-		self.assertRaises(frappe.ValidationError, inv.insert)
+		self.assertRaises(capkpi.ValidationError, inv.insert)
 
 	def test_serialized_item_transaction(self):
 		from erp.stock.doctype.serial_no.serial_no import get_serial_nos
@@ -410,7 +410,7 @@ class TestPOSInvoice(unittest.TestCase):
 		)
 
 		pos2.insert()
-		self.assertRaises(frappe.ValidationError, pos2.submit)
+		self.assertRaises(capkpi.ValidationError, pos2.submit)
 
 	def test_delivered_serialized_item_transaction(self):
 		from erp.stock.doctype.serial_no.serial_no import get_serial_nos
@@ -462,7 +462,7 @@ class TestPOSInvoice(unittest.TestCase):
 		)
 
 		pos2.insert()
-		self.assertRaises(frappe.ValidationError, pos2.submit)
+		self.assertRaises(capkpi.ValidationError, pos2.submit)
 
 	def test_invalid_serial_no_validation(self):
 		from erp.stock.doctype.stock_entry.test_stock_entry import make_serialized_item
@@ -493,7 +493,7 @@ class TestPOSInvoice(unittest.TestCase):
 		pos.get("items")[0].serial_no = serial_nos
 		pos.insert()
 
-		self.assertRaises(frappe.ValidationError, pos.submit)
+		self.assertRaises(capkpi.ValidationError, pos.submit)
 
 	def test_loyalty_points(self):
 		from erp.accounts.doctype.loyalty_program.loyalty_program import (
@@ -502,7 +502,7 @@ class TestPOSInvoice(unittest.TestCase):
 		from erp.accounts.doctype.loyalty_program.test_loyalty_program import create_records
 
 		create_records()
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Customer", "Test Loyalty Customer", "loyalty_program", "Test Single Loyalty"
 		)
 		before_lp_details = get_loyalty_program_details_with_points(
@@ -511,7 +511,7 @@ class TestPOSInvoice(unittest.TestCase):
 
 		inv = create_pos_invoice(customer="Test Loyalty Customer", rate=10000)
 
-		lpe = frappe.get_doc(
+		lpe = capkpi.get_doc(
 			"Loyalty Point Entry",
 			{"invoice_type": "POS Invoice", "invoice": inv.name, "customer": inv.customer},
 		)
@@ -565,7 +565,7 @@ class TestPOSInvoice(unittest.TestCase):
 			consolidate_pos_invoices,
 		)
 
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 		test_user, pos_profile = init_user_and_profile()
 		pos_inv = create_pos_invoice(rate=300, additional_discount_percentage=10, do_not_submit=1)
 		pos_inv.append("payments", {"mode_of_payment": "Cash", "account": "Cash - _TC", "amount": 270})
@@ -578,7 +578,7 @@ class TestPOSInvoice(unittest.TestCase):
 		consolidate_pos_invoices()
 
 		pos_inv.load_from_db()
-		rounded_total = frappe.db.get_value(
+		rounded_total = capkpi.db.get_value(
 			"Sales Invoice", pos_inv.consolidated_invoice, "rounded_total"
 		)
 		self.assertEqual(rounded_total, 3470)
@@ -591,7 +591,7 @@ class TestPOSInvoice(unittest.TestCase):
 			consolidate_pos_invoices,
 		)
 
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 		test_user, pos_profile = init_user_and_profile()
 		pos_inv = create_pos_invoice(rate=300, do_not_submit=1)
 		pos_inv.append("payments", {"mode_of_payment": "Cash", "account": "Cash - _TC", "amount": 300})
@@ -627,7 +627,7 @@ class TestPOSInvoice(unittest.TestCase):
 		consolidate_pos_invoices()
 
 		pos_inv.load_from_db()
-		rounded_total = frappe.db.get_value(
+		rounded_total = capkpi.db.get_value(
 			"Sales Invoice", pos_inv.consolidated_invoice, "rounded_total"
 		)
 		self.assertEqual(rounded_total, 840)
@@ -640,13 +640,13 @@ class TestPOSInvoice(unittest.TestCase):
 			consolidate_pos_invoices,
 		)
 
-		if not frappe.db.get_single_value("Selling Settings", "validate_selling_price"):
-			frappe.db.set_value("Selling Settings", "Selling Settings", "validate_selling_price", 1)
+		if not capkpi.db.get_single_value("Selling Settings", "validate_selling_price"):
+			capkpi.db.set_value("Selling Settings", "Selling Settings", "validate_selling_price", 1)
 
 		item = "Test Selling Price Validation"
 		make_item(item, {"is_stock_item": 1})
 		make_purchase_receipt(item_code=item, warehouse="_Test Warehouse - _TC", qty=1, rate=300)
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 		test_user, pos_profile = init_user_and_profile()
 		pos_inv = create_pos_invoice(item=item, rate=300, do_not_submit=1)
 		pos_inv.append("payments", {"mode_of_payment": "Cash", "account": "Cash - _TC", "amount": 300})
@@ -661,7 +661,7 @@ class TestPOSInvoice(unittest.TestCase):
 				"included_in_print_rate": 1,
 			},
 		)
-		self.assertRaises(frappe.ValidationError, pos_inv.submit)
+		self.assertRaises(capkpi.ValidationError, pos_inv.submit)
 
 		pos_inv2 = create_pos_invoice(item=item, rate=400, do_not_submit=1)
 		pos_inv2.append("payments", {"mode_of_payment": "Cash", "account": "Cash - _TC", "amount": 400})
@@ -681,7 +681,7 @@ class TestPOSInvoice(unittest.TestCase):
 		consolidate_pos_invoices()
 
 		pos_inv2.load_from_db()
-		rounded_total = frappe.db.get_value(
+		rounded_total = capkpi.db.get_value(
 			"Sales Invoice", pos_inv2.consolidated_invoice, "rounded_total"
 		)
 		self.assertEqual(rounded_total, 400)
@@ -692,8 +692,8 @@ class TestPOSInvoice(unittest.TestCase):
 		)
 
 		create_batch_item_with_batch("_BATCH ITEM", "TestBatch 01")
-		item = frappe.get_doc("Item", "_BATCH ITEM")
-		batch = frappe.get_doc("Batch", "TestBatch 01")
+		item = capkpi.get_doc("Item", "_BATCH ITEM")
+		batch = capkpi.get_doc("Batch", "TestBatch 01")
 		batch.submit()
 		item.batch_no = "TestBatch 01"
 		item.save()
@@ -715,7 +715,7 @@ class TestPOSInvoice(unittest.TestCase):
 		pos_inv2.items[0].batch_no = "TestBatch 01"
 		pos_inv2.save()
 
-		self.assertRaises(frappe.ValidationError, pos_inv2.submit)
+		self.assertRaises(capkpi.ValidationError, pos_inv2.submit)
 
 		# teardown
 		pos_inv1.reload()
@@ -731,7 +731,7 @@ class TestPOSInvoice(unittest.TestCase):
 	def test_ignore_pricing_rule(self):
 		from erp.accounts.doctype.pricing_rule.test_pricing_rule import make_pricing_rule
 
-		item_price = frappe.get_doc(
+		item_price = capkpi.get_doc(
 			{
 				"doctype": "Item Price",
 				"item_code": "_Test Item",
@@ -774,14 +774,14 @@ class TestPOSInvoice(unittest.TestCase):
 		from erp.stock.doctype.serial_no.test_serial_no import get_serial_nos
 		from erp.stock.doctype.stock_entry.test_stock_entry import make_serialized_item
 
-		frappe.db.savepoint("before_test_delivered_serial_no_case")
+		capkpi.db.savepoint("before_test_delivered_serial_no_case")
 		try:
 			se = make_serialized_item()
 			serial_no = get_serial_nos(se.get("items")[0].serial_no)[0]
 
 			dn = create_delivery_note(item_code="_Test Serialized Item With Series", serial_no=serial_no)
 
-			delivery_document_no = frappe.db.get_value("Serial No", serial_no, "delivery_document_no")
+			delivery_document_no = capkpi.db.get_value("Serial No", serial_no, "delivery_document_no")
 			self.assertEquals(delivery_document_no, dn.name)
 
 			init_user_and_profile()
@@ -794,11 +794,11 @@ class TestPOSInvoice(unittest.TestCase):
 				do_not_submit=True,
 			)
 
-			self.assertRaises(frappe.ValidationError, pos_inv.submit)
+			self.assertRaises(capkpi.ValidationError, pos_inv.submit)
 
 		finally:
-			frappe.db.rollback(save_point="before_test_delivered_serial_no_case")
-			frappe.set_user("Administrator")
+			capkpi.db.rollback(save_point="before_test_delivered_serial_no_case")
+			capkpi.set_user("Administrator")
 
 	def test_returned_serial_no_case(self):
 		from erp.accounts.doctype.pos_invoice_merge_log.test_pos_invoice_merge_log import (
@@ -808,7 +808,7 @@ class TestPOSInvoice(unittest.TestCase):
 		from erp.stock.doctype.serial_no.test_serial_no import get_serial_nos
 		from erp.stock.doctype.stock_entry.test_stock_entry import make_serialized_item
 
-		frappe.db.savepoint("before_test_returned_serial_no_case")
+		capkpi.db.savepoint("before_test_returned_serial_no_case")
 		try:
 			se = make_serialized_item()
 			serial_no = get_serial_nos(se.get("items")[0].serial_no)[0]
@@ -833,18 +833,18 @@ class TestPOSInvoice(unittest.TestCase):
 			self.assertTrue(serial_no not in pos_reserved_serial_nos)
 
 		finally:
-			frappe.db.rollback(save_point="before_test_returned_serial_no_case")
-			frappe.set_user("Administrator")
+			capkpi.db.rollback(save_point="before_test_returned_serial_no_case")
+			capkpi.set_user("Administrator")
 
 
 def create_pos_invoice(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 	pos_profile = None
 	if not args.pos_profile:
 		pos_profile = make_pos_profile()
 		pos_profile.save()
 
-	pos_inv = frappe.new_doc("POS Invoice")
+	pos_inv = capkpi.new_doc("POS Invoice")
 	pos_inv.update(args)
 	pos_inv.update_stock = 1
 	pos_inv.is_pos = 1
@@ -852,7 +852,7 @@ def create_pos_invoice(**args):
 
 	if args.posting_date:
 		pos_inv.set_posting_time = 1
-	pos_inv.posting_date = args.posting_date or frappe.utils.nowdate()
+	pos_inv.posting_date = args.posting_date or capkpi.utils.nowdate()
 
 	pos_inv.company = args.company or "_Test Company"
 	pos_inv.customer = args.customer or "_Test Customer"
@@ -895,5 +895,5 @@ def create_pos_invoice(**args):
 def make_batch_item(item_name):
 	from erp.stock.doctype.item.test_item import make_item
 
-	if not frappe.db.exists(item_name):
+	if not capkpi.db.exists(item_name):
 		return make_item(item_name, dict(has_batch_no=1, create_new_batch=1, is_stock_item=1))

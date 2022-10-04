@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Article', {
+capkpi.ui.form.on('Article', {
 	refresh: function(frm) {
 		if (!frm.doc.__islocal) {
 			frm.add_custom_button(__('Add to Topics'), function() {
@@ -13,7 +13,7 @@ frappe.ui.form.on('Article', {
 	add_article_to_topics: function(frm) {
 		get_topics_without_article(frm.doc.name).then(r => {
 			if (r.message.length) {
-				frappe.prompt([
+				capkpi.prompt([
 					{
 						fieldname: 'topics',
 						label: __('Topics'),
@@ -24,7 +24,7 @@ frappe.ui.form.on('Article', {
 					}
 				],
 				function(data) {
-					frappe.call({
+					capkpi.call({
 						method: 'erp.education.doctype.topic.topic.add_content_to_topics',
 						args: {
 							'content_type': 'Article',
@@ -41,14 +41,14 @@ frappe.ui.form.on('Article', {
 					});
 				}, __('Add Article to Topics'), __('Add'));
 			} else {
-				frappe.msgprint(__('This article is already added to the existing topics'));
+				capkpi.msgprint(__('This article is already added to the existing topics'));
 			}
 		});
 	}
 });
 
 let get_topics_without_article = function(article) {
-	return frappe.call({
+	return capkpi.call({
 		type: 'GET',
 		method: 'erp.education.doctype.article.article.get_topics_without_article',
 		args: {'article': article}

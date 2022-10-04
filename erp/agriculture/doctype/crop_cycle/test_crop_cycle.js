@@ -8,9 +8,9 @@ QUnit.test("test: Crop Cycle", function (assert) {
 	// number of asserts
 	assert.expect(1);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Crop Cycle
-		() => frappe.tests.make('Crop Cycle', [
+		() => capkpi.tests.make('Crop Cycle', [
 			// values to be set
 			{title: 'Basil from seed 2017'},
 			{detected_disease: [

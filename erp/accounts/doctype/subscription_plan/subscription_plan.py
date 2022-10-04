@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import date_diff, flt, get_first_day, get_last_day, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import date_diff, flt, get_first_day, get_last_day, getdate
 
 from erp.utilities.product import get_price
 
@@ -16,20 +16,20 @@ class SubscriptionPlan(Document):
 
 	def validate_interval_count(self):
 		if self.billing_interval_count < 1:
-			frappe.throw(_("Billing Interval Count cannot be less than 1"))
+			capkpi.throw(_("Billing Interval Count cannot be less than 1"))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_plan_rate(
 	plan, quantity=1, customer=None, start_date=None, end_date=None, prorate_factor=1
 ):
-	plan = frappe.get_doc("Subscription Plan", plan)
+	plan = capkpi.get_doc("Subscription Plan", plan)
 	if plan.price_determination == "Fixed Rate":
 		return plan.cost * prorate_factor
 
 	elif plan.price_determination == "Based On Price List":
 		if customer:
-			customer_group = frappe.db.get_value("Customer", customer, "customer_group")
+			customer_group = capkpi.db.get_value("Customer", customer, "customer_group")
 		else:
 			customer_group = None
 
@@ -53,7 +53,7 @@ def get_plan_rate(
 		cost = plan.cost * no_of_months
 
 		# Adjust cost if start or end date is not month start or end
-		prorate = frappe.db.get_single_value("Subscription Settings", "prorate")
+		prorate = capkpi.db.get_single_value("Subscription Settings", "prorate")
 
 		if prorate:
 			prorate_factor = flt(

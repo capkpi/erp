@@ -8,9 +8,9 @@ QUnit.test("test: Shopify Settings", function (assert) {
 	// number of asserts
 	assert.expect(1);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Shopify Settings
-		() => frappe.tests.make('Shopify Settings', [
+		() => capkpi.tests.make('Shopify Settings', [
 			// values to be set
 			{key: 'value'}
 		]),

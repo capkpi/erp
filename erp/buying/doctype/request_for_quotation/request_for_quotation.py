@@ -4,14 +4,14 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.core.doctype.communication.email import make
-from frappe.desk.form.load import get_attachments
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import get_url
-from frappe.utils.print_format import download_pdf
-from frappe.utils.user import get_user_fullname
+import capkpi
+from capkpi import _
+from capkpi.core.doctype.communication.email import make
+from capkpi.desk.form.load import get_attachments
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import get_url
+from capkpi.utils.print_format import download_pdf
+from capkpi.utils.user import get_user_fullname
 from six import string_types
 
 from erp.accounts.party import get_party_account_currency, get_party_details
@@ -32,27 +32,27 @@ class RequestforQuotation(BuyingController):
 
 		if self.docstatus < 1:
 			# after amend and save, status still shows as cancelled, until submit
-			frappe.db.set(self, "status", "Draft")
+			capkpi.db.set(self, "status", "Draft")
 
 	def validate_duplicate_supplier(self):
 		supplier_list = [d.supplier for d in self.suppliers]
 		if len(supplier_list) != len(set(supplier_list)):
-			frappe.throw(_("Same supplier has been entered multiple times"))
+			capkpi.throw(_("Same supplier has been entered multiple times"))
 
 	def validate_supplier_list(self):
 		for d in self.suppliers:
-			prevent_rfqs = frappe.db.get_value("Supplier", d.supplier, "prevent_rfqs")
+			prevent_rfqs = capkpi.db.get_value("Supplier", d.supplier, "prevent_rfqs")
 			if prevent_rfqs:
-				standing = frappe.db.get_value("Supplier Scorecard", d.supplier, "status")
-				frappe.throw(
+				standing = capkpi.db.get_value("Supplier Scorecard", d.supplier, "status")
+				capkpi.throw(
 					_("RFQs are not allowed for {0} due to a scorecard standing of {1}").format(
 						d.supplier, standing
 					)
 				)
-			warn_rfqs = frappe.db.get_value("Supplier", d.supplier, "warn_rfqs")
+			warn_rfqs = capkpi.db.get_value("Supplier", d.supplier, "warn_rfqs")
 			if warn_rfqs:
-				standing = frappe.db.get_value("Supplier Scorecard", d.supplier, "status")
-				frappe.msgprint(
+				standing = capkpi.db.get_value("Supplier Scorecard", d.supplier, "status")
+				capkpi.msgprint(
 					_(
 						"{0} currently has a {1} Supplier Scorecard standing, and RFQs to this supplier should be issued with caution."
 					).format(d.supplier, standing),
@@ -63,27 +63,27 @@ class RequestforQuotation(BuyingController):
 	def update_email_id(self):
 		for rfq_supplier in self.suppliers:
 			if not rfq_supplier.email_id:
-				rfq_supplier.email_id = frappe.db.get_value("Contact", rfq_supplier.contact, "email_id")
+				rfq_supplier.email_id = capkpi.db.get_value("Contact", rfq_supplier.contact, "email_id")
 
 	def validate_email_id(self, args):
 		if not args.email_id:
-			frappe.throw(
+			capkpi.throw(
 				_("Row {0}: For Supplier {1}, Email Address is Required to send an email").format(
-					args.idx, frappe.bold(args.supplier)
+					args.idx, capkpi.bold(args.supplier)
 				)
 			)
 
 	def on_submit(self):
-		frappe.db.set(self, "status", "Submitted")
+		capkpi.db.set(self, "status", "Submitted")
 		for supplier in self.suppliers:
 			supplier.email_sent = 0
 			supplier.quote_status = "Pending"
 		self.send_to_supplier()
 
 	def on_cancel(self):
-		frappe.db.set(self, "status", "Cancelled")
+		capkpi.db.set(self, "status", "Cancelled")
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_supplier_email_preview(self, supplier):
 		"""Returns formatted email preview as string."""
 		rfq_suppliers = list(filter(lambda row: row.supplier == supplier, self.suppliers))
@@ -118,7 +118,7 @@ class RequestforQuotation(BuyingController):
 	def update_supplier_part_no(self, supplier):
 		self.vendor = supplier
 		for item in self.items:
-			item.supplier_part_no = frappe.db.get_value(
+			item.supplier_part_no = capkpi.db.get_value(
 				"Item Supplier", {"parent": item.item_code, "supplier": supplier}, "supplier_part_no"
 			)
 
@@ -126,8 +126,8 @@ class RequestforQuotation(BuyingController):
 		"""Create a new user for the supplier if not set in contact"""
 		update_password_link, contact = "", ""
 
-		if frappe.db.exists("User", rfq_supplier.email_id):
-			user = frappe.get_doc("User", rfq_supplier.email_id)
+		if capkpi.db.exists("User", rfq_supplier.email_id):
+			user = capkpi.get_doc("User", rfq_supplier.email_id)
 		else:
 			user, update_password_link = self.create_user(rfq_supplier, link)
 
@@ -138,9 +138,9 @@ class RequestforQuotation(BuyingController):
 	def link_supplier_contact(self, rfq_supplier, user):
 		"""If no Contact, create a new contact against Supplier. If Contact exists, check if email and user id set."""
 		if rfq_supplier.contact:
-			contact = frappe.get_doc("Contact", rfq_supplier.contact)
+			contact = capkpi.get_doc("Contact", rfq_supplier.contact)
 		else:
-			contact = frappe.new_doc("Contact")
+			contact = capkpi.new_doc("Contact")
 			contact.first_name = rfq_supplier.supplier_name or rfq_supplier.supplier
 			contact.append("links", {"link_doctype": "Supplier", "link_name": rfq_supplier.supplier})
 			contact.append("email_ids", {"email_id": user.name, "is_primary": 1})
@@ -156,7 +156,7 @@ class RequestforQuotation(BuyingController):
 			return contact.name
 
 	def create_user(self, rfq_supplier, link):
-		user = frappe.get_doc(
+		user = capkpi.get_doc(
 			{
 				"doctype": "User",
 				"send_welcome_email": 0,
@@ -172,7 +172,7 @@ class RequestforQuotation(BuyingController):
 		return user, update_password_link
 
 	def supplier_rfq_mail(self, data, update_password_link, rfq_link, preview=False):
-		full_name = get_user_fullname(frappe.session["user"])
+		full_name = get_user_fullname(capkpi.session["user"])
 		if full_name == "Guest":
 			full_name = "Administrator"
 
@@ -184,14 +184,14 @@ class RequestforQuotation(BuyingController):
 		# Get Contact Full Name
 		supplier_name = None
 		if data.get("contact"):
-			contact_name = frappe.db.get_value(
+			contact_name = capkpi.db.get_value(
 				"Contact", data.get("contact"), ["first_name", "middle_name", "last_name"]
 			)
 			supplier_name = (" ").join(x for x in contact_name if x)  # remove any blank values
 
 		args = {
 			"update_password_link": update_password_link,
-			"message": frappe.render_template(self.message_for_supplier, doc_args),
+			"message": capkpi.render_template(self.message_for_supplier, doc_args),
 			"rfq_link": rfq_link,
 			"user_fullname": full_name,
 			"supplier_name": supplier_name or data.get("supplier_name"),
@@ -200,8 +200,8 @@ class RequestforQuotation(BuyingController):
 
 		subject = self.subject or _("Request for Quotation")
 		template = "templates/emails/request_for_quotation.html"
-		sender = frappe.session.user not in STANDARD_USERS and frappe.session.user or None
-		message = frappe.get_template(template).render(args)
+		sender = capkpi.session.user not in STANDARD_USERS and capkpi.session.user or None
+		message = capkpi.get_template(template).render(args)
 
 		if preview:
 			return message
@@ -222,11 +222,11 @@ class RequestforQuotation(BuyingController):
 			name=self.name,
 		)["name"]
 
-		frappe.msgprint(_("Email Sent to Supplier {0}").format(data.supplier))
+		capkpi.msgprint(_("Email Sent to Supplier {0}").format(data.supplier))
 
 	def get_attachments(self):
 		attachments = [d.name for d in get_attachments(self.doctype, self.name)]
-		attachments.append(frappe.attach_print(self.doctype, self.name, doc=self))
+		attachments.append(capkpi.attach_print(self.doctype, self.name, doc=self))
 		return attachments
 
 	def update_rfq_supplier_status(self, sup_name=None):
@@ -234,7 +234,7 @@ class RequestforQuotation(BuyingController):
 			if sup_name == None or supplier.supplier == sup_name:
 				quote_status = _("Received")
 				for item in self.items:
-					sqi_count = frappe.db.sql(
+					sqi_count = capkpi.db.sql(
 						"""
 						SELECT
 							COUNT(sqi.name) as count
@@ -253,19 +253,19 @@ class RequestforQuotation(BuyingController):
 				supplier.quote_status = quote_status
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def send_supplier_emails(rfq_name):
 	check_portal_enabled("Request for Quotation")
-	rfq = frappe.get_doc("Request for Quotation", rfq_name)
+	rfq = capkpi.get_doc("Request for Quotation", rfq_name)
 	if rfq.docstatus == 1:
 		rfq.send_to_supplier()
 
 
 def check_portal_enabled(reference_doctype):
-	if not frappe.db.get_value(
+	if not capkpi.db.get_value(
 		"Portal Menu Item", {"reference_doctype": reference_doctype}, "enabled"
 	):
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"The Access to Request for Quotation From Portal is Disabled. To Allow Access, Enable it in Portal Settings."
 			)
@@ -287,7 +287,7 @@ def get_list_context(context=None):
 	return list_context
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=None):
 	def postprocess(source, target_doc):
 		if for_supplier:
@@ -296,7 +296,7 @@ def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=
 			target_doc.currency = args.currency or get_party_account_currency(
 				"Supplier", for_supplier, source.company
 			)
-			target_doc.buying_price_list = args.buying_price_list or frappe.db.get_value(
+			target_doc.buying_price_list = args.buying_price_list or capkpi.db.get_value(
 				"Buying Settings", None, "buying_price_list"
 			)
 		set_missing_values(source, target_doc)
@@ -322,13 +322,13 @@ def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=
 
 
 # This method is used to make supplier quotation from supplier's portal.
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_supplier_quotation(doc):
 	if isinstance(doc, string_types):
 		doc = json.loads(doc)
 
 	try:
-		sq_doc = frappe.get_doc(
+		sq_doc = capkpi.get_doc(
 			{
 				"doctype": "Supplier Quotation",
 				"supplier": doc.get("supplier"),
@@ -337,14 +337,14 @@ def create_supplier_quotation(doc):
 				"currency": doc.get("currency")
 				or get_party_account_currency("Supplier", doc.get("supplier"), doc.get("company")),
 				"buying_price_list": doc.get("buying_price_list")
-				or frappe.db.get_value("Buying Settings", None, "buying_price_list"),
+				or capkpi.db.get_value("Buying Settings", None, "buying_price_list"),
 			}
 		)
 		add_items(sq_doc, doc.get("supplier"), doc.get("items"))
 		sq_doc.flags.ignore_permissions = True
 		sq_doc.run_method("set_missing_values")
 		sq_doc.save()
-		frappe.msgprint(_("Supplier Quotation {0} Created").format(sq_doc.name))
+		capkpi.msgprint(_("Supplier Quotation {0} Created").format(sq_doc.name))
 		return sq_doc.name
 	except Exception:
 		return None
@@ -354,7 +354,7 @@ def add_items(sq_doc, supplier, items):
 	for data in items:
 		if data.get("qty") > 0:
 			if isinstance(data, dict):
-				data = frappe._dict(data)
+				data = capkpi._dict(data)
 
 			create_rfq_items(sq_doc, supplier, data)
 
@@ -380,7 +380,7 @@ def create_rfq_items(sq_doc, supplier, data):
 		{
 			"request_for_quotation_item": data.name,
 			"request_for_quotation": data.parent,
-			"supplier_part_no": frappe.db.get_value(
+			"supplier_part_no": capkpi.db.get_value(
 				"Item Supplier", {"parent": data.item_code, "supplier": supplier}, "supplier_part_no"
 			),
 		}
@@ -389,7 +389,7 @@ def create_rfq_items(sq_doc, supplier, data):
 	sq_doc.append("items", args)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_pdf(doctype, name, supplier):
 	doc = get_rfq_doc(doctype, name, supplier)
 	if doc:
@@ -398,14 +398,14 @@ def get_pdf(doctype, name, supplier):
 
 def get_rfq_doc(doctype, name, supplier):
 	if supplier:
-		doc = frappe.get_doc(doctype, name)
+		doc = capkpi.get_doc(doctype, name)
 		doc.update_supplier_part_no(supplier)
 		return doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_item_from_material_requests_based_on_supplier(source_name, target_doc=None):
-	mr_items_list = frappe.db.sql(
+	mr_items_list = capkpi.db.sql(
 		"""
 		SELECT
 			mr.name, mr_item.item_code
@@ -458,18 +458,18 @@ def get_item_from_material_requests_based_on_supplier(source_name, target_doc=No
 	return target_doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_supplier_tag():
 	filters = {"document_type": "Supplier"}
 	tags = list(
-		set(tag.tag for tag in frappe.get_all("Tag Link", filters=filters, fields=["tag"]) if tag)
+		set(tag.tag for tag in capkpi.get_all("Tag Link", filters=filters, fields=["tag"]) if tag)
 	)
 
 	return tags
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_rfq_containing_supplier(doctype, txt, searchfield, start, page_len, filters):
 	conditions = ""
 	if txt:
@@ -478,7 +478,7 @@ def get_rfq_containing_supplier(doctype, txt, searchfield, start, page_len, filt
 	if filters.get("transaction_date"):
 		conditions += "and rfq.transaction_date = '{0}'".format(filters.get("transaction_date"))
 
-	rfq_data = frappe.db.sql(
+	rfq_data = capkpi.db.sql(
 		"""
 		select
 			distinct rfq.name, rfq.transaction_date,

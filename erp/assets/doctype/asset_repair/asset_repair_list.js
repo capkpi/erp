@@ -1,4 +1,4 @@
-frappe.listview_settings['Asset Repair'] = {
+capkpi.listview_settings['Asset Repair'] = {
 	add_fields: ["repair_status"],
 	get_indicator: function(doc) {
 		if(doc.repair_status=="Pending") {

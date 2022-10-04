@@ -1,7 +1,7 @@
 // Copyright (c) 2019, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Invoice Discounting', {
+capkpi.ui.form.on('Invoice Discounting', {
 	setup: (frm) => {
 		frm.set_query("sales_invoice", "invoices", (doc) => {
 			return {
@@ -81,7 +81,7 @@ frappe.ui.form.on('Invoice Discounting', {
 
 	set_end_date: (frm) => {
 		if (frm.doc.loan_start_date && frm.doc.loan_period) {
-			let end_date = frappe.datetime.add_days(frm.doc.loan_start_date, frm.doc.loan_period);
+			let end_date = capkpi.datetime.add_days(frm.doc.loan_start_date, frm.doc.loan_period);
 			frm.set_value("loan_end_date", end_date);
 		}
 	},
@@ -98,7 +98,7 @@ frappe.ui.form.on('Invoice Discounting', {
 		frm.set_value("total_amount", total_amount);
 	},
 	get_invoices: (frm) => {
-		var d = new frappe.ui.Dialog({
+		var d = new capkpi.ui.Dialog({
 			title: __('Get Invoices based on Filters'),
 			fields: [
 				{
@@ -135,7 +135,7 @@ frappe.ui.form.on('Invoice Discounting', {
 			primary_action: function() {
 				var data = d.get_values();
 
-				frappe.call({
+				capkpi.call({
 					method: "erp.accounts.doctype.invoice_discounting.invoice_discounting.get_invoices",
 					args: {
 						filters: data
@@ -160,13 +160,13 @@ frappe.ui.form.on('Invoice Discounting', {
 	},
 
 	create_disbursement_entry: (frm) => {
-		frappe.call({
+		capkpi.call({
 			method:"create_disbursement_entry",
 			doc: frm.doc,
 			callback: function(r) {
 				if(!r.exc){
-					var doclist = frappe.model.sync(r.message);
-					frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+					var doclist = capkpi.model.sync(r.message);
+					capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 				}
 			}
 		});
@@ -174,13 +174,13 @@ frappe.ui.form.on('Invoice Discounting', {
 	},
 
 	close_loan: (frm) => {
-		frappe.call({
+		capkpi.call({
 			method:"close_loan",
 			doc: frm.doc,
 			callback: function(r) {
 				if(!r.exc){
-					var doclist = frappe.model.sync(r.message);
-					frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+					var doclist = capkpi.model.sync(r.message);
+					capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 				}
 			}
 		});
@@ -190,7 +190,7 @@ frappe.ui.form.on('Invoice Discounting', {
 	show_general_ledger: (frm) => {
 		if(frm.doc.docstatus > 0) {
 			cur_frm.add_custom_button(__('Accounting Ledger'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					voucher_no: frm.doc.name,
 					from_date: frm.doc.posting_date,
 					to_date: moment(frm.doc.modified).format('YYYY-MM-DD'),
@@ -198,13 +198,13 @@ frappe.ui.form.on('Invoice Discounting', {
 					group_by: "Group by Voucher (Consolidated)",
 					show_cancelled_entries: frm.doc.docstatus === 2
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			}, __("View"));
 		}
 	}
 });
 
-frappe.ui.form.on('Discounted Invoice', {
+capkpi.ui.form.on('Discounted Invoice', {
 	sales_invoice: (frm) => {
 		frm.events.calculate_total_amount(frm);
 		frm.events.refresh_filters(frm);

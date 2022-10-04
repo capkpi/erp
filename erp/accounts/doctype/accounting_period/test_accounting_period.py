@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_months, nowdate
+import capkpi
+from capkpi.utils import add_months, nowdate
 
 from erp.accounts.doctype.accounting_period.accounting_period import OverlapError
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
@@ -38,14 +38,14 @@ class TestAccountingPeriod(unittest.TestCase):
 		self.assertRaises(ClosedAccountingPeriod, doc.submit)
 
 	def tearDown(self):
-		for d in frappe.get_all("Accounting Period"):
-			frappe.delete_doc("Accounting Period", d.name)
+		for d in capkpi.get_all("Accounting Period"):
+			capkpi.delete_doc("Accounting Period", d.name)
 
 
 def create_accounting_period(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	accounting_period = frappe.new_doc("Accounting Period")
+	accounting_period = capkpi.new_doc("Accounting Period")
 	accounting_period.start_date = args.start_date or nowdate()
 	accounting_period.end_date = args.end_date or add_months(nowdate(), 1)
 	accounting_period.company = args.company or "_Test Company"

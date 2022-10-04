@@ -4,9 +4,9 @@
 
 import unittest
 
-import frappe
+import capkpi
 
-test_records = frappe.get_test_records("Monthly Distribution")
+test_records = capkpi.get_test_records("Monthly Distribution")
 
 
 class TestMonthlyDistribution(unittest.TestCase):

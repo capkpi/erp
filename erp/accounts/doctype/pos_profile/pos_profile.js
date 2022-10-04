@@ -3,7 +3,7 @@
 
 {% include "erp/public/js/controllers/accounts.js" %}
 
-frappe.ui.form.on('POS Profile', {
+capkpi.ui.form.on('POS Profile', {
 	setup: function(frm) {
 		frm.set_query("selling_price_list", function() {
 			return { filters: { selling: 1 } };
@@ -27,7 +27,7 @@ frappe.ui.form.on('POS Profile', {
 
 		frm.set_query("account_for_change_amount", function(doc) {
 			if (!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {
@@ -50,11 +50,11 @@ frappe.ui.form.on('POS Profile', {
 
 		frm.set_query('company_address', function(doc) {
 			if (!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {
-				query: 'frappe.contacts.doctype.address.address.address_query',
+				query: 'capkpi.contacts.doctype.address.address.address_query',
 				filters: {
 					link_doctype: 'Company',
 					link_name: doc.company
@@ -64,7 +64,7 @@ frappe.ui.form.on('POS Profile', {
 
 		frm.set_query('income_account', function(doc) {
 			if (!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {
@@ -78,7 +78,7 @@ frappe.ui.form.on('POS Profile', {
 
 		frm.set_query('cost_center', function(doc) {
 			if (!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {
@@ -91,7 +91,7 @@ frappe.ui.form.on('POS Profile', {
 
 		frm.set_query('expense_account', function(doc) {
 			if (!doc.company) {
-				frappe.throw(__('Please set Company'));
+				capkpi.throw(__('Please set Company'));
 			}
 
 			return {

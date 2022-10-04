@@ -19,7 +19,7 @@ erp.buying.SupplierQuotationController = erp.buying.BuyingController.extend({
 		this._super();
 
 		if (this.frm.doc.__islocal && !this.frm.doc.valid_till) {
-			this.frm.set_value('valid_till', frappe.datetime.add_months(this.frm.doc.transaction_date, 1));
+			this.frm.set_value('valid_till', capkpi.datetime.add_months(this.frm.doc.transaction_date, 1));
 		}
 		if (this.frm.doc.docstatus === 1) {
 			cur_frm.add_custom_button(__("Purchase Order"), this.make_purchase_order,
@@ -59,7 +59,7 @@ erp.buying.SupplierQuotationController = erp.buying.BuyingController.extend({
 			this.frm.add_custom_button(__("Request for Quotation"),
 			function() {
 				if (!me.frm.doc.supplier) {
-					frappe.throw({message:__("Please select a Supplier"), title:__("Mandatory")})
+					capkpi.throw({message:__("Please select a Supplier"), title:__("Mandatory")})
 				}
 				erp.utils.map_current_doc({
 					method: "erp.buying.doctype.request_for_quotation.request_for_quotation.make_supplier_quotation_from_rfq",
@@ -80,13 +80,13 @@ erp.buying.SupplierQuotationController = erp.buying.BuyingController.extend({
 	},
 
 	make_purchase_order: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.buying.doctype.supplier_quotation.supplier_quotation.make_purchase_order",
 			frm: cur_frm
 		})
 	},
 	make_quotation: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.buying.doctype.supplier_quotation.supplier_quotation.make_quotation",
 			frm: cur_frm
 		})

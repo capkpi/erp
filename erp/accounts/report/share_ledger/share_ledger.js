@@ -3,13 +3,13 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Share Ledger"] = {
+capkpi.query_reports["Share Ledger"] = {
 	"filters": [
 		{
 			"fieldname":"date",
 			"label": __("Date"),
 			"fieldtype": "Date",
-			"default": frappe.datetime.get_today(),
+			"default": capkpi.datetime.get_today(),
 			"reqd": 1
 		},
 		{

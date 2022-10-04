@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Subcontracted Item To Be Received"] = {
+capkpi.query_reports["Subcontracted Item To Be Received"] = {
 	"filters": [
 		{
 			fieldname: "supplier",
@@ -15,14 +15,14 @@ frappe.query_reports["Subcontracted Item To Be Received"] = {
 			fieldname:"from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.month_start(), -1),
+			default: capkpi.datetime.add_months(capkpi.datetime.month_start(), -1),
 			reqd: 1
 		},
 		{
 			fieldname:"to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_days(frappe.datetime.month_start(),-1),
+			default: capkpi.datetime.add_days(capkpi.datetime.month_start(),-1),
 			reqd: 1
 		},
 	]

@@ -2,27 +2,27 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, scrub
-from frappe.utils import getdate, nowdate
+import capkpi
+from capkpi import _, scrub
+from capkpi.utils import getdate, nowdate
 from six import iteritems, itervalues
 
 
 class PartyLedgerSummaryReport(object):
 	def __init__(self, filters=None):
-		self.filters = frappe._dict(filters or {})
+		self.filters = capkpi._dict(filters or {})
 		self.filters.from_date = getdate(self.filters.from_date or nowdate())
 		self.filters.to_date = getdate(self.filters.to_date or nowdate())
 
 		if not self.filters.get("company"):
-			self.filters["company"] = frappe.db.get_single_value("Global Defaults", "default_company")
+			self.filters["company"] = capkpi.db.get_single_value("Global Defaults", "default_company")
 
 	def run(self, args):
 		if self.filters.from_date > self.filters.to_date:
-			frappe.throw(_("From Date must be before To Date"))
+			capkpi.throw(_("From Date must be before To Date"))
 
 		self.filters.party_type = args.get("party_type")
-		self.party_naming_by = frappe.db.get_value(
+		self.party_naming_by = capkpi.db.get_value(
 			args.get("naming_by")[0], None, args.get("naming_by")[1]
 		)
 
@@ -120,17 +120,17 @@ class PartyLedgerSummaryReport(object):
 		return columns
 
 	def get_data(self):
-		company_currency = frappe.get_cached_value(
+		company_currency = capkpi.get_cached_value(
 			"Company", self.filters.get("company"), "default_currency"
 		)
 		invoice_dr_or_cr = "debit" if self.filters.party_type == "Customer" else "credit"
 		reverse_dr_or_cr = "credit" if self.filters.party_type == "Customer" else "debit"
 
-		self.party_data = frappe._dict({})
+		self.party_data = capkpi._dict({})
 		for gle in self.gl_entries:
 			self.party_data.setdefault(
 				gle.party,
-				frappe._dict(
+				capkpi._dict(
 					{
 						"party": gle.party,
 						"party_name": gle.party_name,
@@ -189,7 +189,7 @@ class PartyLedgerSummaryReport(object):
 			join_field = ", p.supplier_name as party_name"
 			join = "left join `tabSupplier` p on gle.party = p.name"
 
-		self.gl_entries = frappe.db.sql(
+		self.gl_entries = capkpi.db.sql(
 			"""
 			select
 				gle.posting_date, gle.party, gle.voucher_type, gle.voucher_no, gle.against_voucher_type,
@@ -221,7 +221,7 @@ class PartyLedgerSummaryReport(object):
 
 		if self.filters.party_type == "Customer":
 			if self.filters.get("customer_group"):
-				lft, rgt = frappe.db.get_value(
+				lft, rgt = capkpi.db.get_value(
 					"Customer Group", self.filters.get("customer_group"), ["lft", "rgt"]
 				)
 
@@ -234,7 +234,7 @@ class PartyLedgerSummaryReport(object):
 				)
 
 			if self.filters.get("territory"):
-				lft, rgt = frappe.db.get_value("Territory", self.filters.get("territory"), ["lft", "rgt"])
+				lft, rgt = capkpi.db.get_value("Territory", self.filters.get("territory"), ["lft", "rgt"])
 
 				conditions.append(
 					"""party in (select name from tabCustomer
@@ -255,7 +255,7 @@ class PartyLedgerSummaryReport(object):
 				)
 
 			if self.filters.get("sales_person"):
-				lft, rgt = frappe.db.get_value(
+				lft, rgt = capkpi.db.get_value(
 					"Sales Person", self.filters.get("sales_person"), ["lft", "rgt"]
 				)
 
@@ -282,7 +282,7 @@ class PartyLedgerSummaryReport(object):
 		doctype = "Sales Invoice" if self.filters.party_type == "Customer" else "Purchase Invoice"
 		self.return_invoices = [
 			d.name
-			for d in frappe.get_all(
+			for d in capkpi.get_all(
 				doctype,
 				filters={
 					"is_return": 1,
@@ -299,9 +299,9 @@ class PartyLedgerSummaryReport(object):
 		)
 		invoice_dr_or_cr = "debit" if self.filters.party_type == "Customer" else "credit"
 		reverse_dr_or_cr = "credit" if self.filters.party_type == "Customer" else "debit"
-		round_off_account = frappe.get_cached_value("Company", self.filters.company, "round_off_account")
+		round_off_account = capkpi.get_cached_value("Company", self.filters.company, "round_off_account")
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""
 			select
 				posting_date, account, party, voucher_type, voucher_no, debit, credit
@@ -343,7 +343,7 @@ class PartyLedgerSummaryReport(object):
 				elif gle.party:
 					parties.setdefault(gle.party, 0)
 					parties[gle.party] += gle.get(reverse_dr_or_cr) - gle.get(invoice_dr_or_cr)
-				elif frappe.get_cached_value("Account", gle.account, "account_type") == income_or_expense:
+				elif capkpi.get_cached_value("Account", gle.account, "account_type") == income_or_expense:
 					accounts.setdefault(gle.account, 0)
 					accounts[gle.account] += gle.get(invoice_dr_or_cr) - gle.get(reverse_dr_or_cr)
 				else:

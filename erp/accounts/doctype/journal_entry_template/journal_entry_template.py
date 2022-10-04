@@ -2,14 +2,14 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class JournalEntryTemplate(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_naming_series():
-	return frappe.get_meta("Journal Entry").get_field("naming_series").options
+	return capkpi.get_meta("Journal Entry").get_field("naming_series").options

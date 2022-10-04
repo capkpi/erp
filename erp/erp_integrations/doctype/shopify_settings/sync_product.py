@@ -1,6 +1,6 @@
-import frappe
-from frappe import _
-from frappe.utils import cint, cstr, get_request_session
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, cstr, get_request_session
 
 from erp import get_default_company
 from erp.erp_integrations.doctype.shopify_settings.shopify_settings import (
@@ -58,8 +58,8 @@ def create_attribute(shopify_item):
 	attribute = []
 	# shopify item dict
 	for attr in shopify_item.get("options"):
-		if not frappe.db.get_value("Item Attribute", attr.get("name"), "name"):
-			frappe.get_doc(
+		if not capkpi.db.get_value("Item Attribute", attr.get("name"), "name"):
+			capkpi.get_doc(
 				{
 					"doctype": "Item Attribute",
 					"attribute_name": attr.get("name"),
@@ -72,7 +72,7 @@ def create_attribute(shopify_item):
 
 		else:
 			# check for attribute values
-			item_attr = frappe.get_doc("Item Attribute", attr.get("name"))
+			item_attr = capkpi.get_doc("Item Attribute", attr.get("name"))
 			if not item_attr.numeric_values:
 				set_new_attribute_values(item_attr, attr.get("values"))
 				item_attr.save()
@@ -131,7 +131,7 @@ def create_item(shopify_item, warehouse, has_variant=0, attributes=None, variant
 		name = ""
 
 		if not item_details:
-			new_item = frappe.get_doc(item_dict)
+			new_item = capkpi.get_doc(item_dict)
 			new_item.insert(ignore_permissions=True, ignore_mandatory=True)
 			name = new_item.name
 
@@ -141,11 +141,11 @@ def create_item(shopify_item, warehouse, has_variant=0, attributes=None, variant
 		if not has_variant:
 			add_to_price_list(shopify_item, name)
 
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def create_item_variants(shopify_item, warehouse, attributes, shopify_variants_attr_list):
-	template_item = frappe.db.get_value(
+	template_item = capkpi.db.get_value(
 		"Item",
 		filters={"shopify_product_id": shopify_item.get("id")},
 		fieldname=["name", "stock_uom"],
@@ -176,7 +176,7 @@ def create_item_variants(shopify_item, warehouse, attributes, shopify_variants_a
 
 
 def get_attribute_value(variant_attr_val, attribute):
-	attribute_value = frappe.db.sql(
+	attribute_value = capkpi.db.sql(
 		"""select attribute_value from `tabItem Attribute Value`
 		where parent = %s and (abbr = %s or attribute_value = %s)""",
 		(attribute["attribute"], variant_attr_val, variant_attr_val),
@@ -186,13 +186,13 @@ def get_attribute_value(variant_attr_val, attribute):
 
 
 def get_item_group(product_type=None):
-	import frappe.utils.nestedset
+	import capkpi.utils.nestedset
 
-	parent_item_group = frappe.utils.nestedset.get_root_of("Item Group")
+	parent_item_group = capkpi.utils.nestedset.get_root_of("Item Group")
 
 	if product_type:
-		if not frappe.db.get_value("Item Group", product_type, "name"):
-			item_group = frappe.get_doc(
+		if not capkpi.db.get_value("Item Group", product_type, "name"):
+			item_group = capkpi.get_doc(
 				{
 					"doctype": "Item Group",
 					"item_group_name": product_type,
@@ -214,18 +214,18 @@ def get_sku(item):
 
 
 def add_to_price_list(item, name):
-	shopify_settings = frappe.db.get_value(
+	shopify_settings = capkpi.db.get_value(
 		"Shopify Settings", None, ["price_list", "update_price_in_erp_price_list"], as_dict=1
 	)
 	if not shopify_settings.update_price_in_erp_price_list:
 		return
 
-	item_price_name = frappe.db.get_value(
+	item_price_name = capkpi.db.get_value(
 		"Item Price", {"item_code": name, "price_list": shopify_settings.price_list}, "name"
 	)
 
 	if not item_price_name:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Item Price",
 				"price_list": shopify_settings.price_list,
@@ -234,7 +234,7 @@ def add_to_price_list(item, name):
 			}
 		).insert()
 	else:
-		item_rate = frappe.get_doc("Item Price", item_price_name)
+		item_rate = capkpi.get_doc("Item Price", item_price_name)
 		item_rate.price_list_rate = item.get("item_price") or item.get("variants")[0].get("price")
 		item_rate.save()
 
@@ -247,7 +247,7 @@ def get_item_image(shopify_item):
 
 def get_supplier(shopify_item):
 	if shopify_item.get("vendor"):
-		supplier = frappe.db.sql(
+		supplier = capkpi.db.sql(
 			"""select name from tabSupplier
 			where name = %s or shopify_supplier_id = %s """,
 			(shopify_item.get("vendor"), shopify_item.get("vendor").lower()),
@@ -255,7 +255,7 @@ def get_supplier(shopify_item):
 		)
 
 		if not supplier:
-			supplier = frappe.get_doc(
+			supplier = capkpi.get_doc(
 				{
 					"doctype": "Supplier",
 					"supplier_name": shopify_item.get("vendor"),
@@ -271,9 +271,9 @@ def get_supplier(shopify_item):
 
 
 def get_supplier_group():
-	supplier_group = frappe.db.get_value("Supplier Group", _("Shopify Supplier"))
+	supplier_group = capkpi.db.get_value("Supplier Group", _("Shopify Supplier"))
 	if not supplier_group:
-		supplier_group = frappe.get_doc(
+		supplier_group = capkpi.get_doc(
 			{"doctype": "Supplier Group", "supplier_group_name": _("Shopify Supplier")}
 		).insert()
 		return supplier_group.name
@@ -283,7 +283,7 @@ def get_supplier_group():
 def get_item_details(shopify_item):
 	item_details = {}
 
-	item_details = frappe.db.get_value(
+	item_details = capkpi.db.get_value(
 		"Item",
 		{"shopify_product_id": shopify_item.get("id")},
 		["name", "stock_uom", "item_name"],
@@ -294,7 +294,7 @@ def get_item_details(shopify_item):
 		return item_details
 
 	else:
-		item_details = frappe.db.get_value(
+		item_details = capkpi.db.get_value(
 			"Item",
 			{"shopify_variant_id": shopify_item.get("id")},
 			["name", "stock_uom", "item_name"],
@@ -307,10 +307,10 @@ def is_item_exists(shopify_item, attributes=None, variant_of=None):
 	if variant_of:
 		name = variant_of
 	else:
-		name = frappe.db.get_value("Item", {"item_name": shopify_item.get("item_name")})
+		name = capkpi.db.get_value("Item", {"item_name": shopify_item.get("item_name")})
 
 	if name:
-		item = frappe.get_doc("Item", name)
+		item = capkpi.get_doc("Item", name)
 		item.flags.ignore_mandatory = True
 
 		if not variant_of and not item.shopify_product_id:
@@ -321,7 +321,7 @@ def is_item_exists(shopify_item, attributes=None, variant_of=None):
 
 		if item.shopify_product_id and attributes and attributes[0].get("attribute_value"):
 			if not variant_of:
-				variant_of = frappe.db.get_value(
+				variant_of = capkpi.db.get_value(
 					"Item", {"shopify_product_id": item.shopify_product_id}, "variant_of"
 				)
 
@@ -341,7 +341,7 @@ def is_item_exists(shopify_item, attributes=None, variant_of=None):
 				" or ".join(conditions), len(attributes)
 			)
 
-			parent = frappe.db.sql(
+			parent = capkpi.db.sql(
 				""" select * from tabItem it where
 				( select count(*) from `tabItem Variant Attribute` iv
 					where {conditions} and it.variant_of = %s """.format(
@@ -352,7 +352,7 @@ def is_item_exists(shopify_item, attributes=None, variant_of=None):
 			)
 
 			if parent:
-				variant = frappe.get_doc("Item", parent[0][0])
+				variant = capkpi.get_doc("Item", parent[0][0])
 				variant.flags.ignore_mandatory = True
 
 				variant.shopify_product_id = shopify_item.get("shopify_product_id")

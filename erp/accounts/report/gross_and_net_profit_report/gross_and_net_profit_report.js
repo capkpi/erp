@@ -2,22 +2,22 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Gross and Net Profit Report"] = {
+capkpi.query_reports["Gross and Net Profit Report"] = {
 	"filters": [
 
 	]
 }
-frappe.require("assets/erp/js/financial_statements.js", function() {
-	frappe.query_reports["Gross and Net Profit Report"] = $.extend({},
+capkpi.require("assets/erp/js/financial_statements.js", function() {
+	capkpi.query_reports["Gross and Net Profit Report"] = $.extend({},
 		erp.financial_statements);
 
-	frappe.query_reports["Gross and Net Profit Report"]["filters"].push(
+	capkpi.query_reports["Gross and Net Profit Report"]["filters"].push(
 		{
 			"fieldname": "project",
 			"label": __("Project"),
 			"fieldtype": "MultiSelectList",
 			get_data: function(txt) {
-				return frappe.db.get_link_options('Project', txt);
+				return capkpi.db.get_link_options('Project', txt);
 			}
 		},
 		{

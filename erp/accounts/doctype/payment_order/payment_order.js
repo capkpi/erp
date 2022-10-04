@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Payment Order', {
+capkpi.ui.form.on('Payment Order', {
 	setup: function(frm) {
 		frm.set_query("company_bank_account", function() {
 			return {
@@ -94,7 +94,7 @@ frappe.ui.form.on('Payment Order', {
 	},
 
 	make_payment_records: function(frm){
-		var dialog = new frappe.ui.Dialog({
+		var dialog = new capkpi.ui.Dialog({
 			title: __("For Supplier"),
 			fields: [
 				{"fieldtype": "Link", "label": __("Supplier"), "fieldname": "supplier", "options":"Supplier",
@@ -121,7 +121,7 @@ frappe.ui.form.on('Payment Order', {
 			var args = dialog.get_values();
 			if(!args) return;
 
-			return frappe.call({
+			return capkpi.call({
 				method: "erp.accounts.doctype.payment_order.payment_order.make_payment_records",
 				args: {
 					"name": me.frm.doc.name,

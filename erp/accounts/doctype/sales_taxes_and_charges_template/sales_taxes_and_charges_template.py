@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import flt
 
 from erp.controllers.accounts_controller import (
 	validate_account_head,
@@ -21,22 +21,22 @@ class SalesTaxesandChargesTemplate(Document):
 
 	def autoname(self):
 		if self.company and self.title:
-			abbr = frappe.get_cached_value("Company", self.company, "abbr")
+			abbr = capkpi.get_cached_value("Company", self.company, "abbr")
 			self.name = "{0} - {1}".format(self.title, abbr)
 
 	def set_missing_values(self):
 		for data in self.taxes:
 			if data.charge_type == "On Net Total" and flt(data.rate) == 0.0:
-				data.rate = frappe.db.get_value("Account", data.account_head, "tax_rate")
+				data.rate = capkpi.db.get_value("Account", data.account_head, "tax_rate")
 
 
 def valdiate_taxes_and_charges_template(doc):
 	# default should not be disabled
-	# if not doc.is_default and not frappe.get_all(doc.doctype, filters={"is_default": 1}):
+	# if not doc.is_default and not capkpi.get_all(doc.doctype, filters={"is_default": 1}):
 	# 	doc.is_default = 1
 
 	if doc.is_default == 1:
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""update `tab{0}` set is_default = 0
 			where is_default = 1 and name != %s and company = %s""".format(
 				doc.doctype
@@ -58,14 +58,14 @@ def valdiate_taxes_and_charges_template(doc):
 
 def validate_disabled(doc):
 	if doc.is_default and doc.disabled:
-		frappe.throw(_("Disabled template must not be default template"))
+		capkpi.throw(_("Disabled template must not be default template"))
 
 
 def validate_for_tax_category(doc):
 	if not doc.tax_category:
 		return
 
-	if frappe.db.exists(
+	if capkpi.db.exists(
 		doc.doctype,
 		{
 			"company": doc.company,
@@ -74,8 +74,8 @@ def validate_for_tax_category(doc):
 			"name": ["!=", doc.name],
 		},
 	):
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"A template with tax category {0} already exists. Only one template is allowed with each tax category"
-			).format(frappe.bold(doc.tax_category))
+			).format(capkpi.bold(doc.tax_category))
 		)

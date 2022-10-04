@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -39,7 +39,7 @@ def get_subcontracted_orders(report_filters):
 
 	filters = get_filters(report_filters)
 
-	return frappe.get_all("Purchase Order", fields=fields, filters=filters) or []
+	return capkpi.get_all("Purchase Order", fields=fields, filters=filters) or []
 
 
 def get_filters(report_filters):
@@ -80,7 +80,7 @@ def get_supplied_items(orders, report_filters):
 	filters = {"parent": ("in", [d.po_id for d in orders]), "docstatus": 1}
 
 	supplied_items = {}
-	for row in frappe.get_all("Purchase Order Item Supplied", fields=fields, filters=filters):
+	for row in capkpi.get_all("Purchase Order Item Supplied", fields=fields, filters=filters):
 		new_key = (row.parent, row.reference_name, row.main_item_code)
 
 		supplied_items.setdefault(new_key, []).append(row)
@@ -93,7 +93,7 @@ def prepare_subcontracted_data(orders, supplied_items):
 	for row in orders:
 		key = (row.po_id, row.name, row.item_code)
 		if key not in po_details:
-			po_details.setdefault(key, frappe._dict({"po_item": row, "supplied_items": []}))
+			po_details.setdefault(key, capkpi._dict({"po_item": row, "supplied_items": []}))
 
 		details = po_details[key]
 

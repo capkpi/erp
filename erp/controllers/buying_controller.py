@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import ValidationError, _, msgprint
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.utils import cint, cstr, flt, getdate
+import capkpi
+from capkpi import ValidationError, _, msgprint
+from capkpi.contacts.doctype.address.address import get_address_display
+from capkpi.utils import cint, cstr, flt, getdate
 
 from erp.accounts.doctype.budget.budget import validate_expense_against_budget
 from erp.accounts.party import get_party_details
@@ -32,7 +32,7 @@ class BuyingController(StockController, Subcontracting):
 	def validate(self):
 		super(BuyingController, self).validate()
 		if getattr(self, "supplier", None) and not self.supplier_name:
-			self.supplier_name = frappe.db.get_value("Supplier", self.supplier, "supplier_name")
+			self.supplier_name = capkpi.db.get_value("Supplier", self.supplier, "supplier_name")
 
 		self.validate_items()
 		self.set_qty_as_per_stock_uom()
@@ -65,7 +65,7 @@ class BuyingController(StockController, Subcontracting):
 		super(BuyingController, self).onload()
 		self.set_onload(
 			"backflush_based_on",
-			frappe.db.get_single_value(
+			capkpi.db.get_single_value(
 				"Buying Settings", "backflush_raw_materials_of_subcontract_based_on"
 			),
 		)
@@ -97,14 +97,14 @@ class BuyingController(StockController, Subcontracting):
 	def set_supplier_from_item_default(self):
 		if self.meta.get_field("supplier") and not self.supplier:
 			for d in self.get("items"):
-				supplier = frappe.db.get_value(
+				supplier = capkpi.db.get_value(
 					"Item Default", {"parent": d.item_code, "company": self.company}, "default_supplier"
 				)
 				if supplier:
 					self.supplier = supplier
 				else:
-					item_group = frappe.db.get_value("Item", d.item_code, "item_group")
-					supplier = frappe.db.get_value(
+					item_group = capkpi.db.get_value("Item", d.item_code, "item_group")
+					supplier = capkpi.db.get_value(
 						"Item Default", {"parent": item_group, "company": self.company}, "default_supplier"
 					)
 					if supplier:
@@ -136,10 +136,10 @@ class BuyingController(StockController, Subcontracting):
 		)
 		not_cancelled_asset = [
 			d.name
-			for d in frappe.db.get_all("Asset", {purchase_doc_field: self.return_against, "docstatus": 1})
+			for d in capkpi.db.get_all("Asset", {purchase_doc_field: self.return_against, "docstatus": 1})
 		]
 		if self.is_return and len(not_cancelled_asset):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"{} has submitted assets linked to it. You need to cancel the assets to create purchase return."
 				).format(self.return_against),
@@ -154,7 +154,7 @@ class BuyingController(StockController, Subcontracting):
 
 	def set_landed_cost_voucher_amount(self):
 		for d in self.get("items"):
-			lc_voucher_data = frappe.db.sql(
+			lc_voucher_data = capkpi.db.sql(
 				"""select sum(applicable_charges), cost_center
 				from `tabLanded Cost Item`
 				where docstatus = 1 and purchase_receipt_item = %s""",
@@ -167,12 +167,12 @@ class BuyingController(StockController, Subcontracting):
 	def validate_from_warehouse(self):
 		for item in self.get("items"):
 			if item.get("from_warehouse") and (item.get("from_warehouse") == item.get("warehouse")):
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: Accepted Warehouse and Supplier Warehouse cannot be same").format(item.idx)
 				)
 
 			if item.get("from_warehouse") and self.get("is_subcontracted") == "Yes":
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Row #{0}: Cannot select Supplier Warehouse while suppling raw materials to subcontractor"
 					).format(item.idx)
@@ -189,7 +189,7 @@ class BuyingController(StockController, Subcontracting):
 				self.set(address_display_field, get_address_display(self.get(address_field)))
 
 	def set_total_in_words(self):
-		from frappe.utils import money_in_words
+		from capkpi.utils import money_in_words
 
 		if self.meta.get_field("base_in_words"):
 			if self.meta.get_field("base_rounded_total") and not self.is_rounded_total_disabled():
@@ -283,7 +283,7 @@ class BuyingController(StockController, Subcontracting):
 			if not cint(self.get("is_return")):
 				# Get outgoing rate based on original item cost based on valuation method
 
-				if not d.get(frappe.scrub(ref_doctype)):
+				if not d.get(capkpi.scrub(ref_doctype)):
 					outgoing_rate = get_incoming_rate(
 						{
 							"item_code": d.item_code,
@@ -304,7 +304,7 @@ class BuyingController(StockController, Subcontracting):
 				else:
 					field = "incoming_rate" if self.get("is_internal_supplier") else "rate"
 					rate = flt(
-						frappe.db.get_value(ref_doctype, d.get(frappe.scrub(ref_doctype)), field)
+						capkpi.db.get_value(ref_doctype, d.get(capkpi.scrub(ref_doctype)), field)
 						* (d.conversion_factor or 1),
 						d.precision("rate"),
 					)
@@ -312,7 +312,7 @@ class BuyingController(StockController, Subcontracting):
 				if self.is_internal_transfer():
 					if rate != d.rate:
 						d.rate = rate
-						frappe.msgprint(
+						capkpi.msgprint(
 							_(
 								"Row {0}: Item rate has been updated as per valuation rate since its an internal stock transfer"
 							).format(d.idx),
@@ -326,7 +326,7 @@ class BuyingController(StockController, Subcontracting):
 		supplied_items_cost = 0.0
 		for d in self.get("supplied_items"):
 			if d.reference_name == item_row_id:
-				if reset_outgoing_rate and frappe.get_cached_value("Item", d.rm_item_code, "is_stock_item"):
+				if reset_outgoing_rate and capkpi.get_cached_value("Item", d.rm_item_code, "is_stock_item"):
 					rate = get_incoming_rate(
 						{
 							"item_code": d.rm_item_code,
@@ -348,23 +348,23 @@ class BuyingController(StockController, Subcontracting):
 
 	def validate_for_subcontracting(self):
 		if not self.is_subcontracted and self.sub_contracted_items:
-			frappe.throw(_("Please enter 'Is Subcontracted' as Yes or No"))
+			capkpi.throw(_("Please enter 'Is Subcontracted' as Yes or No"))
 
 		if self.is_subcontracted == "Yes":
 			if self.doctype in ["Purchase Receipt", "Purchase Invoice"] and not self.supplier_warehouse:
-				frappe.throw(_("Supplier Warehouse mandatory for sub-contracted {0}").format(self.doctype))
+				capkpi.throw(_("Supplier Warehouse mandatory for sub-contracted {0}").format(self.doctype))
 
 			for item in self.get("items"):
 				if item in self.sub_contracted_items and not item.bom:
-					frappe.throw(_("Please select BOM in BOM field for Item {0}").format(item.item_code))
+					capkpi.throw(_("Please select BOM in BOM field for Item {0}").format(item.item_code))
 
 			if self.doctype != "Purchase Order":
 				return
 
 			for row in self.get("supplied_items"):
 				if not row.reserve_warehouse:
-					msg = f"Reserved Warehouse is mandatory for the Item {frappe.bold(row.rm_item_code)} in Raw Materials supplied"
-					frappe.throw(_(msg))
+					msg = f"Reserved Warehouse is mandatory for the Item {capkpi.bold(row.rm_item_code)} in Raw Materials supplied"
+					capkpi.throw(_(msg))
 		else:
 			for item in self.get("items"):
 				if item.bom:
@@ -387,7 +387,7 @@ class BuyingController(StockController, Subcontracting):
 			self._sub_contracted_items = []
 			item_codes = list(set(item.item_code for item in self.get("items")))
 			if item_codes:
-				items = frappe.get_all(
+				items = capkpi.get_all(
 					"Item", filters={"name": ["in", item_codes], "is_sub_contracted_item": 1}
 				)
 				self._sub_contracted_items = [item.name for item in items]
@@ -400,7 +400,7 @@ class BuyingController(StockController, Subcontracting):
 				# Check if item code is present
 				# Conversion factor should not be mandatory for non itemized items
 				if not d.conversion_factor and d.item_code:
-					frappe.throw(_("Row {0}: Conversion Factor is mandatory").format(d.idx))
+					capkpi.throw(_("Row {0}: Conversion Factor is mandatory").format(d.idx))
 				d.stock_qty = flt(d.qty) * flt(d.conversion_factor)
 
 				if self.doctype == "Purchase Receipt" and d.meta.get_field("received_stock_qty"):
@@ -412,7 +412,7 @@ class BuyingController(StockController, Subcontracting):
 	def validate_purchase_return(self):
 		for d in self.get("items"):
 			if self.is_return and flt(d.rejected_qty) != 0:
-				frappe.throw(_("Row #{0}: Rejected Qty can not be entered in Purchase Return").format(d.idx))
+				capkpi.throw(_("Row #{0}: Rejected Qty can not be entered in Purchase Return").format(d.idx))
 
 			# validate rate with ref PR
 
@@ -423,7 +423,7 @@ class BuyingController(StockController, Subcontracting):
 					d.rejected_warehouse = self.rejected_warehouse
 
 				if not d.rejected_warehouse:
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Rejected Warehouse is mandatory against rejected Item {1}").format(
 							d.idx, d.item_code
 						)
@@ -443,7 +443,7 @@ class BuyingController(StockController, Subcontracting):
 				message = _(
 					"Row #{0}: Received Qty must be equal to Accepted + Rejected Qty for Item {1}"
 				).format(d.idx, d.item_code)
-				frappe.throw(msg=message, title=_("Mismatch"), exc=QtyMismatchError)
+				capkpi.throw(msg=message, title=_("Mismatch"), exc=QtyMismatchError)
 
 	def validate_negative_quantity(self, item_row, field_list):
 		if self.is_return:
@@ -452,10 +452,10 @@ class BuyingController(StockController, Subcontracting):
 		item_row = item_row.as_dict()
 		for fieldname in field_list:
 			if flt(item_row[fieldname]) < 0:
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{0}: {1} can not be negative for item {2}").format(
 						item_row["idx"],
-						frappe.get_meta(item_row.doctype).get_label(fieldname),
+						capkpi.get_meta(item_row.doctype).get_label(fieldname),
 						item_row["item_code"],
 					)
 				)
@@ -463,9 +463,9 @@ class BuyingController(StockController, Subcontracting):
 	def check_for_on_hold_or_closed_status(self, ref_doctype, ref_fieldname):
 		for d in self.get("items"):
 			if d.get(ref_fieldname):
-				status = frappe.db.get_value(ref_doctype, d.get(ref_fieldname), "status")
+				status = capkpi.db.get_value(ref_doctype, d.get(ref_fieldname), "status")
 				if status in ("Closed", "On Hold"):
-					frappe.throw(_("{0} {1} is {2}").format(ref_doctype, d.get(ref_fieldname), status))
+					capkpi.throw(_("{0} {1} is {2}").format(ref_doctype, d.get(ref_fieldname), status))
 
 	def update_stock_ledger(self, allow_negative_stock=False, via_landed_cost_voucher=False):
 		self.update_ordered_and_reserved_qty()
@@ -563,12 +563,12 @@ class BuyingController(StockController, Subcontracting):
 
 		for po, po_item_rows in po_map.items():
 			if po and po_item_rows:
-				po_obj = frappe.get_doc("Purchase Order", po)
+				po_obj = capkpi.get_doc("Purchase Order", po)
 
 				if po_obj.status in ["Closed", "Cancelled"]:
-					frappe.throw(
+					capkpi.throw(
 						_("{0} {1} is cancelled or closed").format(_("Purchase Order"), po),
-						frappe.InvalidStatusError,
+						capkpi.InvalidStatusError,
 					)
 
 				po_obj.update_ordered_qty(po_item_rows)
@@ -665,44 +665,44 @@ class BuyingController(StockController, Subcontracting):
 						if len(created_assets) > 5:
 							# dont show asset form links if more than 5 assets are created
 							messages.append(
-								_("{} Assets created for {}").format(len(created_assets), frappe.bold(d.item_code))
+								_("{} Assets created for {}").format(len(created_assets), capkpi.bold(d.item_code))
 							)
 						else:
-							assets_link = list(map(lambda d: frappe.utils.get_link_to_form("Asset", d), created_assets))
-							assets_link = frappe.bold(",".join(assets_link))
+							assets_link = list(map(lambda d: capkpi.utils.get_link_to_form("Asset", d), created_assets))
+							assets_link = capkpi.bold(",".join(assets_link))
 
 							is_plural = "s" if len(created_assets) != 1 else ""
 							messages.append(
 								_("Asset{} {assets_link} created for {}").format(
-									is_plural, frappe.bold(d.item_code), assets_link=assets_link
+									is_plural, capkpi.bold(d.item_code), assets_link=assets_link
 								)
 							)
 					else:
-						frappe.throw(
+						capkpi.throw(
 							_("Row {}: Asset Naming Series is mandatory for the auto creation for item {}").format(
-								d.idx, frappe.bold(d.item_code)
+								d.idx, capkpi.bold(d.item_code)
 							)
 						)
 				else:
 					messages.append(
 						_("Assets not created for {0}. You will have to create asset manually.").format(
-							frappe.bold(d.item_code)
+							capkpi.bold(d.item_code)
 						)
 					)
 
 		for message in messages:
-			frappe.msgprint(message, title="Success", indicator="green")
+			capkpi.msgprint(message, title="Success", indicator="green")
 
 	def make_asset(self, row):
 		if not row.asset_location:
-			frappe.throw(_("Row {0}: Enter location for the asset item {1}").format(row.idx, row.item_code))
+			capkpi.throw(_("Row {0}: Enter location for the asset item {1}").format(row.idx, row.item_code))
 
-		item_data = frappe.db.get_value(
+		item_data = capkpi.db.get_value(
 			"Item", row.item_code, ["asset_naming_series", "asset_category"], as_dict=1
 		)
 
 		purchase_amount = flt(row.base_rate + row.item_tax_amount)
-		asset = frappe.get_doc(
+		asset = capkpi.get_doc(
 			{
 				"doctype": "Asset",
 				"item_code": row.item_code,
@@ -731,14 +731,14 @@ class BuyingController(StockController, Subcontracting):
 	def update_fixed_asset(self, field, delete_asset=False):
 		for d in self.get("items"):
 			if d.is_fixed_asset:
-				is_auto_create_enabled = frappe.db.get_value("Item", d.item_code, "auto_create_assets")
-				assets = frappe.db.get_all("Asset", filters={field: self.name, "item_code": d.item_code})
+				is_auto_create_enabled = capkpi.db.get_value("Item", d.item_code, "auto_create_assets")
+				assets = capkpi.db.get_all("Asset", filters={field: self.name, "item_code": d.item_code})
 
 				for asset in assets:
-					asset = frappe.get_doc("Asset", asset.name)
+					asset = capkpi.get_doc("Asset", asset.name)
 					if delete_asset and is_auto_create_enabled:
 						# need to delete movements to delete assets otherwise throws link exists error
-						movements = frappe.db.sql(
+						movements = capkpi.db.sql(
 							"""SELECT asm.name
 							FROM `tabAsset Movement` asm, `tabAsset Movement Item` asm_item
 							WHERE asm_item.parent=asm.name and asm_item.asset=%s""",
@@ -746,8 +746,8 @@ class BuyingController(StockController, Subcontracting):
 							as_dict=1,
 						)
 						for movement in movements:
-							frappe.delete_doc("Asset Movement", movement.name, force=1)
-						frappe.delete_doc("Asset", asset.name, force=1)
+							capkpi.delete_doc("Asset Movement", movement.name, force=1)
+						capkpi.delete_doc("Asset", asset.name, force=1)
 						continue
 
 					if self.docstatus in [0, 1] and not asset.get(field):
@@ -759,10 +759,10 @@ class BuyingController(StockController, Subcontracting):
 							asset.set(field, None)
 							asset.supplier = None
 						if asset.docstatus == 1 and delete_asset:
-							frappe.throw(
+							capkpi.throw(
 								_(
 									"Cannot cancel this document as it is linked with submitted asset {0}. Please cancel it to continue."
-								).format(frappe.utils.get_link_to_form("Asset", asset.name))
+								).format(capkpi.utils.get_link_to_form("Asset", asset.name))
 							)
 
 					asset.flags.ignore_validate_update_after_submit = True
@@ -776,7 +776,7 @@ class BuyingController(StockController, Subcontracting):
 		if self.doctype == "Purchase Invoice" and not self.get("update_stock"):
 			return
 
-		frappe.db.sql("delete from `tabAsset Movement` where reference_name=%s", self.name)
+		capkpi.db.sql("delete from `tabAsset Movement` where reference_name=%s", self.name)
 
 	def validate_schedule_date(self):
 		if not self.get("items"):
@@ -798,9 +798,9 @@ class BuyingController(StockController, Subcontracting):
 					and self.transaction_date
 					and getdate(d.schedule_date) < getdate(self.transaction_date)
 				):
-					frappe.throw(_("Row #{0}: Reqd by Date cannot be before Transaction Date").format(d.idx))
+					capkpi.throw(_("Row #{0}: Reqd by Date cannot be before Transaction Date").format(d.idx))
 		else:
-			frappe.throw(_("Please enter Reqd by Date"))
+			capkpi.throw(_("Please enter Reqd by Date"))
 
 	def validate_items(self):
 		# validate items to see if they have is_purchase_item or is_subcontracted_item enabled
@@ -815,7 +815,7 @@ class BuyingController(StockController, Subcontracting):
 
 def get_asset_item_details(asset_items):
 	asset_items_data = {}
-	for d in frappe.get_all(
+	for d in capkpi.get_all(
 		"Item",
 		fields=["name", "auto_create_assets", "asset_naming_series"],
 		filters={"name": ("in", asset_items)},
@@ -833,11 +833,11 @@ def validate_item_type(doc, fieldname, message):
 	if not items:
 		return
 
-	item_list = ", ".join(["%s" % frappe.db.escape(d) for d in items])
+	item_list = ", ".join(["%s" % capkpi.db.escape(d) for d in items])
 
 	invalid_items = [
 		d[0]
-		for d in frappe.db.sql(
+		for d in capkpi.db.sql(
 			"""
 		select item_code from tabItem where name in ({0}) and {1}=0
 		""".format(
@@ -859,4 +859,4 @@ def validate_item_type(doc, fieldname, message):
 				"Following item {0} is not marked as {1} item. You can enable them as {1} item from its Item master"
 			).format(items, message)
 
-		frappe.throw(error_message)
+		capkpi.throw(error_message)

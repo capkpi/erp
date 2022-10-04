@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from frappe import _
+from capkpi import _
 
 from erp.controllers.trends import get_columns, get_data
 

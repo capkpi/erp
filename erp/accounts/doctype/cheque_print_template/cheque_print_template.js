@@ -1,9 +1,9 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.cheque_print");
+capkpi.provide("erp.cheque_print");
 
-frappe.ui.form.on('Cheque Print Template', {
+capkpi.ui.form.on('Cheque Print Template', {
 	refresh: function(frm) {
 		if(!frm.doc.__islocal) {
 			frm.add_custom_button(frm.doc.has_print_format?__("Update Print Format"):__("Create Print Format"),
@@ -25,7 +25,7 @@ frappe.ui.form.on('Cheque Print Template', {
 						position: absolute;"> {{ message_to_show || __("Account Pay Only") }} </span>\
 					<span style="top: {{ date_dist_from_top_edge }}cm;\
 						left: {{ date_dist_from_left_edge }}cm;\
-						position: absolute;"> {{ frappe.datetime.obj_to_user() }} </span>\
+						position: absolute;"> {{ capkpi.datetime.obj_to_user() }} </span>\
 					<span style="top: {{ acc_no_dist_from_top_edge }}cm;\
 						left: {{ acc_no_dist_from_left_edge }}cm;\
 						position: absolute;"> Acc. No. </span>\
@@ -48,7 +48,7 @@ frappe.ui.form.on('Cheque Print Template', {
 				</div>\
 			</div>';
 
-			$(frappe.render(template, frm.doc)).appendTo(frm.fields_dict.cheque_print_preview.wrapper)
+			$(capkpi.render(template, frm.doc)).appendTo(frm.fields_dict.cheque_print_preview.wrapper)
 
 			if (frm.doc.scanned_cheque) {
 				$(frm.fields_dict.cheque_print_preview.wrapper).find("#cheque_preview").css('background-image', 'url(' + frm.doc.scanned_cheque + ')');
@@ -59,18 +59,18 @@ frappe.ui.form.on('Cheque Print Template', {
 
 
 erp.cheque_print.view_cheque_print = function(frm) {
-	frappe.call({
+	capkpi.call({
 		method: "erp.accounts.doctype.cheque_print_template.cheque_print_template.create_or_update_cheque_print_format",
 		args:{
 			"template_name": frm.doc.name
 		},
 		callback: function(r) {
 			if (!r.exe && !frm.doc.has_print_format) {
-				var doc = frappe.model.sync(r.message);
-				frappe.set_route("Form", r.message.doctype, r.message.name);
+				var doc = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", r.message.doctype, r.message.name);
 			}
 			else {
-				frappe.msgprint(__("Print settings updated in respective print format"))
+				capkpi.msgprint(__("Print settings updated in respective print format"))
 			}
 		}
 	})

@@ -4,7 +4,7 @@
 erp.setup_auto_gst_taxation('Sales Invoice');
 erp.setup_einvoice_actions('Sales Invoice')
 
-frappe.ui.form.on("Sales Invoice", {
+capkpi.ui.form.on("Sales Invoice", {
 	setup: function(frm) {
 		frm.set_query('transporter', function() {
 			return {
@@ -28,7 +28,7 @@ frappe.ui.form.on("Sales Invoice", {
 			&& !frm.doc.is_return && !frm.doc.ewaybill) {
 
 			frm.add_custom_button('E-Way Bill JSON', () => {
-				frappe.call({
+				capkpi.call({
 					method: 'erp.regional.india.utils.generate_ewb_json',
 					args: {
 						'dt': frm.doc.doctype,
@@ -41,7 +41,7 @@ frappe.ui.form.on("Sales Invoice", {
 								data: r.message,
 								docname: frm.doc.name
 							};
-							open_url_post(frappe.request.url, args);
+							open_url_post(capkpi.request.url, args);
 						}
 					}
 				});

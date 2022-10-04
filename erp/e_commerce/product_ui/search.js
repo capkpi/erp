@@ -47,7 +47,7 @@ erp.ProductSearch = class {
 
 			if (query.length < 3 || !query.length) return;
 
-			frappe.call({
+			capkpi.call({
 				method: "erp.templates.pages.product_search.search",
 				args: {
 					query: query

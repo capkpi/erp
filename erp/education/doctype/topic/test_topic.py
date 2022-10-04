@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestTopic(unittest.TestCase):
@@ -11,18 +11,18 @@ class TestTopic(unittest.TestCase):
 		make_topic_and_linked_content("_Test Topic 1", [{"type": "Article", "name": "_Test Article 1"}])
 
 	def test_get_contents(self):
-		topic = frappe.get_doc("Topic", "_Test Topic 1")
+		topic = capkpi.get_doc("Topic", "_Test Topic 1")
 		contents = topic.get_contents()
 		self.assertEqual(contents[0].doctype, "Article")
 		self.assertEqual(contents[0].name, "_Test Article 1")
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 
 def make_topic(name):
 	try:
-		topic = frappe.get_doc("Topic", name)
-	except frappe.DoesNotExistError:
-		topic = frappe.get_doc(
+		topic = capkpi.get_doc("Topic", name)
+	except capkpi.DoesNotExistError:
+		topic = capkpi.get_doc(
 			{
 				"doctype": "Topic",
 				"topic_name": name,
@@ -34,10 +34,10 @@ def make_topic(name):
 
 def make_topic_and_linked_content(topic_name, content_dict_list):
 	try:
-		topic = frappe.get_doc("Topic", topic_name)
-	except frappe.DoesNotExistError:
+		topic = capkpi.get_doc("Topic", topic_name)
+	except capkpi.DoesNotExistError:
 		make_topic(topic_name)
-		topic = frappe.get_doc("Topic", topic_name)
+		topic = capkpi.get_doc("Topic", topic_name)
 	content_list = [make_content(content["type"], content["name"]) for content in content_dict_list]
 	for content in content_list:
 		topic.append("topic_content", {"content": content.title, "content_type": content.doctype})
@@ -47,7 +47,7 @@ def make_topic_and_linked_content(topic_name, content_dict_list):
 
 def make_content(type, name):
 	try:
-		content = frappe.get_doc(type, name)
-	except frappe.DoesNotExistError:
-		content = frappe.get_doc({"doctype": type, "title": name}).insert()
+		content = capkpi.get_doc(type, name)
+	except capkpi.DoesNotExistError:
+		content = capkpi.get_doc({"doctype": type, "title": name}).insert()
 	return content

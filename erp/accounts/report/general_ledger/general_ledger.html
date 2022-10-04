@@ -16,9 +16,9 @@
 </h6>
 
 <h5 class="text-center">
-	{%= frappe.datetime.str_to_user(filters.from_date) %}
+	{%= capkpi.datetime.str_to_user(filters.from_date) %}
 	{%= __("to") %}
-	{%= frappe.datetime.str_to_user(filters.to_date) %}
+	{%= capkpi.datetime.str_to_user(filters.to_date) %}
 </h5>
 <hr>
 <table class="table table-bordered">
@@ -36,7 +36,7 @@
 		{% for(var i=0, l=data.length; i<l; i++) { %}
 			<tr>
 			{% if(data[i].posting_date) { %}
-				<td>{%= frappe.datetime.str_to_user(data[i].posting_date) %}</td>
+				<td>{%= capkpi.datetime.str_to_user(data[i].posting_date) %}</td>
 				<td>{%= data[i].voucher_type %}
 					<br>{%= data[i].voucher_no %}</td>
 				<td>
@@ -58,7 +58,7 @@
 			{% } else { %}
 				<td></td>
 				<td></td>
-				<td><b>{%= frappe.format(data[i].account, {fieldtype: "Link"}) || "&nbsp;" %}</b></td>
+				<td><b>{%= capkpi.format(data[i].account, {fieldtype: "Link"}) || "&nbsp;" %}</b></td>
 				<td style="text-align: right">
 					{%= data[i].account && format_currency(data[i].debit, filters.presentation_currency) %}
 				</td>
@@ -73,4 +73,4 @@
 		{% } %}
 	</tbody>
 </table>
-<p class="text-right text-muted">Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>
+<p class="text-right text-muted">Printed On {%= capkpi.datetime.str_to_user(capkpi.datetime.get_datetime_as_string()) %}</p>

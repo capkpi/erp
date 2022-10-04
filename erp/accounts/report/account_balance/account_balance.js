@@ -2,20 +2,20 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["Account Balance"] = {
+capkpi.query_reports["Account Balance"] = {
 	"filters": [
 		{
 			fieldname:"company",
 			label: __("Company"),
 			fieldtype: "Link",
 			options: "Company",
-			default: frappe.defaults.get_user_default("Company")
+			default: capkpi.defaults.get_user_default("Company")
 		},
 		{
 			fieldname:"report_date",
 			label: __("Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
+			default: capkpi.datetime.get_today(),
 			reqd: 1
 		},
 		{

@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import getdate, nowdate
+import capkpi
+from capkpi import _
+from capkpi.utils import getdate, nowdate
 
 
 def execute(filters=None):
@@ -62,7 +62,7 @@ def get_conditions(filters):
 
 def get_entries(filters):
 	conditions = get_conditions(filters)
-	journal_entries = frappe.db.sql(
+	journal_entries = capkpi.db.sql(
 		"""SELECT
 			"Journal Entry", jv.name, jv.posting_date, jv.cheque_no,
 			jv.clearance_date, jvd.against_account, jvd.debit - jvd.credit
@@ -77,7 +77,7 @@ def get_entries(filters):
 		as_list=1,
 	)
 
-	payment_entries = frappe.db.sql(
+	payment_entries = capkpi.db.sql(
 		"""SELECT
 			"Payment Entry", name, posting_date, reference_no, clearance_date, party,
 			if(paid_from=%(account)s, paid_amount * -1, received_amount)

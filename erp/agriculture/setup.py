@@ -1,11 +1,11 @@
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.setup.utils import insert_record
 
 
 def setup_agriculture():
-	if frappe.get_all("Agriculture Analysis Criteria"):
+	if capkpi.get_all("Agriculture Analysis Criteria"):
 		# already setup
 		return
 	create_agriculture_data()

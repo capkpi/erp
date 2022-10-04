@@ -4,30 +4,30 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.email.doctype.email_group.email_group import add_subscribers
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import cstr, flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.email.doctype.email_group.email_group import add_subscribers
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import cstr, flt, getdate
 
 
 def get_course(program):
 	"""Return list of courses for a particular program
 	:param program: Program
 	"""
-	courses = frappe.db.sql(
+	courses = capkpi.db.sql(
 		"""select course, course_name from `tabProgram Course` where parent=%s""", (program), as_dict=1
 	)
 	return courses
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def enroll_student(source_name):
 	"""Creates a Student Record and returns a Program Enrollment.
 
 	:param source_name: Student Applicant.
 	"""
-	frappe.publish_realtime("enroll_student_progress", {"progress": [1, 4]}, user=frappe.session.user)
+	capkpi.publish_realtime("enroll_student_progress", {"progress": [1, 4]}, user=capkpi.session.user)
 	student = get_mapped_doc(
 		"Student Applicant",
 		source_name,
@@ -36,19 +36,19 @@ def enroll_student(source_name):
 	)
 	student.save()
 
-	student_applicant = frappe.db.get_value(
+	student_applicant = capkpi.db.get_value(
 		"Student Applicant", source_name, ["student_category", "program"], as_dict=True
 	)
-	program_enrollment = frappe.new_doc("Program Enrollment")
+	program_enrollment = capkpi.new_doc("Program Enrollment")
 	program_enrollment.student = student.name
 	program_enrollment.student_category = student_applicant.student_category
 	program_enrollment.student_name = student.title
 	program_enrollment.program = student_applicant.program
-	frappe.publish_realtime("enroll_student_progress", {"progress": [2, 4]}, user=frappe.session.user)
+	capkpi.publish_realtime("enroll_student_progress", {"progress": [2, 4]}, user=capkpi.session.user)
 	return program_enrollment
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def check_attendance_records_exist(course_schedule=None, student_group=None, date=None):
 	"""Check if Attendance Records are made against the specified Course Schedule or Student Group for given date.
 
@@ -57,14 +57,14 @@ def check_attendance_records_exist(course_schedule=None, student_group=None, dat
 	:param date: Date.
 	"""
 	if course_schedule:
-		return frappe.get_list("Student Attendance", filters={"course_schedule": course_schedule})
+		return capkpi.get_list("Student Attendance", filters={"course_schedule": course_schedule})
 	else:
-		return frappe.get_list(
+		return capkpi.get_list(
 			"Student Attendance", filters={"student_group": student_group, "date": date}
 		)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def mark_attendance(
 	students_present, students_absent, course_schedule=None, student_group=None, date=None
 ):
@@ -78,13 +78,13 @@ def mark_attendance(
 	"""
 
 	if student_group:
-		academic_year = frappe.db.get_value("Student Group", student_group, "academic_year")
+		academic_year = capkpi.db.get_value("Student Group", student_group, "academic_year")
 		if academic_year:
-			year_start_date, year_end_date = frappe.db.get_value(
+			year_start_date, year_end_date = capkpi.db.get_value(
 				"Academic Year", academic_year, ["year_start_date", "year_end_date"]
 			)
 			if getdate(date) < getdate(year_start_date) or getdate(date) > getdate(year_end_date):
-				frappe.throw(
+				capkpi.throw(
 					_("Attendance cannot be marked outside of Academic Year {0}").format(academic_year)
 				)
 
@@ -101,8 +101,8 @@ def mark_attendance(
 			d["student"], d["student_name"], "Absent", course_schedule, student_group, date
 		)
 
-	frappe.db.commit()
-	frappe.msgprint(_("Attendance has been marked successfully."))
+	capkpi.db.commit()
+	capkpi.msgprint(_("Attendance has been marked successfully."))
 
 
 def make_attendance_records(
@@ -115,7 +115,7 @@ def make_attendance_records(
 	:param course_schedule: Course Schedule.
 	:param status: Status (Present/Absent)
 	"""
-	student_attendance = frappe.get_doc(
+	student_attendance = capkpi.get_doc(
 		{
 			"doctype": "Student Attendance",
 			"student": student,
@@ -125,7 +125,7 @@ def make_attendance_records(
 		}
 	)
 	if not student_attendance:
-		student_attendance = frappe.new_doc("Student Attendance")
+		student_attendance = capkpi.new_doc("Student Attendance")
 	student_attendance.student = student
 	student_attendance.student_name = student_name
 	student_attendance.course_schedule = course_schedule
@@ -136,31 +136,31 @@ def make_attendance_records(
 	student_attendance.submit()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_student_guardians(student):
 	"""Returns List of Guardians of a Student.
 
 	:param student: Student.
 	"""
-	guardians = frappe.get_all("Student Guardian", fields=["guardian"], filters={"parent": student})
+	guardians = capkpi.get_all("Student Guardian", fields=["guardian"], filters={"parent": student})
 	return guardians
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_student_group_students(student_group, include_inactive=0):
 	"""Returns List of student, student_name in Student Group.
 
 	:param student_group: Student Group.
 	"""
 	if include_inactive:
-		students = frappe.get_all(
+		students = capkpi.get_all(
 			"Student Group Student",
 			fields=["student", "student_name"],
 			filters={"parent": student_group},
 			order_by="group_roll_number",
 		)
 	else:
-		students = frappe.get_all(
+		students = capkpi.get_all(
 			"Student Group Student",
 			fields=["student", "student_name"],
 			filters={"parent": student_group, "active": 1},
@@ -169,27 +169,27 @@ def get_student_group_students(student_group, include_inactive=0):
 	return students
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_fee_structure(program, academic_term=None):
 	"""Returns Fee Structure.
 
 	:param program: Program.
 	:param academic_term: Academic Term.
 	"""
-	fee_structure = frappe.db.get_values(
+	fee_structure = capkpi.db.get_values(
 		"Fee Structure", {"program": program, "academic_term": academic_term}, "name", as_dict=True
 	)
 	return fee_structure[0].name if fee_structure else None
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_fee_components(fee_structure):
 	"""Returns Fee Components.
 
 	:param fee_structure: Fee Structure.
 	"""
 	if fee_structure:
-		fs = frappe.get_all(
+		fs = capkpi.get_all(
 			"Fee Component",
 			fields=["fees_category", "description", "amount"],
 			filters={"parent": fee_structure},
@@ -198,7 +198,7 @@ def get_fee_components(fee_structure):
 		return fs
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_fee_schedule(program, student_category=None, academic_year=None):
 	"""Returns Fee Schedule.
 	:param program: Program.
@@ -215,7 +215,7 @@ def get_fee_schedule(program, student_category=None, academic_year=None):
 	if academic_year:
 		filters["academic_year"] = academic_year
 
-	fs = frappe.db.get_list(
+	fs = capkpi.db.get_list(
 		"Fee Schedule",
 		filters=filters,
 		fields=[
@@ -230,16 +230,16 @@ def get_fee_schedule(program, student_category=None, academic_year=None):
 	return fs
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def collect_fees(fees, amt):
-	paid_amount = flt(amt) + flt(frappe.db.get_value("Fees", fees, "paid_amount"))
-	total_amount = flt(frappe.db.get_value("Fees", fees, "total_amount"))
-	frappe.db.set_value("Fees", fees, "paid_amount", paid_amount)
-	frappe.db.set_value("Fees", fees, "outstanding_amount", (total_amount - paid_amount))
+	paid_amount = flt(amt) + flt(capkpi.db.get_value("Fees", fees, "paid_amount"))
+	total_amount = flt(capkpi.db.get_value("Fees", fees, "total_amount"))
+	capkpi.db.set_value("Fees", fees, "paid_amount", paid_amount)
+	capkpi.db.set_value("Fees", fees, "outstanding_amount", (total_amount - paid_amount))
 	return paid_amount
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_course_schedule_events(start, end, filters=None):
 	"""Returns events for Course Schedule Calendar view rendering.
 
@@ -247,11 +247,11 @@ def get_course_schedule_events(start, end, filters=None):
 	:param end: End date-time.
 	:param filters: Filters (JSON).
 	"""
-	from frappe.desk.calendar import get_event_conditions
+	from capkpi.desk.calendar import get_event_conditions
 
 	conditions = get_event_conditions("Course Schedule", filters)
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""select name, course, color,
 			timestamp(schedule_date, from_time) as from_time,
 			timestamp(schedule_date, to_time) as to_time,
@@ -269,13 +269,13 @@ def get_course_schedule_events(start, end, filters=None):
 	return data
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_assessment_criteria(course):
 	"""Returns Assessmemt Criteria and their Weightage from Course Master.
 
 	:param Course: Course
 	"""
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Course Assessment Criteria",
 		fields=["assessment_criteria", "weightage"],
 		filters={"parent": course},
@@ -283,7 +283,7 @@ def get_assessment_criteria(course):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_assessment_students(assessment_plan, student_group):
 	student_list = get_student_group_students(student_group)
 	for i, student in enumerate(student_list):
@@ -303,13 +303,13 @@ def get_assessment_students(assessment_plan, student_group):
 	return student_list
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_assessment_details(assessment_plan):
 	"""Returns Assessment Criteria  and Maximum Score from Assessment Plan Master.
 
 	:param Assessment Plan: Assessment Plan
 	"""
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Assessment Plan Criteria",
 		fields=["assessment_criteria", "maximum_score", "docstatus"],
 		filters={"parent": assessment_plan},
@@ -317,24 +317,24 @@ def get_assessment_details(assessment_plan):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_result(student, assessment_plan):
 	"""Returns Submitted Result of given student for specified Assessment Plan
 
 	:param Student: Student
 	:param Assessment Plan: Assessment Plan
 	"""
-	results = frappe.get_all(
+	results = capkpi.get_all(
 		"Assessment Result",
 		filters={"student": student, "assessment_plan": assessment_plan, "docstatus": ("!=", 2)},
 	)
 	if results:
-		return frappe.get_doc("Assessment Result", results[0])
+		return capkpi.get_doc("Assessment Result", results[0])
 	else:
 		return None
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_grade(grading_scale, percentage):
 	"""Returns Grade based on the Grading Scale and Score.
 
@@ -342,12 +342,12 @@ def get_grade(grading_scale, percentage):
 	:param Percentage: Score Percentage Percentage
 	"""
 	grading_scale_intervals = {}
-	if not hasattr(frappe.local, "grading_scale"):
-		grading_scale = frappe.get_all(
+	if not hasattr(capkpi.local, "grading_scale"):
+		grading_scale = capkpi.get_all(
 			"Grading Scale Interval", fields=["grade_code", "threshold"], filters={"parent": grading_scale}
 		)
-		frappe.local.grading_scale = grading_scale
-	for d in frappe.local.grading_scale:
+		capkpi.local.grading_scale = grading_scale
+	for d in capkpi.local.grading_scale:
 		grading_scale_intervals.update({d.threshold: d.grade_code})
 	intervals = sorted(grading_scale_intervals.keys(), key=float, reverse=True)
 	for interval in intervals:
@@ -359,7 +359,7 @@ def get_grade(grading_scale, percentage):
 	return grade
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def mark_assessment_result(assessment_plan, scores):
 	student_score = json.loads(scores)
 	assessment_details = []
@@ -391,7 +391,7 @@ def mark_assessment_result(assessment_plan, scores):
 	return assessment_result_dict
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def submit_assessment_results(assessment_plan, student_group):
 	total_result = 0
 	student_list = get_student_group_students(student_group)
@@ -404,25 +404,25 @@ def submit_assessment_results(assessment_plan, student_group):
 
 
 def get_assessment_result_doc(student, assessment_plan):
-	assessment_result = frappe.get_all(
+	assessment_result = capkpi.get_all(
 		"Assessment Result",
 		filters={"student": student, "assessment_plan": assessment_plan, "docstatus": ("!=", 2)},
 	)
 	if assessment_result:
-		doc = frappe.get_doc("Assessment Result", assessment_result[0])
+		doc = capkpi.get_doc("Assessment Result", assessment_result[0])
 		if doc.docstatus == 0:
 			return doc
 		elif doc.docstatus == 1:
-			frappe.msgprint(_("Result already Submitted"))
+			capkpi.msgprint(_("Result already Submitted"))
 			return None
 	else:
-		return frappe.new_doc("Assessment Result")
+		return capkpi.new_doc("Assessment Result")
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_email_group(doctype, name):
-	if not frappe.db.exists("Email Group", name):
-		email_group = frappe.new_doc("Email Group")
+	if not capkpi.db.exists("Email Group", name):
+		email_group = capkpi.new_doc("Email Group")
 		email_group.title = name
 		email_group.save()
 	email_list = []
@@ -431,16 +431,16 @@ def update_email_group(doctype, name):
 		students = get_student_group_students(name)
 	for stud in students:
 		for guard in get_student_guardians(stud.student):
-			email = frappe.db.get_value("Guardian", guard.guardian, "email_address")
+			email = capkpi.db.get_value("Guardian", guard.guardian, "email_address")
 			if email:
 				email_list.append(email)
 	add_subscribers(name, email_list)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_current_enrollment(student, academic_year=None):
-	current_academic_year = academic_year or frappe.defaults.get_defaults().academic_year
-	program_enrollment_list = frappe.db.sql(
+	current_academic_year = academic_year or capkpi.defaults.get_defaults().academic_year
+	program_enrollment_list = capkpi.db.sql(
 		"""
 		select
 			name as program_enrollment, student_name, program, student_batch_name as student_batch,

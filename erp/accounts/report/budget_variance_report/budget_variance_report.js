@@ -1,14 +1,14 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["Budget Variance Report"] = {
+capkpi.query_reports["Budget Variance Report"] = {
 	"filters": [
 		{
 			fieldname: "from_fiscal_year",
 			label: __("From Fiscal Year"),
 			fieldtype: "Link",
 			options: "Fiscal Year",
-			default: frappe.sys_defaults.fiscal_year,
+			default: capkpi.sys_defaults.fiscal_year,
 			reqd: 1
 		},
 		{
@@ -16,7 +16,7 @@ frappe.query_reports["Budget Variance Report"] = {
 			label: __("To Fiscal Year"),
 			fieldtype: "Link",
 			options: "Fiscal Year",
-			default: frappe.sys_defaults.fiscal_year,
+			default: capkpi.sys_defaults.fiscal_year,
 			reqd: 1
 		},
 		{
@@ -37,7 +37,7 @@ frappe.query_reports["Budget Variance Report"] = {
 			label: __("Company"),
 			fieldtype: "Link",
 			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
+			default: capkpi.defaults.get_user_default("Company"),
 			reqd: 1
 		},
 		{
@@ -48,8 +48,8 @@ frappe.query_reports["Budget Variance Report"] = {
 			default: "Cost Center",
 			reqd: 1,
 			on_change: function() {
-				frappe.query_report.set_filter_value("budget_against_filter", []);
-				frappe.query_report.refresh();
+				capkpi.query_report.set_filter_value("budget_against_filter", []);
+				capkpi.query_report.refresh();
 			}
 		},
 		{
@@ -57,12 +57,12 @@ frappe.query_reports["Budget Variance Report"] = {
 			label: __('Dimension Filter'),
 			fieldtype: "MultiSelectList",
 			get_data: function(txt) {
-				if (!frappe.query_report.filters) return;
+				if (!capkpi.query_report.filters) return;
 
-				let budget_against = frappe.query_report.get_filter_value('budget_against');
+				let budget_against = capkpi.query_report.get_filter_value('budget_against');
 				if (!budget_against) return;
 
-				return frappe.db.get_link_options(budget_against, txt);
+				return capkpi.db.get_link_options(budget_against, txt);
 			}
 		},
 		{
@@ -90,5 +90,5 @@ frappe.query_reports["Budget Variance Report"] = {
 }
 
 erp.dimension_filters.forEach((dimension) => {
-	frappe.query_reports["Budget Variance Report"].filters[4].options.push(dimension["document_type"]);
+	capkpi.query_reports["Budget Variance Report"].filters[4].options.push(dimension["document_type"]);
 });

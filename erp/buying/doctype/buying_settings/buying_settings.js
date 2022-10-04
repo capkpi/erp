@@ -1,13 +1,13 @@
 // Copyright (c) 2019, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Buying Settings', {
+capkpi.ui.form.on('Buying Settings', {
 	// refresh: function(frm) {
 
 	// }
 });
 
-frappe.tour['Buying Settings'] = [
+capkpi.tour['Buying Settings'] = [
 	{
 		fieldname: "supp_master_name",
 		title: "Supplier Naming By",

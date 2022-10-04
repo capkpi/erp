@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.desk.form.linked_with import get_linked_doctypes
-from frappe.model.document import Document
-from frappe.utils import getdate, today
+import capkpi
+from capkpi import _
+from capkpi.desk.form.linked_with import get_linked_doctypes
+from capkpi.model.document import Document
+from capkpi.utils import getdate, today
 
 from erp.education.utils import check_content_completion, check_quiz_completion
 
@@ -20,36 +20,36 @@ class Student(Document):
 			self.check_unique()
 			self.update_applicant_status()
 
-		if frappe.get_value("Student", self.name, "title") != self.title:
+		if capkpi.get_value("Student", self.name, "title") != self.title:
 			self.update_student_name_in_linked_doctype()
 
 	def validate_dates(self):
 		for sibling in self.siblings:
 			if sibling.date_of_birth and getdate(sibling.date_of_birth) > getdate():
-				frappe.throw(
+				capkpi.throw(
 					_("Row {0}:Sibling Date of Birth cannot be greater than today.").format(sibling.idx)
 				)
 
 		if self.date_of_birth and getdate(self.date_of_birth) >= getdate(today()):
-			frappe.throw(_("Date of Birth cannot be greater than today."))
+			capkpi.throw(_("Date of Birth cannot be greater than today."))
 
 		if self.date_of_birth and getdate(self.date_of_birth) >= getdate(self.joining_date):
-			frappe.throw(_("Date of Birth cannot be greater than Joining Date."))
+			capkpi.throw(_("Date of Birth cannot be greater than Joining Date."))
 
 		if (
 			self.joining_date
 			and self.date_of_leaving
 			and getdate(self.joining_date) > getdate(self.date_of_leaving)
 		):
-			frappe.throw(_("Joining Date can not be greater than Leaving Date"))
+			capkpi.throw(_("Joining Date can not be greater than Leaving Date"))
 
 	def update_student_name_in_linked_doctype(self):
 		linked_doctypes = get_linked_doctypes("Student")
 		for d in linked_doctypes:
-			meta = frappe.get_meta(d)
+			meta = capkpi.get_meta(d)
 			if not meta.issingle:
 				if "student_name" in [f.fieldname for f in meta.fields]:
-					frappe.db.sql(
+					capkpi.db.sql(
 						"""UPDATE `tab{0}` set student_name = %s where {1} = %s""".format(
 							d, linked_doctypes[d]["fieldname"][0]
 						),
@@ -57,9 +57,9 @@ class Student(Document):
 					)
 
 				if "child_doctype" in linked_doctypes[d].keys() and "student_name" in [
-					f.fieldname for f in frappe.get_meta(linked_doctypes[d]["child_doctype"]).fields
+					f.fieldname for f in capkpi.get_meta(linked_doctypes[d]["child_doctype"]).fields
 				]:
-					frappe.db.sql(
+					capkpi.db.sql(
 						"""UPDATE `tab{0}` set student_name = %s where {1} = %s""".format(
 							linked_doctypes[d]["child_doctype"], linked_doctypes[d]["fieldname"][0]
 						),
@@ -68,25 +68,25 @@ class Student(Document):
 
 	def check_unique(self):
 		"""Validates if the Student Applicant is Unique"""
-		student = frappe.db.sql(
+		student = capkpi.db.sql(
 			"select name from `tabStudent` where student_applicant=%s and name!=%s",
 			(self.student_applicant, self.name),
 		)
 		if student:
-			frappe.throw(
+			capkpi.throw(
 				_("Student {0} exist against student applicant {1}").format(
 					student[0][0], self.student_applicant
 				)
 			)
 
 	def after_insert(self):
-		if not frappe.get_single("Education Settings").get("user_creation_skip"):
+		if not capkpi.get_single("Education Settings").get("user_creation_skip"):
 			self.create_student_user()
 
 	def create_student_user(self):
 		"""Create a website user for student creation if not already exists"""
-		if not frappe.db.exists("User", self.student_email_id):
-			student_user = frappe.get_doc(
+		if not capkpi.db.exists("User", self.student_email_id):
+			student_user = capkpi.get_doc(
 				{
 					"doctype": "User",
 					"first_name": self.first_name,
@@ -104,13 +104,13 @@ class Student(Document):
 	def update_applicant_status(self):
 		"""Updates Student Applicant status to Admitted"""
 		if self.student_applicant:
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Student Applicant", self.student_applicant, "application_status", "Admitted"
 			)
 
 	def get_all_course_enrollments(self):
 		"""Returns a list of course enrollments linked with the current student"""
-		course_enrollments = frappe.get_all(
+		course_enrollments = capkpi.get_all(
 			"Course Enrollment", filters={"student": self.name}, fields=["course", "name"]
 		)
 		if not course_enrollments:
@@ -121,7 +121,7 @@ class Student(Document):
 
 	def get_program_enrollments(self):
 		"""Returns a list of course enrollments linked with the current student"""
-		program_enrollments = frappe.get_all(
+		program_enrollments = capkpi.get_all(
 			"Program Enrollment", filters={"student": self.name}, fields=["program"]
 		)
 		if not program_enrollments:
@@ -161,30 +161,30 @@ class Student(Document):
 
 	def enroll_in_program(self, program_name):
 		try:
-			enrollment = frappe.get_doc(
+			enrollment = capkpi.get_doc(
 				{
 					"doctype": "Program Enrollment",
 					"student": self.name,
-					"academic_year": frappe.get_last_doc("Academic Year").name,
+					"academic_year": capkpi.get_last_doc("Academic Year").name,
 					"program": program_name,
-					"enrollment_date": frappe.utils.datetime.datetime.now(),
+					"enrollment_date": capkpi.utils.datetime.datetime.now(),
 				}
 			)
 			enrollment.save(ignore_permissions=True)
-		except frappe.exceptions.ValidationError:
-			enrollment_name = frappe.get_list(
+		except capkpi.exceptions.ValidationError:
+			enrollment_name = capkpi.get_list(
 				"Program Enrollment", filters={"student": self.name, "Program": program_name}
 			)[0].name
-			return frappe.get_doc("Program Enrollment", enrollment_name)
+			return capkpi.get_doc("Program Enrollment", enrollment_name)
 		else:
 			enrollment.submit()
 			return enrollment
 
 	def enroll_in_course(self, course_name, program_enrollment, enrollment_date=None):
 		if enrollment_date is None:
-			enrollment_date = frappe.utils.datetime.datetime.now()
+			enrollment_date = capkpi.utils.datetime.datetime.now()
 		try:
-			enrollment = frappe.get_doc(
+			enrollment = capkpi.get_doc(
 				{
 					"doctype": "Course Enrollment",
 					"student": self.name,
@@ -194,8 +194,8 @@ class Student(Document):
 				}
 			)
 			enrollment.save(ignore_permissions=True)
-		except frappe.exceptions.ValidationError:
-			enrollment_name = frappe.get_list(
+		except capkpi.exceptions.ValidationError:
+			enrollment_name = capkpi.get_list(
 				"Course Enrollment",
 				filters={
 					"student": self.name,
@@ -203,7 +203,7 @@ class Student(Document):
 					"program_enrollment": program_enrollment,
 				},
 			)[0].name
-			return frappe.get_doc("Course Enrollment", enrollment_name)
+			return capkpi.get_doc("Course Enrollment", enrollment_name)
 		else:
 			return enrollment
 
@@ -211,7 +211,7 @@ class Student(Document):
 def get_timeline_data(doctype, name):
 	"""Return timeline for attendance"""
 	return dict(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""select unix_timestamp(`date`), count(*)
 		from `tabStudent Attendance` where
 			student=%s

@@ -5,25 +5,25 @@
 import copy
 import json
 
-import frappe
-from frappe import _
-from frappe.utils import cstr, flt
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr, flt
 from six import string_types
 
 
-class ItemVariantExistsError(frappe.ValidationError):
+class ItemVariantExistsError(capkpi.ValidationError):
 	pass
 
 
-class InvalidItemAttributeValueError(frappe.ValidationError):
+class InvalidItemAttributeValueError(capkpi.ValidationError):
 	pass
 
 
-class ItemTemplateCannotHaveStock(frappe.ValidationError):
+class ItemTemplateCannotHaveStock(capkpi.ValidationError):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_variant(template, args=None, variant=None, manufacturer=None, manufacturer_part_no=None):
 	"""Validates Attributes and their Values, then looks for an exactly
 	matching Item Variant
@@ -31,7 +31,7 @@ def get_variant(template, args=None, variant=None, manufacturer=None, manufactur
 	:param item: Template Item
 	:param args: A dictionary with "Attribute" as key and "Attribute Value" as value
 	"""
-	item_template = frappe.get_doc("Item", template)
+	item_template = capkpi.get_doc("Item", template)
 
 	if item_template.variant_based_on == "Manufacturer" and manufacturer:
 		return make_variant_based_on_manufacturer(item_template, manufacturer, manufacturer_part_no)
@@ -40,16 +40,16 @@ def get_variant(template, args=None, variant=None, manufacturer=None, manufactur
 			args = json.loads(args)
 
 		if not args:
-			frappe.throw(_("Please specify at least one attribute in the Attributes table"))
+			capkpi.throw(_("Please specify at least one attribute in the Attributes table"))
 		return find_variant(template, args, variant)
 
 
 def make_variant_based_on_manufacturer(template, manufacturer, manufacturer_part_no):
 	"""Make and return a new variant based on manufacturer and
 	manufacturer part no"""
-	from frappe.model.naming import append_number_if_name_exists
+	from capkpi.model.naming import append_number_if_name_exists
 
-	variant = frappe.new_doc("Item")
+	variant = capkpi.new_doc("Item")
 
 	copy_attributes_to_variant(template, variant)
 
@@ -63,7 +63,7 @@ def make_variant_based_on_manufacturer(template, manufacturer, manufacturer_part
 
 def validate_item_variant_attributes(item, args=None):
 	if isinstance(item, string_types):
-		item = frappe.get_doc("Item", item)
+		item = capkpi.get_doc("Item", item)
 
 	if not args:
 		args = {d.attribute.lower(): d.attribute_value for d in item.attributes}
@@ -90,7 +90,7 @@ def validate_is_incremental(numeric_attribute, attribute, value, item):
 
 	if increment == 0:
 		# defensive validation to prevent ZeroDivisionError
-		frappe.throw(_("Increment for Attribute {0} cannot be 0").format(attribute))
+		capkpi.throw(_("Increment for Attribute {0} cannot be 0").format(attribute))
 
 	is_in_range = from_range <= flt(value) <= to_range
 	precision = max(len(cstr(v).split(".")[-1].rstrip("0")) for v in (value, increment))
@@ -100,7 +100,7 @@ def validate_is_incremental(numeric_attribute, attribute, value, item):
 	is_incremental = remainder == 0 or remainder == increment
 
 	if not (is_in_range and is_incremental):
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"Value for Attribute {0} must be within the range of {1} to {2} in the increments of {3} for Item {4}"
 			).format(attribute, from_range, to_range, increment, item),
@@ -112,55 +112,55 @@ def validate_is_incremental(numeric_attribute, attribute, value, item):
 def validate_item_attribute_value(
 	attributes_list, attribute, attribute_value, item, from_variant=True
 ):
-	allow_rename_attribute_value = frappe.db.get_single_value(
+	allow_rename_attribute_value = capkpi.db.get_single_value(
 		"Item Variant Settings", "allow_rename_attribute_value"
 	)
 	if allow_rename_attribute_value:
 		pass
 	elif attribute_value not in attributes_list:
 		if from_variant:
-			frappe.throw(
+			capkpi.throw(
 				_("{0} is not a valid Value for Attribute {1} of Item {2}.").format(
-					frappe.bold(attribute_value), frappe.bold(attribute), frappe.bold(item)
+					capkpi.bold(attribute_value), capkpi.bold(attribute), capkpi.bold(item)
 				),
 				InvalidItemAttributeValueError,
 				title=_("Invalid Value"),
 			)
 		else:
 			msg = _("The value {0} is already assigned to an existing Item {1}.").format(
-				frappe.bold(attribute_value), frappe.bold(item)
+				capkpi.bold(attribute_value), capkpi.bold(item)
 			)
 			msg += "<br>" + _(
 				"To still proceed with editing this Attribute Value, enable {0} in Item Variant Settings."
-			).format(frappe.bold("Allow Rename Attribute Value"))
+			).format(capkpi.bold("Allow Rename Attribute Value"))
 
-			frappe.throw(msg, InvalidItemAttributeValueError, title=_("Edit Not Allowed"))
+			capkpi.throw(msg, InvalidItemAttributeValueError, title=_("Edit Not Allowed"))
 
 
 def get_attribute_values(item):
-	if not frappe.flags.attribute_values:
+	if not capkpi.flags.attribute_values:
 		attribute_values = {}
 		numeric_values = {}
-		for t in frappe.get_all("Item Attribute Value", fields=["parent", "attribute_value"]):
+		for t in capkpi.get_all("Item Attribute Value", fields=["parent", "attribute_value"]):
 			attribute_values.setdefault(t.parent.lower(), []).append(t.attribute_value)
 
-		for t in frappe.get_all(
+		for t in capkpi.get_all(
 			"Item Variant Attribute",
 			fields=["attribute", "from_range", "to_range", "increment"],
 			filters={"numeric_values": 1, "parent": item.variant_of},
 		):
 			numeric_values[t.attribute.lower()] = t
 
-		frappe.flags.attribute_values = attribute_values
-		frappe.flags.numeric_values = numeric_values
+		capkpi.flags.attribute_values = attribute_values
+		capkpi.flags.numeric_values = numeric_values
 
-	return frappe.flags.attribute_values, frappe.flags.numeric_values
+	return capkpi.flags.attribute_values, capkpi.flags.numeric_values
 
 
 def find_variant(template, args, variant_item_code=None):
 	conditions = [
 		"""(iv_attribute.attribute={0} and iv_attribute.attribute_value={1})""".format(
-			frappe.db.escape(key), frappe.db.escape(cstr(value))
+			capkpi.db.escape(key), capkpi.db.escape(cstr(value))
 		)
 		for key, value in args.items()
 	]
@@ -174,7 +174,7 @@ def find_variant(template, args, variant_item_code=None):
 	]
 
 	for variant in possible_variants:
-		variant = frappe.get_doc("Item", variant)
+		variant = capkpi.get_doc("Item", variant)
 
 		if len(args.keys()) == len(variant.get("attributes")):
 			# has the same number of attributes and values
@@ -192,13 +192,13 @@ def find_variant(template, args, variant_item_code=None):
 				return variant.name
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_variant(item, args):
 	if isinstance(args, string_types):
 		args = json.loads(args)
 
-	template = frappe.get_doc("Item", item)
-	variant = frappe.new_doc("Item")
+	template = capkpi.get_doc("Item", item)
+	variant = capkpi.new_doc("Item")
 	variant.variant_based_on = "Item Attribute"
 	variant_attributes = []
 
@@ -212,7 +212,7 @@ def create_variant(item, args):
 	return variant
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def enqueue_multiple_variant_creation(item, args):
 	# There can be innumerable attribute combinations, enqueue
 	if isinstance(args, string_types):
@@ -221,16 +221,16 @@ def enqueue_multiple_variant_creation(item, args):
 	for key in variants:
 		total_variants *= len(variants[key])
 	if total_variants >= 600:
-		frappe.throw(_("Please do not create more than 500 items at a time"))
+		capkpi.throw(_("Please do not create more than 500 items at a time"))
 		return
 	if total_variants < 10:
 		return create_multiple_variants(item, args)
 	else:
-		frappe.enqueue(
+		capkpi.enqueue(
 			"erp.controllers.item_variant.create_multiple_variants",
 			item=item,
 			args=args,
-			now=frappe.flags.in_test,
+			now=capkpi.flags.in_test,
 		)
 		return "queued"
 
@@ -322,7 +322,7 @@ def copy_attributes_to_variant(item, variant):
 		# don't copy manufacturer values if based on part no
 		exclude_fields += ["manufacturer", "manufacturer_part_no"]
 
-	allow_fields = [d.field_name for d in frappe.get_all("Variant Field", fields=["field_name"])]
+	allow_fields = [d.field_name for d in capkpi.get_all("Variant Field", fields=["field_name"])]
 	if "variant_based_on" not in allow_fields:
 		allow_fields.append("variant_based_on")
 	for field in item.meta.fields:
@@ -362,7 +362,7 @@ def make_variant_item_code(template_item_code, template_item_name, variant):
 
 	abbreviations = []
 	for attr in variant.attributes:
-		item_attribute = frappe.db.sql(
+		item_attribute = capkpi.db.sql(
 			"""select i.numeric_values, v.abbr
 			from `tabItem Attribute` i left join `tabItem Attribute Value` v
 				on (i.name=v.parent)
@@ -373,8 +373,8 @@ def make_variant_item_code(template_item_code, template_item_name, variant):
 
 		if not item_attribute:
 			continue
-			# frappe.throw(_('Invalid attribute {0} {1}').format(frappe.bold(attr.attribute),
-			# 	frappe.bold(attr.attribute_value)), title=_('Invalid Attribute'),
+			# capkpi.throw(_('Invalid attribute {0} {1}').format(capkpi.bold(attr.attribute),
+			# 	capkpi.bold(attr.attribute_value)), title=_('Invalid Attribute'),
 			# 	exc=InvalidItemAttributeValueError)
 
 		abbr_or_value = (
@@ -387,9 +387,9 @@ def make_variant_item_code(template_item_code, template_item_name, variant):
 		variant.item_name = "{0}-{1}".format(template_item_name, "-".join(abbreviations))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_variant_doc_for_quick_entry(template, args):
-	variant_based_on = frappe.db.get_value("Item", template, "variant_based_on")
+	variant_based_on = capkpi.db.get_value("Item", template, "variant_based_on")
 	args = json.loads(args)
 	if variant_based_on == "Manufacturer":
 		variant = get_variant(template, **args)

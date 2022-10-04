@@ -1,38 +1,38 @@
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
-# ruleid: frappe-modifying-but-not-comitting
+# ruleid: capkpi-modifying-but-not-comitting
 def on_submit(self):
 	if self.value_of_goods == 0:
-		frappe.throw(_('Value of goods cannot be 0'))
+		capkpi.throw(_('Value of goods cannot be 0'))
 	self.status = 'Submitted'
 
 
-# ok: frappe-modifying-but-not-comitting
+# ok: capkpi-modifying-but-not-comitting
 def on_submit(self):
 	if self.value_of_goods == 0:
-		frappe.throw(_('Value of goods cannot be 0'))
+		capkpi.throw(_('Value of goods cannot be 0'))
 	self.status = 'Submitted'
 	self.db_set('status', 'Submitted')
 
-# ok: frappe-modifying-but-not-comitting
+# ok: capkpi-modifying-but-not-comitting
 def on_submit(self):
 	if self.value_of_goods == 0:
-		frappe.throw(_('Value of goods cannot be 0'))
+		capkpi.throw(_('Value of goods cannot be 0'))
 	x = "y"
 	self.status = x
 	self.db_set('status', x)
 
 
-# ok: frappe-modifying-but-not-comitting
+# ok: capkpi-modifying-but-not-comitting
 def on_submit(self):
 	x = "y"
 	self.status = x
 	self.save()
 
-# ruleid: frappe-modifying-but-not-comitting-other-method
+# ruleid: capkpi-modifying-but-not-comitting-other-method
 class DoctypeClass(Document):
 	def on_submit(self):
 		self.good_method()
@@ -42,7 +42,7 @@ class DoctypeClass(Document):
 		self.status = "uptate"
 
 
-# ok: frappe-modifying-but-not-comitting-other-method
+# ok: capkpi-modifying-but-not-comitting-other-method
 class DoctypeClass(Document):
 	def on_submit(self):
 		self.good_method()
@@ -52,7 +52,7 @@ class DoctypeClass(Document):
 		self.status = "update"
 		self.db_set("status", "update")
 
-# ok: frappe-modifying-but-not-comitting-other-method
+# ok: capkpi-modifying-but-not-comitting-other-method
 class DoctypeClass(Document):
 	def on_submit(self):
 		self.good_method()

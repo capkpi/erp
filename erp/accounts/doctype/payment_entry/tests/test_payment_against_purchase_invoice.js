@@ -4,9 +4,9 @@ QUnit.test("test payment entry", function(assert) {
 	assert.expect(7	);
 	let done = assert.async();
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Purchase Invoice', [
+			return capkpi.tests.make('Purchase Invoice', [
 				{supplier: 'Test Supplier'},
 				{bill_no: 'in1234'},
 				{items: [
@@ -25,17 +25,17 @@ QUnit.test("test payment entry", function(assert) {
 		},
 
 		() => cur_frm.save(),
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(1),
-		() => frappe.click_button('Make'),
-		() => frappe.timeout(2),
-		() => frappe.click_link('Payment'),
-		() => frappe.timeout(3),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(1),
+		() => capkpi.click_button('Make'),
+		() => capkpi.timeout(2),
+		() => capkpi.click_link('Payment'),
+		() => capkpi.timeout(3),
 		() => cur_frm.set_value('mode_of_payment','Cash'),
-		() => frappe.timeout(3),
+		() => capkpi.timeout(3),
 		() => {
-			assert.equal(frappe.get_route()[1], 'Payment Entry',
+			assert.equal(capkpi.get_route()[1], 'Payment Entry',
 				'made payment entry');
 			assert.equal(cur_frm.doc.party, 'Test Supplier',
 				'supplier set in payment entry');
@@ -52,9 +52,9 @@ QUnit.test("test payment entry", function(assert) {
 		},
 
 		() => cur_frm.save(),
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(3),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(3),
 		() => done()
 	]);
 });

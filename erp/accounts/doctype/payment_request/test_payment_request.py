@@ -3,7 +3,7 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.payment_request.payment_request import make_payment_request
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
@@ -33,16 +33,16 @@ payment_method = [
 
 class TestPaymentRequest(unittest.TestCase):
 	def setUp(self):
-		if not frappe.db.get_value("Payment Gateway", payment_gateway["gateway"], "name"):
-			frappe.get_doc(payment_gateway).insert(ignore_permissions=True)
+		if not capkpi.db.get_value("Payment Gateway", payment_gateway["gateway"], "name"):
+			capkpi.get_doc(payment_gateway).insert(ignore_permissions=True)
 
 		for method in payment_method:
-			if not frappe.db.get_value(
+			if not capkpi.db.get_value(
 				"Payment Gateway Account",
 				{"payment_gateway": method["payment_gateway"], "currency": method["currency"]},
 				"name",
 			):
-				frappe.get_doc(method).insert(ignore_permissions=True)
+				capkpi.get_doc(method).insert(ignore_permissions=True)
 
 	def test_payment_request_linkings(self):
 		so_inr = make_sales_order(currency="INR")
@@ -72,11 +72,11 @@ class TestPaymentRequest(unittest.TestCase):
 		self.assertEqual(pr.currency, "USD")
 
 	def test_payment_entry(self):
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Company", "_Test Company", "exchange_gain_loss_account", "_Test Exchange Gain/Loss - _TC"
 		)
-		frappe.db.set_value("Company", "_Test Company", "write_off_account", "_Test Write Off - _TC")
-		frappe.db.set_value("Company", "_Test Company", "cost_center", "_Test Cost Center - _TC")
+		capkpi.db.set_value("Company", "_Test Company", "write_off_account", "_Test Write Off - _TC")
+		capkpi.db.set_value("Company", "_Test Company", "cost_center", "_Test Cost Center - _TC")
 
 		so_inr = make_sales_order(currency="INR")
 		pr = make_payment_request(
@@ -90,7 +90,7 @@ class TestPaymentRequest(unittest.TestCase):
 		)
 		pe = pr.set_as_paid()
 
-		so_inr = frappe.get_doc("Sales Order", so_inr.name)
+		so_inr = capkpi.get_doc("Sales Order", so_inr.name)
 
 		self.assertEqual(so_inr.advance_paid, 1000)
 
@@ -122,7 +122,7 @@ class TestPaymentRequest(unittest.TestCase):
 			]
 		)
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select account, debit, credit, against_voucher
 			from `tabGL Entry` where voucher_type='Payment Entry' and voucher_no=%s
 			order by account asc""",
@@ -187,4 +187,4 @@ class TestPaymentRequest(unittest.TestCase):
 
 		# Try to make Payment Request more than SO amount, should give validation
 		pr2.grand_total = 900
-		self.assertRaises(frappe.ValidationError, pr2.save)
+		self.assertRaises(capkpi.ValidationError, pr2.save)

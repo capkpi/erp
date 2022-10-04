@@ -5,9 +5,9 @@ QUnit.test('Test: Program', function(assert){
 	assert.expect(6);
 	let done = assert.async();
 	let fee_structure_code;
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Program', [
+			return capkpi.tests.make('Program', [
 				{program_name: 'Standard Test'},
 				{program_code: 'Standard Test'},
 				{department: 'Test Department'},

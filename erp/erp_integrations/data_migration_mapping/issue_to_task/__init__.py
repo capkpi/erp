@@ -1,12 +1,12 @@
-import frappe
+import capkpi
 
 
 def pre_process(issue):
 
-	project = frappe.db.get_value("Project", filters={"project_name": issue.milestone})
+	project = capkpi.db.get_value("Project", filters={"project_name": issue.milestone})
 	return {
 		"title": issue.title,
-		"body": frappe.utils.md_to_html(issue.body or ""),
+		"body": capkpi.utils.md_to_html(issue.body or ""),
 		"state": issue.state.title(),
 		"project": project or "",
 	}

@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import flt, nowdate
+import capkpi
+from capkpi.utils import flt, nowdate
 
 from erp.assets.doctype.asset.test_asset import (
 	create_asset,
@@ -20,7 +20,7 @@ class TestAssetRepair(unittest.TestCase):
 		set_depreciation_settings_in_company()
 		create_asset_data()
 		create_item("_Test Stock Item")
-		frappe.db.sql("delete from `tabTax Rule`")
+		capkpi.db.sql("delete from `tabTax Rule`")
 
 	def test_update_status(self):
 		asset = create_asset(submit=1)
@@ -33,7 +33,7 @@ class TestAssetRepair(unittest.TestCase):
 
 		asset_repair.repair_status = "Completed"
 		asset_repair.save()
-		asset_status = frappe.db.get_value("Asset", asset_repair.asset, "status")
+		asset_status = capkpi.db.get_value("Asset", asset_repair.asset, "status")
 		self.assertEqual(asset_status, initial_status)
 
 	def test_stock_item_total_value(self):
@@ -69,7 +69,7 @@ class TestAssetRepair(unittest.TestCase):
 
 	def test_decrease_stock_quantity(self):
 		asset_repair = create_asset_repair(stock_consumption=1, submit=1)
-		stock_entry = frappe.get_last_doc("Stock Entry")
+		stock_entry = capkpi.get_last_doc("Stock Entry")
 
 		self.assertEqual(stock_entry.stock_entry_type, "Material Issue")
 		self.assertEqual(stock_entry.items[0].s_warehouse, asset_repair.warehouse)
@@ -127,7 +127,7 @@ class TestAssetRepair(unittest.TestCase):
 
 	def test_gl_entries(self):
 		asset_repair = create_asset_repair(capitalize_repair_cost=1, submit=1)
-		gl_entry = frappe.get_last_doc("GL Entry")
+		gl_entry = capkpi.get_last_doc("GL Entry")
 		self.assertEqual(asset_repair.name, gl_entry.voucher_no)
 
 	def test_increase_in_asset_life(self):
@@ -155,13 +155,13 @@ def create_asset_repair(**args):
 	from erp.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
 	from erp.stock.doctype.warehouse.test_warehouse import create_warehouse
 
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
 	if args.asset:
 		asset = args.asset
 	else:
 		asset = create_asset(is_existing_asset=1, submit=1)
-	asset_repair = frappe.new_doc("Asset Repair")
+	asset_repair = capkpi.new_doc("Asset Repair")
 	asset_repair.update(
 		{
 			"asset": asset.name,
@@ -195,7 +195,7 @@ def create_asset_repair(**args):
 		asset_repair.cost_center = "_Test Cost Center - _TC"
 
 		if args.stock_consumption:
-			stock_entry = frappe.get_doc(
+			stock_entry = capkpi.get_doc(
 				{"doctype": "Stock Entry", "stock_entry_type": "Material Receipt", "company": asset.company}
 			)
 			stock_entry.append(

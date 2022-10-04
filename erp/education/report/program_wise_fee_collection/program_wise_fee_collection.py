@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -47,7 +47,7 @@ def get_data(filters=None):
 
 	conditions = get_filter_conditions(filters)
 
-	fee_details = frappe.db.sql(
+	fee_details = capkpi.db.sql(
 		"""
 			SELECT
 				FeesCollected.program,

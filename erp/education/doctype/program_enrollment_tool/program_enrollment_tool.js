@@ -1,7 +1,7 @@
 // Copyright (c) 2016, CapKPI and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Program Enrollment Tool", {
+capkpi.ui.form.on("Program Enrollment Tool", {
 	setup: function(frm) {
 		frm.add_fetch("student", "title", "student_name");
 		frm.add_fetch("student_applicant", "title", "student_name");
@@ -13,9 +13,9 @@ frappe.ui.form.on("Program Enrollment Tool", {
 	"refresh": function(frm) {
 		frm.disable_save();
 		frm.fields_dict.enroll_students.$input.addClass(' btn btn-primary');
-		frappe.realtime.on("program_enrollment_tool", function(data) {
-			frappe.hide_msgprint(true);
-			frappe.show_progress(__("Enrolling students"), data.progress[0], data.progress[1]);
+		capkpi.realtime.on("program_enrollment_tool", function(data) {
+			capkpi.hide_msgprint(true);
+			capkpi.show_progress(__("Enrolling students"), data.progress[0], data.progress[1]);
 		});
 	},
 
@@ -27,7 +27,7 @@ frappe.ui.form.on("Program Enrollment Tool", {
 
 	"get_students": function(frm) {
 		frm.set_value("students",[]);
-		frappe.call({
+		capkpi.call({
 			method: "get_students",
 			doc:frm.doc,
 			callback: function(r) {
@@ -39,12 +39,12 @@ frappe.ui.form.on("Program Enrollment Tool", {
 	},
 
 	"enroll_students": function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "enroll_students",
 			doc:frm.doc,
 			callback: function(r) {
 				frm.set_value("students", []);
-				frappe.hide_msgprint(true);
+				capkpi.hide_msgprint(true);
 			}
 		});
 	}

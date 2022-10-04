@@ -1,7 +1,7 @@
 import unittest
 from functools import partial
 
-import frappe
+import capkpi
 
 from erp.controllers import queries
 
@@ -95,4 +95,4 @@ class TestQueries(unittest.TestCase):
 		self.assertGreaterEqual(len(wh), 1)
 
 	def test_default_uoms(self):
-		self.assertGreaterEqual(frappe.db.count("UOM", {"enabled": 1}), 10)
+		self.assertGreaterEqual(capkpi.db.count("UOM", {"enabled": 1}), 10)

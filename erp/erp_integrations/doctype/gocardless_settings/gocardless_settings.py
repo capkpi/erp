@@ -2,12 +2,12 @@
 # For license information, please see license.txt
 
 
-import frappe
+import capkpi
 import gocardless_pro
-from frappe import _
-from frappe.integrations.utils import create_payment_gateway, create_request_log
-from frappe.model.document import Document
-from frappe.utils import call_hook_method, cint, flt, get_url
+from capkpi import _
+from capkpi.integrations.utils import create_payment_gateway, create_request_log
+from capkpi.model.document import Document
+from capkpi.utils import call_hook_method, cint, flt, get_url
 from six.moves.urllib.parse import urlencode
 
 
@@ -25,7 +25,7 @@ class GoCardlessSettings(Document):
 			)
 			return self.client
 		except Exception as e:
-			frappe.throw(e)
+			capkpi.throw(e)
 
 	def on_update(self):
 		create_payment_gateway(
@@ -35,7 +35,7 @@ class GoCardlessSettings(Document):
 
 	def on_payment_request_submission(self, data):
 		if data.reference_doctype != "Fees":
-			customer_data = frappe.db.get_value(
+			customer_data = capkpi.db.get_value(
 				data.reference_doctype, data.reference_name, ["company", "customer_name"], as_dict=1
 			)
 
@@ -45,7 +45,7 @@ class GoCardlessSettings(Document):
 			"description": data.subject.encode("utf-8"),
 			"reference_doctype": data.doctype,
 			"reference_docname": data.name,
-			"payer_email": data.email_to or frappe.session.user,
+			"payer_email": data.email_to or capkpi.session.user,
 			"payer_name": customer_data.customer_name,
 			"order_id": data.name,
 			"currency": data.currency,
@@ -62,8 +62,8 @@ class GoCardlessSettings(Document):
 
 	def check_mandate_validity(self, data):
 
-		if frappe.db.exists("GoCardless Mandate", dict(customer=data.get("payer_name"), disabled=0)):
-			registered_mandate = frappe.db.get_value(
+		if capkpi.db.exists("GoCardless Mandate", dict(customer=data.get("payer_name"), disabled=0)):
+			registered_mandate = capkpi.db.get_value(
 				"GoCardless Mandate", dict(customer=data.get("payer_name"), disabled=0), "mandate"
 			)
 			self.initialize_client()
@@ -89,7 +89,7 @@ class GoCardlessSettings(Document):
 
 	def validate_transaction_currency(self, currency):
 		if currency not in self.supported_currencies:
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Please select another payment method. Go Cardless does not support transactions in currency '{0}'"
 				).format(currency)
@@ -99,16 +99,16 @@ class GoCardlessSettings(Document):
 		return get_url("./integrations/gocardless_checkout?{0}".format(urlencode(kwargs)))
 
 	def create_payment_request(self, data):
-		self.data = frappe._dict(data)
+		self.data = capkpi._dict(data)
 
 		try:
 			self.integration_request = create_request_log(self.data, "Host", "GoCardless")
 			return self.create_charge_on_gocardless()
 
 		except Exception:
-			frappe.log_error(frappe.get_traceback())
+			capkpi.log_error(capkpi.get_traceback())
 			return {
-				"redirect_to": frappe.redirect_to_message(
+				"redirect_to": capkpi.redirect_to_message(
 					_("Server Error"),
 					_(
 						"There seems to be an issue with the server's GoCardless configuration. Don't worry, in case of failure, the amount will get refunded to your account."
@@ -121,7 +121,7 @@ class GoCardlessSettings(Document):
 		redirect_to = self.data.get("redirect_to") or None
 		redirect_message = self.data.get("redirect_message") or None
 
-		reference_doc = frappe.get_doc(
+		reference_doc = capkpi.get_doc(
 			self.data.get("reference_doctype"), self.data.get("reference_docname")
 		)
 		self.initialize_client()
@@ -162,32 +162,32 @@ class GoCardlessSettings(Document):
 				or payment.status == "charged_back"
 			):
 				self.integration_request.db_set("status", "Cancelled", update_modified=False)
-				frappe.log_error(
+				capkpi.log_error(
 					_("Payment Cancelled. Please check your GoCardless Account for more details"),
 					"GoCardless Payment Error",
 				)
 				self.integration_request.db_set("error", payment.status, update_modified=False)
 			else:
 				self.integration_request.db_set("status", "Failed", update_modified=False)
-				frappe.log_error(
+				capkpi.log_error(
 					_("Payment Failed. Please check your GoCardless Account for more details"),
 					"GoCardless Payment Error",
 				)
 				self.integration_request.db_set("error", payment.status, update_modified=False)
 
 		except Exception as e:
-			frappe.log_error(e, "GoCardless Payment Error")
+			capkpi.log_error(e, "GoCardless Payment Error")
 
 		if self.flags.status_changed_to == "Completed":
 			status = "Completed"
 			if "reference_doctype" in self.data and "reference_docname" in self.data:
 				custom_redirect_to = None
 				try:
-					custom_redirect_to = frappe.get_doc(
+					custom_redirect_to = capkpi.get_doc(
 						self.data.get("reference_doctype"), self.data.get("reference_docname")
 					).run_method("on_payment_authorized", self.flags.status_changed_to)
 				except Exception:
-					frappe.log_error(frappe.get_traceback())
+					capkpi.log_error(capkpi.get_traceback())
 
 				if custom_redirect_to:
 					redirect_to = custom_redirect_to
@@ -206,8 +206,8 @@ class GoCardlessSettings(Document):
 
 
 def get_gateway_controller(doc):
-	payment_request = frappe.get_doc("Payment Request", doc)
-	gateway_controller = frappe.db.get_value(
+	payment_request = capkpi.get_doc("Payment Request", doc)
+	gateway_controller = capkpi.db.get_value(
 		"Payment Gateway", payment_request.payment_gateway, "gateway_controller"
 	)
 	return gateway_controller
@@ -215,6 +215,6 @@ def get_gateway_controller(doc):
 
 def gocardless_initialization(doc):
 	gateway_controller = get_gateway_controller(doc)
-	settings = frappe.get_doc("GoCardless Settings", gateway_controller)
+	settings = capkpi.get_doc("GoCardless Settings", gateway_controller)
 	client = settings.initialize_client()
 	return client

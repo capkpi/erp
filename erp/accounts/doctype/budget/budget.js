@@ -1,8 +1,8 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on('Budget', {
+capkpi.ui.form.on('Budget', {
 	onload: function(frm) {
 		frm.set_query("account", "accounts", function() {
 			return {

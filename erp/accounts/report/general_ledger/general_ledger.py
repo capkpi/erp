@@ -4,9 +4,9 @@
 
 from collections import OrderedDict
 
-import frappe
-from frappe import _, _dict
-from frappe.utils import cstr, getdate
+import capkpi
+from capkpi import _, _dict
+from capkpi.utils import cstr, getdate
 from six import iteritems
 
 from erp import get_company_currency, get_default_company
@@ -19,7 +19,7 @@ from erp.accounts.report.utils import convert_to_presentation_currency, get_curr
 from erp.accounts.utils import get_account_currency
 
 # to cache translations
-TRANSLATIONS = frappe._dict()
+TRANSLATIONS = capkpi._dict()
 
 
 def execute(filters=None):
@@ -29,13 +29,13 @@ def execute(filters=None):
 	account_details = {}
 
 	if filters and filters.get("print_in_account_currency") and not filters.get("account"):
-		frappe.throw(_("Select an account to print in account currency"))
+		capkpi.throw(_("Select an account to print in account currency"))
 
-	for acc in frappe.db.sql("""select name, is_group from tabAccount""", as_dict=1):
+	for acc in capkpi.db.sql("""select name, is_group from tabAccount""", as_dict=1):
 		account_details.setdefault(acc.name, acc)
 
 	if filters.get("party"):
-		filters.party = frappe.parse_json(filters.get("party"))
+		filters.party = capkpi.parse_json(filters.get("party"))
 
 	validate_filters(filters, account_details)
 
@@ -60,36 +60,36 @@ def update_translations():
 
 def validate_filters(filters, account_details):
 	if not filters.get("company"):
-		frappe.throw(_("{0} is mandatory").format(_("Company")))
+		capkpi.throw(_("{0} is mandatory").format(_("Company")))
 
 	if not filters.get("from_date") and not filters.get("to_date"):
-		frappe.throw(
-			_("{0} and {1} are mandatory").format(frappe.bold(_("From Date")), frappe.bold(_("To Date")))
+		capkpi.throw(
+			_("{0} and {1} are mandatory").format(capkpi.bold(_("From Date")), capkpi.bold(_("To Date")))
 		)
 
 	if filters.get("account"):
-		filters.account = frappe.parse_json(filters.get("account"))
+		filters.account = capkpi.parse_json(filters.get("account"))
 		for account in filters.account:
 			if not account_details.get(account):
-				frappe.throw(_("Account {0} does not exists").format(account))
+				capkpi.throw(_("Account {0} does not exists").format(account))
 
 	if filters.get("account") and filters.get("group_by") == "Group by Account":
-		filters.account = frappe.parse_json(filters.get("account"))
+		filters.account = capkpi.parse_json(filters.get("account"))
 		for account in filters.account:
 			if account_details[account].is_group == 0:
-				frappe.throw(_("Can not filter based on Child Account, if grouped by Account"))
+				capkpi.throw(_("Can not filter based on Child Account, if grouped by Account"))
 
 	if filters.get("voucher_no") and filters.get("group_by") in ["Group by Voucher"]:
-		frappe.throw(_("Can not filter based on Voucher No, if grouped by Voucher"))
+		capkpi.throw(_("Can not filter based on Voucher No, if grouped by Voucher"))
 
 	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date must be before To Date"))
+		capkpi.throw(_("From Date must be before To Date"))
 
 	if filters.get("project"):
-		filters.project = frappe.parse_json(filters.get("project"))
+		filters.project = capkpi.parse_json(filters.get("project"))
 
 	if filters.get("cost_center"):
-		filters.cost_center = frappe.parse_json(filters.get("cost_center"))
+		filters.cost_center = capkpi.parse_json(filters.get("cost_center"))
 
 
 def validate_party(filters):
@@ -97,13 +97,13 @@ def validate_party(filters):
 
 	if party and party_type:
 		for d in party:
-			if not frappe.db.exists(party_type, d):
-				frappe.throw(_("Invalid {0}: {1}").format(party_type, d))
+			if not capkpi.db.exists(party_type, d):
+				capkpi.throw(_("Invalid {0}: {1}").format(party_type, d))
 
 
 def set_account_currency(filters):
 	if filters.get("account") or (filters.get("party") and len(filters.party) == 1):
-		filters["company_currency"] = frappe.get_cached_value(
+		filters["company_currency"] = capkpi.get_cached_value(
 			"Company", filters.company, "default_currency"
 		)
 		account_currency = None
@@ -123,7 +123,7 @@ def set_account_currency(filters):
 					account_currency = currency
 
 		elif filters.get("party"):
-			gle_currency = frappe.db.get_value(
+			gle_currency = capkpi.db.get_value(
 				"GL Entry",
 				{"party_type": filters.party_type, "party": filters.party[0], "company": filters.company},
 				"account_currency",
@@ -135,7 +135,7 @@ def set_account_currency(filters):
 				account_currency = (
 					None
 					if filters.party_type in ["Employee", "Student", "Shareholder", "Member"]
-					else frappe.db.get_value(filters.party_type, filters.party[0], "default_currency")
+					else capkpi.db.get_value(filters.party_type, filters.party[0], "default_currency")
 				)
 
 		filters["account_currency"] = account_currency or filters.company_currency
@@ -175,7 +175,7 @@ def get_gl_entries(filters, accounting_dimensions):
 		order_by_statement = "order by account, posting_date, creation"
 
 	if filters.get("include_default_book_entries"):
-		filters["company_fb"] = frappe.db.get_value(
+		filters["company_fb"] = capkpi.db.get_value(
 			"Company", filters.get("company"), "default_finance_book"
 		)
 
@@ -223,7 +223,7 @@ def get_gl_entries(filters, accounting_dimensions):
 			conditions=get_conditions(filters).replace("and cost_center in %(cost_center)s ", ""),
 		)
 
-	gl_entries = frappe.db.sql(
+	gl_entries = capkpi.db.sql(
 		"""
 		select
 			name as gl_entry, posting_date, account, party_type, party,
@@ -298,7 +298,7 @@ def get_conditions(filters):
 	if not filters.get("show_cancelled_entries"):
 		conditions.append("is_cancelled = 0")
 
-	from frappe.desk.reportview import build_match_conditions
+	from capkpi.desk.reportview import build_match_conditions
 
 	match_conditions = build_match_conditions("GL Entry")
 
@@ -312,7 +312,7 @@ def get_conditions(filters):
 			for dimension in accounting_dimensions:
 				if not dimension.disabled:
 					if filters.get(dimension.fieldname):
-						if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+						if capkpi.get_cached_value("DocType", dimension.document_type, "is_tree"):
 							filters[dimension.fieldname] = get_dimension_with_children(
 								dimension.document_type, filters.get(dimension.fieldname)
 							)
@@ -329,12 +329,12 @@ def get_accounts_with_children(accounts):
 
 	all_accounts = []
 	for d in accounts:
-		if frappe.db.exists("Account", d):
-			lft, rgt = frappe.db.get_value("Account", d, ["lft", "rgt"])
-			children = frappe.get_all("Account", filters={"lft": [">=", lft], "rgt": ["<=", rgt]})
+		if capkpi.db.exists("Account", d):
+			lft, rgt = capkpi.db.get_value("Account", d, ["lft", "rgt"])
+			children = capkpi.get_all("Account", filters={"lft": [">=", lft], "rgt": ["<=", rgt]})
 			all_accounts += [c.name for c in children]
 		else:
-			frappe.throw(_("Account: {0} does not exist").format(d))
+			capkpi.throw(_("Account: {0} does not exist").format(d))
 
 	return list(set(all_accounts))
 
@@ -505,8 +505,8 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map):
 
 
 def get_account_type_map(company):
-	account_type_map = frappe._dict(
-		frappe.get_all(
+	account_type_map = capkpi._dict(
+		capkpi.get_all(
 			"Account", fields=["name", "account_type"], filters={"company": company}, as_list=1
 		)
 	)
@@ -533,7 +533,7 @@ def get_result_as_list(data, filters):
 
 def get_supplier_invoice_details():
 	inv_details = {}
-	for d in frappe.db.sql(
+	for d in capkpi.db.sql(
 		""" select name, bill_no from `tabPurchase Invoice`
 		where docstatus = 1 and bill_no is not null and bill_no != '' """,
 		as_dict=1,

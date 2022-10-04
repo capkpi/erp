@@ -1,15 +1,15 @@
 # Copyright (c) 2021, CapKPI Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-import frappe
-from frappe.utils import floor
+import capkpi
+from capkpi.utils import floor
 
 
 class ProductFiltersBuilder:
 	def __init__(self, item_group=None):
 		if not item_group:
-			self.doc = frappe.get_doc("E Commerce Settings")
+			self.doc = capkpi.get_doc("E Commerce Settings")
 		else:
-			self.doc = frappe.get_doc("Item Group", item_group)
+			self.doc = capkpi.get_doc("Item Group", item_group)
 
 		self.item_group = item_group
 
@@ -23,7 +23,7 @@ class ProductFiltersBuilder:
 		filter_fields = [row.fieldname for row in self.doc.filter_fields]  # fields in settings
 
 		# filter valid field filters i.e. those that exist in Website Item
-		web_item_meta = frappe.get_meta("Website Item", cached=True)
+		web_item_meta = capkpi.get_meta("Website Item", cached=True)
 		fields = [
 			web_item_meta.get_field(field) for field in filter_fields if web_item_meta.has_field(field)
 		]
@@ -34,7 +34,7 @@ class ProductFiltersBuilder:
 
 			if df.fieldtype == "Link":
 				if self.item_group:
-					include_child = frappe.db.get_value("Item Group", self.item_group, "include_descendants")
+					include_child = capkpi.db.get_value("Item Group", self.item_group, "include_descendants")
 					if include_child:
 						include_groups = get_child_groups_for_website(self.item_group, include_self=True)
 						include_groups = [x.name for x in include_groups]
@@ -53,11 +53,11 @@ class ProductFiltersBuilder:
 						)
 
 				# exclude variants if mentioned in settings
-				if frappe.db.get_single_value("E Commerce Settings", "hide_variants"):
+				if capkpi.db.get_single_value("E Commerce Settings", "hide_variants"):
 					item_filters["variant_of"] = ["is", "not set"]
 
 				# Get link field values attached to published items
-				item_values = frappe.get_all(
+				item_values = capkpi.get_all(
 					"Website Item",
 					fields=[df.fieldname],
 					filters=item_filters,
@@ -88,10 +88,10 @@ class ProductFiltersBuilder:
 		        set: A set containing valid record names
 		"""
 		link_doctype = field.get_link_doctype()
-		meta = frappe.get_meta(link_doctype, cached=True) if link_doctype else None
+		meta = capkpi.get_meta(link_doctype, cached=True) if link_doctype else None
 		if meta:
 			filters = self.get_link_doctype_filters(meta)
-			link_doctype_values = set(d.name for d in frappe.get_all(link_doctype, filters))
+			link_doctype_values = set(d.name for d in capkpi.get_all(link_doctype, filters))
 
 		return link_doctype_values if meta else set()
 
@@ -119,7 +119,7 @@ class ProductFiltersBuilder:
 		if not attributes:
 			return []
 
-		result = frappe.db.sql(
+		result = capkpi.db.sql(
 			"""
 			select
 				distinct attribute, attribute_value
@@ -139,7 +139,7 @@ class ProductFiltersBuilder:
 
 		out = []
 		for name, values in attribute_value_map.items():
-			out.append(frappe._dict(name=name, item_attribute_values=values))
+			out.append(capkpi._dict(name=name, item_attribute_values=values))
 		return out
 
 	def get_discount_filters(self, discounts):

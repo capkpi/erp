@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.utils import formatdate
+import capkpi
+from capkpi import _, msgprint
+from capkpi.utils import formatdate
 
 from erp.education.doctype.student_attendance.student_attendance import get_holiday_list
 from erp.hr.doctype.holiday_list.holiday_list import is_holiday
@@ -24,7 +24,7 @@ def execute(filters=None):
 	if is_holiday(holiday_list, filters.get("date")):
 		msgprint(
 			_("No attendance has been marked for {0} as it is a Holiday").format(
-				frappe.bold(formatdate(filters.get("date")))
+				capkpi.bold(formatdate(filters.get("date")))
 			)
 		)
 
@@ -38,7 +38,7 @@ def execute(filters=None):
 	for student in absent_students:
 		if not student.student in leave_applicants:
 			row = [student.student, student.student_name, student.student_group]
-			stud_details = frappe.db.get_value(
+			stud_details = capkpi.db.get_value(
 				"Student", student.student, ["student_email_id", "student_mobile_number"], as_dict=True
 			)
 
@@ -73,7 +73,7 @@ def get_columns(filters):
 
 
 def get_absent_students(date):
-	absent_students = frappe.db.sql(
+	absent_students = capkpi.db.sql(
 		"""
 		SELECT student, student_name, student_group
 		FROM `tabStudent Attendance`
@@ -89,7 +89,7 @@ def get_absent_students(date):
 
 def get_leave_applications(date):
 	leave_applicants = []
-	leave_applications = frappe.db.sql(
+	leave_applications = capkpi.db.sql(
 		"""
 		SELECT student
 		FROM
@@ -107,17 +107,17 @@ def get_leave_applications(date):
 
 
 def get_transportation_details(date, student_list):
-	academic_year = frappe.get_all(
+	academic_year = capkpi.get_all(
 		"Academic Year", filters=[["year_start_date", "<=", date], ["year_end_date", ">=", date]]
 	)
 	if academic_year:
 		academic_year = academic_year[0].name
-	elif frappe.defaults.get_defaults().academic_year:
-		academic_year = frappe.defaults.get_defaults().academic_year
+	elif capkpi.defaults.get_defaults().academic_year:
+		academic_year = capkpi.defaults.get_defaults().academic_year
 	else:
 		return {}
 
-	transportation_details = frappe.get_all(
+	transportation_details = capkpi.get_all(
 		"Program Enrollment",
 		fields=["student", "mode_of_transportation", "vehicle_no"],
 		filters={

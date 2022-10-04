@@ -5,11 +5,11 @@ QUnit.test('Test: Student Log', function(assert){
 	assert.expect(9);
 	let done = assert.async();
 	let student_code;
-	frappe.run_serially([
-		() => frappe.db.get_value('Student', {'student_email_id': 'test2@testmail.com'}, 'name'),
+	capkpi.run_serially([
+		() => capkpi.db.get_value('Student', {'student_email_id': 'test2@testmail.com'}, 'name'),
 		(student) => {student_code = student.message.name;},
 		() => {
-			return frappe.tests.make("Student Log", [
+			return capkpi.tests.make("Student Log", [
 				{student: student_code},
 				{academic_year: '2016-17'},
 				{academic_term: '2016-17 (Semester 1)'},

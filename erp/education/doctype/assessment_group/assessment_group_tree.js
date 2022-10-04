@@ -1,3 +1,3 @@
-frappe.treeview_settings["Assessment Group"] = {
+capkpi.treeview_settings["Assessment Group"] = {
 
 }

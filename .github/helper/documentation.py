@@ -4,10 +4,10 @@ from urllib.parse import urlparse
 import requests
 
 docs_repos = [
-	"frappe_docs",
+	"capkpi_docs",
 	"erp_documentation",
 	"erp_com",
-	"frappe_io",
+	"capkpi_io",
 ]
 
 
@@ -22,7 +22,7 @@ def docs_link_exists(body):
 				parsed_url = urlparse(word)
 				if parsed_url.netloc == "github.com":
 					parts = parsed_url.path.split('/')
-					if len(parts) == 5 and parts[1] == "frappe" and parts[2] in docs_repos:
+					if len(parts) == 5 and parts[1] == "capkpi" and parts[2] in docs_repos:
 						return True
 				elif parsed_url.netloc == "docs.capkpi.com":
 					return True

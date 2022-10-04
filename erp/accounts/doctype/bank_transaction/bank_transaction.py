@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.utils import flt
+import capkpi
+from capkpi.utils import flt
 from six.moves import reduce
 
 from erp.controllers.status_updater import StatusUpdater
@@ -35,8 +35,8 @@ class BankTransaction(StatusUpdater):
 			allocated_amount = 0
 
 		if allocated_amount:
-			frappe.db.set_value(self.doctype, self.name, "allocated_amount", flt(allocated_amount))
-			frappe.db.set_value(
+			capkpi.db.set_value(self.doctype, self.name, "allocated_amount", flt(allocated_amount))
+			capkpi.db.set_value(
 				self.doctype,
 				self.name,
 				"unallocated_amount",
@@ -44,14 +44,14 @@ class BankTransaction(StatusUpdater):
 			)
 
 		else:
-			frappe.db.set_value(self.doctype, self.name, "allocated_amount", 0)
-			frappe.db.set_value(
+			capkpi.db.set_value(self.doctype, self.name, "allocated_amount", 0)
+			capkpi.db.set_value(
 				self.doctype, self.name, "unallocated_amount", abs(flt(self.withdrawal) - flt(self.deposit))
 			)
 
 		amount = self.deposit or self.withdrawal
 		if amount == self.allocated_amount:
-			frappe.db.set_value(self.doctype, self.name, "status", "Reconciled")
+			capkpi.db.set_value(self.doctype, self.name, "status", "Reconciled")
 
 		self.reload()
 
@@ -73,20 +73,20 @@ class BankTransaction(StatusUpdater):
 	def clear_simple_entry(self, payment_entry, for_cancel=False):
 		if payment_entry.payment_document == "Payment Entry":
 			if (
-				frappe.db.get_value("Payment Entry", payment_entry.payment_entry, "payment_type")
+				capkpi.db.get_value("Payment Entry", payment_entry.payment_entry, "payment_type")
 				== "Internal Transfer"
 			):
 				if len(get_reconciled_bank_transactions(payment_entry)) < 2:
 					return
 
 		clearance_date = self.date if not for_cancel else None
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			payment_entry.payment_document, payment_entry.payment_entry, "clearance_date", clearance_date
 		)
 
 	def clear_sales_invoice(self, payment_entry, for_cancel=False):
 		clearance_date = self.date if not for_cancel else None
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Sales Invoice Payment",
 			dict(parenttype=payment_entry.payment_document, parent=payment_entry.payment_entry),
 			"clearance_date",
@@ -95,7 +95,7 @@ class BankTransaction(StatusUpdater):
 
 
 def get_reconciled_bank_transactions(payment_entry):
-	reconciled_bank_transactions = frappe.get_all(
+	reconciled_bank_transactions = capkpi.get_all(
 		"Bank Transaction Payments",
 		filters={"payment_entry": payment_entry.payment_entry},
 		fields=["parent"],
@@ -105,7 +105,7 @@ def get_reconciled_bank_transactions(payment_entry):
 
 
 def get_total_allocated_amount(payment_entry):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT
 			SUM(btp.allocated_amount) as allocated_amount,
@@ -130,7 +130,7 @@ def get_paid_amount(payment_entry, currency, bank_account):
 
 		paid_amount_field = "paid_amount"
 		if payment_entry.payment_document == "Payment Entry":
-			doc = frappe.get_doc("Payment Entry", payment_entry.payment_entry)
+			doc = capkpi.get_doc("Payment Entry", payment_entry.payment_entry)
 
 			if doc.payment_type == "Receive":
 				paid_amount_field = (
@@ -141,52 +141,52 @@ def get_paid_amount(payment_entry, currency, bank_account):
 					"paid_amount" if doc.paid_to_account_currency == currency else "base_paid_amount"
 				)
 
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			payment_entry.payment_document, payment_entry.payment_entry, paid_amount_field
 		)
 
 	elif payment_entry.payment_document == "Journal Entry":
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			"Journal Entry Account",
 			{"parent": payment_entry.payment_entry, "account": bank_account},
 			"sum(credit_in_account_currency)",
 		)
 
 	elif payment_entry.payment_document == "Expense Claim":
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			payment_entry.payment_document, payment_entry.payment_entry, "total_amount_reimbursed"
 		)
 
 	elif payment_entry.payment_document == "Loan Disbursement":
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			payment_entry.payment_document, payment_entry.payment_entry, "disbursed_amount"
 		)
 
 	elif payment_entry.payment_document == "Loan Repayment":
-		return frappe.db.get_value(
+		return capkpi.db.get_value(
 			payment_entry.payment_document, payment_entry.payment_entry, "amount_paid"
 		)
 
 	else:
-		frappe.throw(
+		capkpi.throw(
 			"Please reconcile {0}: {1} manually".format(
 				payment_entry.payment_document, payment_entry.payment_entry
 			)
 		)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def unclear_reference_payment(doctype, docname):
-	if frappe.db.exists(doctype, docname):
-		doc = frappe.get_doc(doctype, docname)
+	if capkpi.db.exists(doctype, docname):
+		doc = capkpi.get_doc(doctype, docname)
 		if doctype == "Sales Invoice":
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Sales Invoice Payment",
 				dict(parenttype=doc.payment_document, parent=doc.payment_entry),
 				"clearance_date",
 				None,
 			)
 		else:
-			frappe.db.set_value(doc.payment_document, doc.payment_entry, "clearance_date", None)
+			capkpi.db.set_value(doc.payment_document, doc.payment_entry, "clearance_date", None)
 
 		return doc.payment_entry

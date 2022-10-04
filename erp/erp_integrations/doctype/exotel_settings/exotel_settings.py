@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
+import capkpi
 import requests
-from frappe import _
-from frappe.model.document import Document
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class ExotelSettings(Document):
@@ -19,4 +19,4 @@ class ExotelSettings(Document):
 				auth=(self.api_key, self.api_token),
 			)
 			if response.status_code != 200:
-				frappe.throw(_("Invalid credentials"))
+				capkpi.throw(_("Invalid credentials"))

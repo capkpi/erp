@@ -4,8 +4,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import now_datetime
+import capkpi
+from capkpi.utils import now_datetime
 
 from erp.accounts.doctype.fiscal_year.fiscal_year import FiscalYearIncorrectDate
 
@@ -14,10 +14,10 @@ test_ignore = ["Company"]
 
 class TestFiscalYear(unittest.TestCase):
 	def test_extra_year(self):
-		if frappe.db.exists("Fiscal Year", "_Test Fiscal Year 2000"):
-			frappe.delete_doc("Fiscal Year", "_Test Fiscal Year 2000")
+		if capkpi.db.exists("Fiscal Year", "_Test Fiscal Year 2000"):
+			capkpi.delete_doc("Fiscal Year", "_Test Fiscal Year 2000")
 
-		fy = frappe.get_doc(
+		fy = capkpi.get_doc(
 			{
 				"doctype": "Fiscal Year",
 				"year": "_Test Fiscal Year 2000",

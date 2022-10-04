@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, scrub
-from frappe.model.document import Document
+import capkpi
+from capkpi import _, scrub
+from capkpi.model.document import Document
 
 
 class AccountingDimensionFilter(Document):
@@ -12,7 +12,7 @@ class AccountingDimensionFilter(Document):
 		self.validate_applicable_accounts()
 
 	def validate_applicable_accounts(self):
-		accounts = frappe.db.sql(
+		accounts = capkpi.db.sql(
 			"""
 				SELECT a.applicable_on_account as account
 				FROM `tabApplicable On Account` a, `tabAccounting Dimension Filter` d
@@ -28,17 +28,17 @@ class AccountingDimensionFilter(Document):
 
 		for account in self.get("accounts"):
 			if account.applicable_on_account in account_list:
-				frappe.throw(
+				capkpi.throw(
 					_("Row {0}: {1} account already applied for Accounting Dimension {2}").format(
 						account.idx,
-						frappe.bold(account.applicable_on_account),
-						frappe.bold(self.accounting_dimension),
+						capkpi.bold(account.applicable_on_account),
+						capkpi.bold(self.accounting_dimension),
 					)
 				)
 
 
 def get_dimension_filter_map():
-	filters = frappe.db.sql(
+	filters = capkpi.db.sql(
 		"""
 		SELECT
 			a.applicable_on_account, d.dimension_value, p.accounting_dimension,

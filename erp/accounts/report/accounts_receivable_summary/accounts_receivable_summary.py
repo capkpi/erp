@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, scrub
-from frappe.utils import cint, flt
+import capkpi
+from capkpi import _, scrub
+from capkpi.utils import cint, flt
 from six import iteritems
 
 from erp.accounts.party import get_partywise_advanced_payment_amount
@@ -23,7 +23,7 @@ def execute(filters=None):
 class AccountsReceivableSummary(ReceivablePayableReport):
 	def run(self, args):
 		self.party_type = args.get("party_type")
-		self.party_naming_by = frappe.db.get_value(
+		self.party_naming_by = capkpi.db.get_value(
 			args.get("naming_by")[0], None, args.get("naming_by")[1]
 		)
 		self.get_columns()
@@ -54,11 +54,11 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 			if party_dict.outstanding == 0:
 				continue
 
-			row = frappe._dict()
+			row = capkpi._dict()
 
 			row.party = party
 			if self.party_naming_by == "Naming Series":
-				row.party_name = frappe.get_cached_value(
+				row.party_name = capkpi.get_cached_value(
 					self.party_type, party, scrub(self.party_type) + "_name"
 				)
 
@@ -78,7 +78,7 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 			self.data.append(row)
 
 	def get_party_total(self, args):
-		self.party_total = frappe._dict()
+		self.party_total = capkpi._dict()
 
 		for d in self.receivables:
 			self.init_party_total(d)
@@ -95,7 +95,7 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 	def init_party_total(self, row):
 		self.party_total.setdefault(
 			row.party,
-			frappe._dict(
+			capkpi._dict(
 				{
 					"invoiced": 0.0,
 					"paid": 0.0,
@@ -196,8 +196,8 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
 
 def get_gl_balance(report_date):
-	return frappe._dict(
-		frappe.db.get_all(
+	return capkpi._dict(
+		capkpi.db.get_all(
 			"GL Entry",
 			fields=["party", "sum(debit -  credit)"],
 			filters={"posting_date": ("<=", report_date), "is_cancelled": 0},

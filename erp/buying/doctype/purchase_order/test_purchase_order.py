@@ -4,9 +4,9 @@
 
 import json
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
-from frappe.utils import add_days, flt, getdate, nowdate
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
+from capkpi.utils import add_days, flt, getdate, nowdate
 
 from erp.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erp.buying.doctype.purchase_order.purchase_order import (
@@ -30,7 +30,7 @@ from erp.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
 class TestPurchaseOrder(CapKPITestCase):
 	def test_make_purchase_receipt(self):
 		po = create_purchase_order(do_not_submit=True)
-		self.assertRaises(frappe.ValidationError, make_purchase_receipt, po.name)
+		self.assertRaises(capkpi.ValidationError, make_purchase_receipt, po.name)
 		po.submit()
 
 		pr = create_pr_against_po(po.name)
@@ -40,7 +40,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		existing_ordered_qty = get_ordered_qty()
 
 		po = create_purchase_order(do_not_submit=True)
-		self.assertRaises(frappe.ValidationError, make_purchase_receipt, po.name)
+		self.assertRaises(capkpi.ValidationError, make_purchase_receipt, po.name)
 
 		po.submit()
 		self.assertEqual(get_ordered_qty(), existing_ordered_qty + 10)
@@ -51,7 +51,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.load_from_db()
 		self.assertEqual(po.get("items")[0].received_qty, 4)
 
-		frappe.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 50)
+		capkpi.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 50)
 
 		pr = create_pr_against_po(po.name, received_qty=8)
 		self.assertEqual(get_ordered_qty(), existing_ordered_qty)
@@ -71,8 +71,8 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		self.assertEqual(get_ordered_qty(), existing_ordered_qty + 10)
 
-		frappe.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 50)
-		frappe.db.set_value("Item", "_Test Item", "over_billing_allowance", 20)
+		capkpi.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 50)
+		capkpi.db.set_value("Item", "_Test Item", "over_billing_allowance", 20)
 
 		pi = make_pi_from_po(po.name)
 		pi.update_stock = 1
@@ -91,9 +91,9 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.load_from_db()
 		self.assertEqual(po.get("items")[0].received_qty, 0)
 
-		frappe.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 0)
-		frappe.db.set_value("Item", "_Test Item", "over_billing_allowance", 0)
-		frappe.db.set_value("Accounts Settings", None, "over_billing_allowance", 0)
+		capkpi.db.set_value("Item", "_Test Item", "over_delivery_receipt_allowance", 0)
+		capkpi.db.set_value("Item", "_Test Item", "over_billing_allowance", 0)
+		capkpi.db.set_value("Accounts Settings", None, "over_billing_allowance", 0)
 
 	def test_update_remove_child_linked_to_mr(self):
 		"""Test impact on linked PO and MR on deleting/updating row."""
@@ -174,7 +174,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.supplied_items[0].supplied_qty = 2
 		po.supplied_items[0].db_update()
 		trans_item[0]["qty"] *= 2
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(capkpi.ValidationError):
 			update_child_qty_rate("Purchase Order", json.dumps(trans_item), po.name)
 
 	def test_update_child(self):
@@ -272,7 +272,7 @@ class TestPurchaseOrder(CapKPITestCase):
 			[{"item_code": "_Test Item", "rate": 200, "qty": 7, "docname": po.get("items")[1].name}]
 		)
 		self.assertRaises(
-			frappe.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
+			capkpi.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
 		)
 
 		first_item_of_po = po.get("items")[0]
@@ -299,24 +299,24 @@ class TestPurchaseOrder(CapKPITestCase):
 		po = create_purchase_order(item_code="_Test Item", qty=4)
 
 		user = "test@example.com"
-		test_user = frappe.get_doc("User", user)
+		test_user = capkpi.get_doc("User", user)
 		test_user.add_roles("Accounts User")
-		frappe.set_user(user)
+		capkpi.set_user(user)
 
 		# update qty
 		trans_item = json.dumps(
 			[{"item_code": "_Test Item", "rate": 200, "qty": 7, "docname": po.items[0].name}]
 		)
 		self.assertRaises(
-			frappe.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
+			capkpi.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
 		)
 
 		# add new item
 		trans_item = json.dumps([{"item_code": "_Test Item", "rate": 100, "qty": 2}])
 		self.assertRaises(
-			frappe.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
+			capkpi.ValidationError, update_child_qty_rate, "Purchase Order", trans_item, po.name
 		)
-		frappe.set_user("Administrator")
+		capkpi.set_user("Administrator")
 
 	def test_update_child_with_tax_template(self):
 		"""
@@ -324,7 +324,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		Add the same item + new item with tax template via Update Items.
 		Expected result: First Item's tax row is updated. New tax row is added for second Item.
 		"""
-		if not frappe.db.exists("Item", "Test Item with Tax"):
+		if not capkpi.db.exists("Item", "Test Item with Tax"):
 			make_item(
 				"Test Item with Tax",
 				{
@@ -332,8 +332,8 @@ class TestPurchaseOrder(CapKPITestCase):
 				},
 			)
 
-		if not frappe.db.exists("Item Tax Template", {"title": "Test Update Items Template"}):
-			frappe.get_doc(
+		if not capkpi.db.exists("Item Tax Template", {"title": "Test Update Items Template"}):
+			capkpi.get_doc(
 				{
 					"doctype": "Item Tax Template",
 					"title": "Test Update Items Template",
@@ -347,9 +347,9 @@ class TestPurchaseOrder(CapKPITestCase):
 				}
 			).insert()
 
-		new_item_with_tax = frappe.get_doc("Item", "Test Item with Tax")
+		new_item_with_tax = capkpi.get_doc("Item", "Test Item with Tax")
 
-		if not frappe.db.exists(
+		if not capkpi.db.exists(
 			"Item Tax",
 			{"item_tax_template": "Test Update Items Template - _TC", "parent": "Test Item with Tax"},
 		):
@@ -360,13 +360,13 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		tax_template = "_Test Account Excise Duty @ 10 - _TC"
 		item = "_Test Item Home Desktop 100"
-		if not frappe.db.exists("Item Tax", {"parent": item, "item_tax_template": tax_template}):
-			item_doc = frappe.get_doc("Item", item)
+		if not capkpi.db.exists("Item Tax", {"parent": item, "item_tax_template": tax_template}):
+			item_doc = capkpi.get_doc("Item", item)
 			item_doc.append("taxes", {"item_tax_template": tax_template, "valid_from": nowdate()})
 			item_doc.save()
 		else:
 			# update valid from
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""UPDATE `tabItem Tax` set valid_from = CURDATE()
 				where parent = %(item)s and item_tax_template = %(tax)s""",
 				{"item": item, "tax": tax_template},
@@ -416,7 +416,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		self.assertEqual(po.taxes[1].total, 840)
 
 		# teardown
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""UPDATE `tabItem Tax` set valid_from = NULL
 			where parent = %(item)s and item_tax_template = %(tax)s""",
 			{"item": item, "tax": tax_template},
@@ -424,7 +424,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.cancel()
 		po.delete()
 		new_item_with_tax.delete()
-		frappe.get_doc("Item Tax Template", "Test Update Items Template - _TC").delete()
+		capkpi.get_doc("Item Tax Template", "Test Update Items Template - _TC").delete()
 
 	def test_update_child_uom_conv_factor_change(self):
 		po = create_purchase_order(item_code="_Test FG Item", is_subcontracted="Yes")
@@ -558,7 +558,7 @@ class TestPurchaseOrder(CapKPITestCase):
 	def test_make_purchase_invoice(self):
 		po = create_purchase_order(do_not_submit=True)
 
-		self.assertRaises(frappe.ValidationError, make_pi_from_po, po.name)
+		self.assertRaises(capkpi.ValidationError, make_pi_from_po, po.name)
 
 		po.submit()
 		pi = make_pi_from_po(po.name)
@@ -571,8 +571,8 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.db_set("Status", "On Hold")
 		pi = make_pi_from_po(po.name)
 		pr = make_purchase_receipt(po.name)
-		self.assertRaises(frappe.ValidationError, pr.submit)
-		self.assertRaises(frappe.ValidationError, pi.submit)
+		self.assertRaises(capkpi.ValidationError, pr.submit)
+		self.assertRaises(capkpi.ValidationError, pi.submit)
 
 	def test_make_purchase_invoice_with_terms(self):
 		from erp.selling.doctype.sales_order.test_sales_order import (
@@ -582,7 +582,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		automatically_fetch_payment_terms()
 		po = create_purchase_order(do_not_save=True)
 
-		self.assertRaises(frappe.ValidationError, make_pi_from_po, po.name)
+		self.assertRaises(capkpi.ValidationError, make_pi_from_po, po.name)
 
 		po.update({"payment_terms_template": "_Test Payment Term Template"})
 
@@ -626,7 +626,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		self.assertRaises(UOMMustBeIntegerError, po.insert)
 
 	def test_ordered_qty_for_closing_po(self):
-		bin = frappe.get_all(
+		bin = capkpi.get_all(
 			"Bin",
 			filters={"item_code": "_Test Item", "warehouse": "_Test Warehouse - _TC"},
 			fields=["ordered_qty"],
@@ -648,15 +648,15 @@ class TestPurchaseOrder(CapKPITestCase):
 		)
 
 	def test_group_same_items(self):
-		frappe.db.set_value("Buying Settings", None, "allow_multiple_items", 1)
-		frappe.get_doc(
+		capkpi.db.set_value("Buying Settings", None, "allow_multiple_items", 1)
+		capkpi.get_doc(
 			{
 				"doctype": "Purchase Order",
 				"company": "_Test Company",
 				"supplier": "_Test Supplier",
 				"is_subcontracted": "No",
 				"schedule_date": add_days(nowdate(), 1),
-				"currency": frappe.get_cached_value("Company", "_Test Company", "default_currency"),
+				"currency": capkpi.get_cached_value("Company", "_Test Company", "default_currency"),
 				"conversion_factor": 1,
 				"items": get_same_items(),
 				"group_same_items": 1,
@@ -673,29 +673,29 @@ class TestPurchaseOrder(CapKPITestCase):
 		self.assertTrue(po.get("payment_schedule"))
 
 	def test_po_for_blocked_supplier_all(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.save()
 
 		self.assertEqual(supplier.hold_type, "All")
-		self.assertRaises(frappe.ValidationError, create_purchase_order)
+		self.assertRaises(capkpi.ValidationError, create_purchase_order)
 
 		supplier.on_hold = 0
 		supplier.save()
 
 	def test_po_for_blocked_supplier_invoices(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.hold_type = "Invoices"
 		supplier.save()
 
-		self.assertRaises(frappe.ValidationError, create_purchase_order)
+		self.assertRaises(capkpi.ValidationError, create_purchase_order)
 
 		supplier.on_hold = 0
 		supplier.save()
 
 	def test_po_for_blocked_supplier_payments(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.hold_type = "Payments"
 		supplier.save()
@@ -703,7 +703,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		po = create_purchase_order()
 
 		self.assertRaises(
-			frappe.ValidationError,
+			capkpi.ValidationError,
 			get_payment_entry,
 			dt="Purchase Order",
 			dn=po.name,
@@ -714,7 +714,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		supplier.save()
 
 	def test_po_for_blocked_supplier_payments_with_today_date(self):
-		supplier = frappe.get_doc("Supplier", "_Test Supplier")
+		supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 		supplier.on_hold = 1
 		supplier.release_date = nowdate()
 		supplier.hold_type = "Payments"
@@ -723,7 +723,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		po = create_purchase_order()
 
 		self.assertRaises(
-			frappe.ValidationError,
+			capkpi.ValidationError,
 			get_payment_entry,
 			dt="Purchase Order",
 			dn=po.name,
@@ -737,7 +737,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		# this test is meant to fail only if something fails in the try block
 		with self.assertRaises(Exception):
 			try:
-				supplier = frappe.get_doc("Supplier", "_Test Supplier")
+				supplier = capkpi.get_doc("Supplier", "_Test Supplier")
 				supplier.on_hold = 1
 				supplier.hold_type = "Payments"
 				supplier.release_date = "2018-03-01"
@@ -759,12 +759,12 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.save()
 		po.submit()
 
-		frappe.db.set_value("Company", "_Test Company", "payment_terms", "_Test Payment Term Template 1")
+		capkpi.db.set_value("Company", "_Test Company", "payment_terms", "_Test Payment Term Template 1")
 		pi = make_pi_from_po(po.name)
 		pi.save()
 
 		self.assertEqual(pi.get("payment_terms_template"), "_Test Payment Term Template 1")
-		frappe.db.set_value("Company", "_Test Company", "payment_terms", "")
+		capkpi.db.set_value("Company", "_Test Company", "payment_terms", "")
 
 	def test_terms_copied(self):
 		po = create_purchase_order(do_not_save=1)
@@ -793,7 +793,7 @@ class TestPurchaseOrder(CapKPITestCase):
 			basic_rate=100,
 		)
 
-		bin1 = frappe.db.get_value(
+		bin1 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname=["reserved_qty_for_sub_contract", "projected_qty", "modified"],
@@ -803,7 +803,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		# Submit PO
 		po = create_purchase_order(item_code="_Test FG Item", is_subcontracted="Yes")
 
-		bin2 = frappe.db.get_value(
+		bin2 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname=["reserved_qty_for_sub_contract", "projected_qty", "modified"],
@@ -828,12 +828,12 @@ class TestPurchaseOrder(CapKPITestCase):
 			}
 		]
 		rm_item_string = json.dumps(rm_item)
-		se = frappe.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
+		se = capkpi.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
 		se.to_warehouse = "_Test Warehouse 1 - _TC"
 		se.save()
 		se.submit()
 
-		bin3 = frappe.db.get_value(
+		bin3 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -844,7 +844,7 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# close PO
 		po.update_status("Closed")
-		bin4 = frappe.db.get_value(
+		bin4 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -855,7 +855,7 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# Re-open PO
 		po.update_status("Submitted")
-		bin5 = frappe.db.get_value(
+		bin5 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -880,7 +880,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		pr.save()
 		pr.submit()
 
-		bin6 = frappe.db.get_value(
+		bin6 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -891,7 +891,7 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# Cancel PR
 		pr.cancel()
-		bin7 = frappe.db.get_value(
+		bin7 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -906,7 +906,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		pi.supplier_warehouse = "_Test Warehouse 1 - _TC"
 		pi.insert()
 		pi.submit()
-		bin8 = frappe.db.get_value(
+		bin8 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -917,7 +917,7 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# Cancel PR
 		pi.cancel()
-		bin9 = frappe.db.get_value(
+		bin9 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -928,7 +928,7 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# Cancel Stock Entry
 		se.cancel()
-		bin10 = frappe.db.get_value(
+		bin10 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -940,7 +940,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		# Cancel PO
 		po.reload()
 		po.cancel()
-		bin11 = frappe.db.get_value(
+		bin11 = capkpi.db.get_value(
 			"Bin",
 			filters={"warehouse": "_Test Warehouse - _TC", "item_code": "_Test Item"},
 			fieldname="reserved_qty_for_sub_contract",
@@ -961,8 +961,8 @@ class TestPurchaseOrder(CapKPITestCase):
 			include_exploded_items=1,
 		)
 
-		name = frappe.db.get_value("BOM", {"item": item_code}, "name")
-		bom = frappe.get_doc("BOM", name)
+		name = capkpi.db.get_value("BOM", {"item": item_code}, "name")
+		bom = capkpi.get_doc("BOM", name)
 
 		exploded_items = sorted(
 			[d.item_code for d in bom.exploded_items if not d.get("sourced_by_supplier")]
@@ -1050,7 +1050,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		]
 
 		rm_item_string = json.dumps(rm_items)
-		se = frappe.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
+		se = capkpi.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
 		se.submit()
 
 		pr = make_purchase_receipt(po.name)
@@ -1069,7 +1069,7 @@ class TestPurchaseOrder(CapKPITestCase):
 		self.assertEqual(transferred_items, issued_items)
 		self.assertEqual(pr.get("items")[0].rm_supp_cost, 2000)
 
-		transferred_rm_map = frappe._dict()
+		transferred_rm_map = capkpi._dict()
 		for item in rm_items:
 			transferred_rm_map[item.get("rm_item_code")] = item
 
@@ -1136,14 +1136,14 @@ class TestPurchaseOrder(CapKPITestCase):
 
 		# Raw Materials transfer entry from stores to supplier's warehouse
 		rm_item_string = json.dumps(rm_items)
-		se = frappe.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
+		se = capkpi.get_doc(make_subcontract_transfer_entry(po.name, rm_item_string))
 		se.submit()
 
 		# Test po_detail field has value or not
 		for item_row in se.items:
 			self.assertEqual(item_row.po_detail, po.supplied_items[item_row.idx - 1].name)
 
-		po_doc = frappe.get_doc("Purchase Order", po.name)
+		po_doc = capkpi.get_doc("Purchase Order", po.name)
 		for row in po_doc.supplied_items:
 			# Valid that whether transferred quantity is matching with supplied qty or not in the purchase order
 			self.assertEqual(row.supplied_qty, 250.0)
@@ -1153,7 +1153,7 @@ class TestPurchaseOrder(CapKPITestCase):
 	def test_advance_payment_entry_unlink_against_purchase_order(self):
 		from erp.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Accounts Settings", "Accounts Settings", "unlink_advance_payment_on_cancelation_of_order", 1
 		)
 
@@ -1170,13 +1170,13 @@ class TestPurchaseOrder(CapKPITestCase):
 		pe.save(ignore_permissions=True)
 		pe.submit()
 
-		po_doc = frappe.get_doc("Purchase Order", po_doc.name)
+		po_doc = capkpi.get_doc("Purchase Order", po_doc.name)
 		po_doc.cancel()
 
-		pe_doc = frappe.get_doc("Payment Entry", pe.name)
+		pe_doc = capkpi.get_doc("Payment Entry", pe.name)
 		pe_doc.cancel()
 
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Accounts Settings", "Accounts Settings", "unlink_advance_payment_on_cancelation_of_order", 0
 		)
 
@@ -1203,12 +1203,12 @@ class TestPurchaseOrder(CapKPITestCase):
 		bo = make_blanket_order(blanket_order_type="Purchasing", quantity=10, rate=10)
 
 		po = create_purchase_order(item_code="_Test Item", qty=5, against_blanket_order=1)
-		po_doc = frappe.get_doc("Purchase Order", po.get("name"))
+		po_doc = capkpi.get_doc("Purchase Order", po.get("name"))
 		# To test if the PO has a Blanket Order
 		self.assertTrue(po_doc.items[0].blanket_order)
 
 		po = create_purchase_order(item_code="_Test Item", qty=5, against_blanket_order=0)
-		po_doc = frappe.get_doc("Purchase Order", po.get("name"))
+		po_doc = capkpi.get_doc("Purchase Order", po.get("name"))
 		# To test if the PO does NOT have a Blanket Order
 		self.assertEqual(po_doc.items[0].blanket_order, None)
 
@@ -1251,9 +1251,9 @@ def make_pr_against_po(po, received_qty=0):
 def make_subcontracted_item(**args):
 	from erp.manufacturing.doctype.production_plan.test_production_plan import make_bom
 
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	if not frappe.db.exists("Item", args.item_code):
+	if not capkpi.db.exists("Item", args.item_code):
 		make_item(
 			args.item_code,
 			{
@@ -1264,7 +1264,7 @@ def make_subcontracted_item(**args):
 		)
 
 	if not args.raw_materials:
-		if not frappe.db.exists("Item", "Test Extra Item 1"):
+		if not capkpi.db.exists("Item", "Test Extra Item 1"):
 			make_item(
 				"Test Extra Item 1",
 				{
@@ -1272,7 +1272,7 @@ def make_subcontracted_item(**args):
 				},
 			)
 
-		if not frappe.db.exists("Item", "Test Extra Item 2"):
+		if not capkpi.db.exists("Item", "Test Extra Item 2"):
 			make_item(
 				"Test Extra Item 2",
 				{
@@ -1282,12 +1282,12 @@ def make_subcontracted_item(**args):
 
 		args.raw_materials = ["_Test FG Item", "Test Extra Item 1"]
 
-	if not frappe.db.get_value("BOM", {"item": args.item_code}, "name"):
+	if not capkpi.db.get_value("BOM", {"item": args.item_code}, "name"):
 		make_bom(item=args.item_code, raw_materials=args.get("raw_materials"))
 
 
 def update_backflush_based_on(based_on):
-	doc = frappe.get_doc("Buying Settings")
+	doc = capkpi.get_doc("Buying Settings")
 	doc.backflush_raw_materials_of_subcontract_based_on = based_on
 	doc.save()
 
@@ -1312,8 +1312,8 @@ def get_same_items():
 
 
 def create_purchase_order(**args):
-	po = frappe.new_doc("Purchase Order")
-	args = frappe._dict(args)
+	po = capkpi.new_doc("Purchase Order")
+	args = capkpi._dict(args)
 	if args.transaction_date:
 		po.transaction_date = args.transaction_date
 
@@ -1321,7 +1321,7 @@ def create_purchase_order(**args):
 	po.company = args.company or "_Test Company"
 	po.supplier = args.supplier or "_Test Supplier"
 	po.is_subcontracted = args.is_subcontracted or "No"
-	po.currency = args.currency or frappe.get_cached_value("Company", po.company, "default_currency")
+	po.currency = args.currency or capkpi.get_cached_value("Company", po.company, "default_currency")
 	po.conversion_factor = args.conversion_factor or 1
 	po.supplier_warehouse = args.supplier_warehouse or None
 
@@ -1366,16 +1366,16 @@ def create_pr_against_po(po, received_qty=4):
 
 def get_ordered_qty(item_code="_Test Item", warehouse="_Test Warehouse - _TC"):
 	return flt(
-		frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "ordered_qty")
+		capkpi.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "ordered_qty")
 	)
 
 
 def get_requested_qty(item_code="_Test Item", warehouse="_Test Warehouse - _TC"):
 	return flt(
-		frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "indented_qty")
+		capkpi.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "indented_qty")
 	)
 
 
 test_dependencies = ["BOM", "Item Price"]
 
-test_records = frappe.get_test_records("Purchase Order")
+test_records = capkpi.get_test_records("Purchase Order")

@@ -2,11 +2,11 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.model.meta import get_field_precision
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.model.meta import get_field_precision
+from capkpi.utils import flt
 
 import erp
 from erp.accounts.doctype.journal_entry.journal_entry import get_balance_on
@@ -28,14 +28,14 @@ class ExchangeRateRevaluation(Document):
 
 	def validate_mandatory(self):
 		if not (self.company and self.posting_date):
-			frappe.throw(_("Please select Company and Posting Date to getting entries"))
+			capkpi.throw(_("Please select Company and Posting Date to getting entries"))
 
 	def on_cancel(self):
 		self.ignore_linked_doctypes = "GL Entry"
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def check_journal_entry_condition(self):
-		total_debit = frappe.db.get_value(
+		total_debit = capkpi.db.get_value(
 			"Journal Entry Account",
 			{"reference_type": "Exchange Rate Revaluation", "reference_name": self.name, "docstatus": 1},
 			"sum(debit) as sum",
@@ -50,13 +50,13 @@ class ExchangeRateRevaluation(Document):
 
 		return False
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_accounts_data(self, account=None):
 		accounts = []
 		self.validate_mandatory()
 		company_currency = erp.get_company_currency(self.company)
 		precision = get_field_precision(
-			frappe.get_meta("Exchange Rate Revaluation Account").get_field("new_balance_in_base_currency"),
+			capkpi.get_meta("Exchange Rate Revaluation Account").get_field("new_balance_in_base_currency"),
 			company_currency,
 		)
 
@@ -90,7 +90,7 @@ class ExchangeRateRevaluation(Document):
 
 	def get_accounts_from_gle(self):
 		company_currency = erp.get_company_currency(self.company)
-		accounts = frappe.db.sql_list(
+		accounts = capkpi.db.sql_list(
 			"""
 			select name
 			from tabAccount
@@ -106,7 +106,7 @@ class ExchangeRateRevaluation(Document):
 
 		account_details = []
 		if accounts:
-			account_details = frappe.db.sql(
+			account_details = capkpi.db.sql(
 				"""
 				select
 					account, party_type, party, account_currency,
@@ -132,22 +132,22 @@ class ExchangeRateRevaluation(Document):
 			message = _("No outstanding invoices require exchange rate revaluation")
 		else:
 			message = _("No outstanding invoices found")
-		frappe.msgprint(message)
+		capkpi.msgprint(message)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def make_jv_entry(self):
 		if self.total_gain_loss == 0:
 			return
 
-		unrealized_exchange_gain_loss_account = frappe.get_cached_value(
+		unrealized_exchange_gain_loss_account = capkpi.get_cached_value(
 			"Company", self.company, "unrealized_exchange_gain_loss_account"
 		)
 		if not unrealized_exchange_gain_loss_account:
-			frappe.throw(
+			capkpi.throw(
 				_("Please set Unrealized Exchange Gain/Loss Account in Company {0}").format(self.company)
 			)
 
-		journal_entry = frappe.new_doc("Journal Entry")
+		journal_entry = capkpi.new_doc("Journal Entry")
 		journal_entry.voucher_type = "Exchange Rate Revaluation"
 		journal_entry.company = self.company
 		journal_entry.posting_date = self.posting_date
@@ -220,13 +220,13 @@ class ExchangeRateRevaluation(Document):
 		return journal_entry.as_dict()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_account_details(account, company, posting_date, party_type=None, party=None):
-	account_currency, account_type = frappe.db.get_value(
+	account_currency, account_type = capkpi.db.get_value(
 		"Account", account, ["account_currency", "account_type"]
 	)
 	if account_type in ["Receivable", "Payable"] and not (party_type and party):
-		frappe.throw(_("Party Type and Party is mandatory for {0} account").format(account_type))
+		capkpi.throw(_("Party Type and Party is mandatory for {0} account").format(account_type))
 
 	account_details = {}
 	company_currency = erp.get_company_currency(company)

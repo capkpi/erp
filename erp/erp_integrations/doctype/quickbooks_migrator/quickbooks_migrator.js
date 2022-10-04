@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('QuickBooks Migrator', {
+capkpi.ui.form.on('QuickBooks Migrator', {
 	connect: function(frm) {
 		// OAuth requires user intervention to provide application access permissionsto requested scope
 		// Here we open a new window and redirect user to the authorization url.
@@ -13,7 +13,7 @@ frappe.ui.form.on('QuickBooks Migrator', {
 	},
 	onload: function(frm) {
 		frm.trigger("set_indicator")
-		var domain = frappe.urllib.get_base_url()
+		var domain = capkpi.urllib.get_base_url()
 		var redirect_url = `${domain}/api/method/erp.erp_integrations.doctype.quickbooks_migrator.quickbooks_migrator.callback`
 		if (frm.doc.redirect_url != redirect_url) {
 			frm.set_value("redirect_url", redirect_url)
@@ -22,7 +22,7 @@ frappe.ui.form.on('QuickBooks Migrator', {
 		// Show a different porgress bar for every action after some time remove the finished progress bar
  		// Former approach causes the progress bar to dance back and forth.
 		frm.trigger("set_indicator")
- 		frappe.realtime.on("quickbooks_progress_update", function (data) {
+ 		capkpi.realtime.on("quickbooks_progress_update", function (data) {
 			frm.dashboard.show_progress(data.message, (data.count / data.total) * 100, data.message)
 			if (data.count == data.total) {
 				window.setTimeout( function(message) {frm.dashboard.hide_progress(message)}, 1500, data.messsage)

@@ -7,7 +7,7 @@ cur_frm.add_fetch('bank_account','iban','iban');
 cur_frm.add_fetch('bank_account','branch_code','branch_code');
 cur_frm.add_fetch('bank','swift_number','swift_number');
 
-frappe.ui.form.on('Bank Guarantee', {
+capkpi.ui.form.on('Bank Guarantee', {
 	setup: function(frm) {
 		frm.set_query("bank", function() {
 			return {
@@ -51,7 +51,7 @@ frappe.ui.form.on('Bank Guarantee', {
 			}
 
 			fields_to_fetch.push(party_field);
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.bank_guarantee.bank_guarantee.get_vouchar_detials",
 				args: {
 					"column_list": fields_to_fetch,
@@ -71,11 +71,11 @@ frappe.ui.form.on('Bank Guarantee', {
 	},
 
 	start_date: function(frm) {
-		var end_date = frappe.datetime.add_days(cur_frm.doc.start_date, cur_frm.doc.validity - 1);
+		var end_date = capkpi.datetime.add_days(cur_frm.doc.start_date, cur_frm.doc.validity - 1);
 		cur_frm.set_value("end_date", end_date);
 	},
 	validity: function(frm) {
-		var end_date = frappe.datetime.add_days(cur_frm.doc.start_date, cur_frm.doc.validity - 1);
+		var end_date = capkpi.datetime.add_days(cur_frm.doc.start_date, cur_frm.doc.validity - 1);
 		cur_frm.set_value("end_date", end_date);
 	}
 });

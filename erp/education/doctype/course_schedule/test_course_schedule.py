@@ -4,13 +4,13 @@
 import datetime
 import unittest
 
-import frappe
-from frappe.utils import to_timedelta, today
-from frappe.utils.data import add_to_date
+import capkpi
+from capkpi.utils import to_timedelta, today
+from capkpi.utils.data import add_to_date
 
 from erp.education.utils import OverlapError
 
-# test_records = frappe.get_test_records('Course Schedule')
+# test_records = capkpi.get_test_records('Course Schedule')
 
 
 class TestCourseSchedule(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestCourseSchedule(unittest.TestCase):
 			from_time=cs1.from_time,
 			to_time=cs1.to_time,
 			instructor="_Test Instructor 2",
-			room=frappe.get_all("Room")[1].name,
+			room=capkpi.get_all("Room")[1].name,
 			do_not_save=1,
 		)
 		self.assertRaises(OverlapError, cs2.save)
@@ -34,7 +34,7 @@ class TestCourseSchedule(unittest.TestCase):
 			from_time=cs1.from_time,
 			to_time=cs1.to_time,
 			student_group="Course-TC101-2014-2015 (_Test Academic Term)",
-			room=frappe.get_all("Room")[1].name,
+			room=capkpi.get_all("Room")[1].name,
 			do_not_save=1,
 		)
 		self.assertRaises(OverlapError, cs2.save)
@@ -59,7 +59,7 @@ class TestCourseSchedule(unittest.TestCase):
 			to_time=cs1.to_time,
 			student_group="Course-TC102-2014-2015 (_Test Academic Term)",
 			instructor="_Test Instructor 2",
-			room=frappe.get_all("Room")[1].name,
+			room=capkpi.get_all("Room")[1].name,
 		)
 
 	def test_update_schedule_date(self):
@@ -69,15 +69,15 @@ class TestCourseSchedule(unittest.TestCase):
 
 
 def make_course_schedule_test_record(**args):
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	course_schedule = frappe.new_doc("Course Schedule")
+	course_schedule = capkpi.new_doc("Course Schedule")
 	course_schedule.student_group = (
 		args.student_group or "Course-TC101-2014-2015 (_Test Academic Term)"
 	)
 	course_schedule.course = args.course or "TC101"
 	course_schedule.instructor = args.instructor or "_Test Instructor"
-	course_schedule.room = args.room or frappe.get_all("Room")[0].name
+	course_schedule.room = args.room or capkpi.get_all("Room")[0].name
 
 	course_schedule.schedule_date = args.schedule_date or today()
 	course_schedule.from_time = args.from_time or to_timedelta("01:00:00")

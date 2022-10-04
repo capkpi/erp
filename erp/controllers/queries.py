@@ -5,24 +5,24 @@
 import json
 from collections import defaultdict
 
-import frappe
-from frappe import scrub
-from frappe.desk.reportview import get_filters_cond, get_match_cond
-from frappe.utils import nowdate, unique
+import capkpi
+from capkpi import scrub
+from capkpi.desk.reportview import get_filters_cond, get_match_cond
+from capkpi.utils import nowdate, unique
 
 import erp
 from erp.stock.get_item_details import _get_item_tax_template
 
 
 # searches for active employees
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def employee_query(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Employee"
 	conditions = []
 	fields = get_fields(doctype, ["name", "employee_name"])
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {fields} from `tabEmployee`
 		where status in ('Active', 'Suspended')
 			and docstatus < 2
@@ -47,13 +47,13 @@ def employee_query(doctype, txt, searchfield, start, page_len, filters):
 
 
 # searches for leads which are not converted
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def lead_query(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Lead"
 	fields = get_fields(doctype, ["name", "lead_name", "company_name"])
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {fields} from `tabLead`
 		where docstatus < 2
 			and ifnull(status, '') != 'Converted'
@@ -76,12 +76,12 @@ def lead_query(doctype, txt, searchfield, start, page_len, filters):
 	# searches for customer
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def customer_query(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Customer"
 	conditions = []
-	cust_master_name = frappe.defaults.get_user_default("cust_master_name")
+	cust_master_name = capkpi.defaults.get_user_default("cust_master_name")
 
 	if cust_master_name == "Customer Name":
 		fields = ["name", "customer_group", "territory"]
@@ -90,10 +90,10 @@ def customer_query(doctype, txt, searchfield, start, page_len, filters):
 
 	fields = get_fields(doctype, fields)
 
-	searchfields = frappe.get_meta(doctype).get_search_fields()
+	searchfields = capkpi.get_meta(doctype).get_search_fields()
 	searchfields = " or ".join(field + " like %(txt)s" for field in searchfields)
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {fields} from `tabCustomer`
 		where docstatus < 2
 			and ({scond}) and disabled=0
@@ -116,11 +116,11 @@ def customer_query(doctype, txt, searchfield, start, page_len, filters):
 
 
 # searches for supplier
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def supplier_query(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Supplier"
-	supp_master_name = frappe.defaults.get_user_default("supp_master_name")
+	supp_master_name = capkpi.defaults.get_user_default("supp_master_name")
 
 	if supp_master_name == "Supplier Name":
 		fields = ["name", "supplier_group"]
@@ -129,7 +129,7 @@ def supplier_query(doctype, txt, searchfield, start, page_len, filters):
 
 	fields = get_fields(doctype, fields)
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {field} from `tabSupplier`
 		where docstatus < 2
 			and ({key} like %(txt)s
@@ -148,8 +148,8 @@ def supplier_query(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def tax_account_query(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Account"
 	company_currency = erp.get_company_currency(filters.get("company"))
@@ -159,7 +159,7 @@ def tax_account_query(doctype, txt, searchfield, start, page_len, filters):
 		if with_account_type_filter:
 			account_type_condition = "AND account_type in %(account_types)s"
 
-		accounts = frappe.db.sql(
+		accounts = capkpi.db.sql(
 			"""
 			SELECT name, parent_account
 			FROM `tabAccount`
@@ -199,8 +199,8 @@ def tax_account_query(doctype, txt, searchfield, start, page_len, filters):
 	return tax_accounts
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
 	doctype = "Item"
 	conditions = []
@@ -209,7 +209,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 		filters = json.loads(filters)
 
 	# Get searchfields from meta and use in Item Link field query
-	meta = frappe.get_meta(doctype, cached=True)
+	meta = capkpi.get_meta(doctype, cached=True)
 	searchfields = meta.get_search_fields()
 
 	# these are handled separately
@@ -238,7 +238,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 	if filters and isinstance(filters, dict):
 		if filters.get("customer") or filters.get("supplier"):
 			party = filters.get("customer") or filters.get("supplier")
-			item_rules_list = frappe.get_all(
+			item_rules_list = capkpi.get_all(
 				"Party Specific Item", filters={"party": party}, fields=["restrict_based_on", "based_on_value"]
 			)
 
@@ -263,10 +263,10 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 			filters.pop("supplier", None)
 
 	description_cond = ""
-	if frappe.db.count(doctype, cache=True) < 50000:
+	if capkpi.db.count(doctype, cache=True) < 50000:
 		# scan description only if items are less than 50000
 		description_cond = "or tabItem.description LIKE %(txt)s"
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select
 			tabItem.name, tabItem.item_name, tabItem.item_group,
 		if(length(tabItem.description) > 40, \
@@ -303,14 +303,14 @@ def item_query(doctype, txt, searchfield, start, page_len, filters, as_dict=Fals
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def bom(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "BOM"
 	conditions = []
 	fields = get_fields(doctype, ["name", "item"])
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {fields}
 		from tabBOM
 		where tabBOM.docstatus=1
@@ -335,22 +335,22 @@ def bom(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_project_name(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Project"
 	cond = ""
 	if filters and filters.get("customer"):
 		cond = """(`tabProject`.customer = %s or
 			ifnull(`tabProject`.customer,"")="") and""" % (
-			frappe.db.escape(filters.get("customer"))
+			capkpi.db.escape(filters.get("customer"))
 		)
 
 	fields = get_fields(doctype, ["name", "project_name"])
-	searchfields = frappe.get_meta(doctype).get_search_fields()
+	searchfields = capkpi.get_meta(doctype).get_search_fields()
 	searchfields = " or ".join(["`tabProject`." + field + " like %(txt)s" for field in searchfields])
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select {fields} from `tabProject`
 		where
 			`tabProject`.status not in ("Completed", "Cancelled")
@@ -371,13 +371,13 @@ def get_project_name(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_delivery_notes_to_be_billed(doctype, txt, searchfield, start, page_len, filters, as_dict):
 	doctype = "Delivery Note"
 	fields = get_fields(doctype, ["name", "customer", "posting_date"])
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select %(fields)s
 		from `tabDelivery Note`
@@ -408,8 +408,8 @@ def get_delivery_notes_to_be_billed(doctype, txt, searchfield, start, page_len, 
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Batch"
 	cond = ""
@@ -430,7 +430,7 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("is_return"):
 		having_clause = ""
 
-	meta = frappe.get_meta(doctype, cached=True)
+	meta = capkpi.get_meta(doctype, cached=True)
 	searchfields = meta.get_search_fields()
 
 	search_columns = ""
@@ -446,7 +446,7 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 			search_columns = ", " + ", ".join(searchfields)
 			search_cond = " or " + " or ".join([field + " like %(txt)s" for field in searchfields])
 
-		batch_nos = frappe.db.sql(
+		batch_nos = capkpi.db.sql(
 			"""select sle.batch_no, round(sum(sle.actual_qty),2), sle.stock_uom,
 				concat('MFG-',batch.manufacturing_date), concat('EXP-',batch.expiry_date)
 				{search_columns}
@@ -478,7 +478,7 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 
 		return batch_nos
 	else:
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name, concat('MFG-', manufacturing_date), concat('EXP-',expiry_date)
 			{search_columns}
 			from `tabBatch` batch
@@ -503,8 +503,8 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 		)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_account_list(doctype, txt, searchfield, start, page_len, filters):
 	doctype = "Account"
 	filter_list = []
@@ -524,7 +524,7 @@ def get_account_list(doctype, txt, searchfield, start, page_len, filters):
 	if searchfield and txt:
 		filter_list.append([doctype, searchfield, "like", "%%%s%%" % txt])
 
-	return frappe.desk.reportview.execute(
+	return capkpi.desk.reportview.execute(
 		doctype,
 		filters=filter_list,
 		fields=["name", "parent_account"],
@@ -534,10 +534,10 @@ def get_account_list(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_blanket_orders(doctype, txt, searchfield, start, page_len, filters):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select distinct bo.name, bo.blanket_order_type, bo.to_date
 		from `tabBlanket Order` bo, `tabBlanket Order Item` boi
 		where
@@ -546,15 +546,15 @@ def get_blanket_orders(doctype, txt, searchfield, start, page_len, filters):
 			and bo.blanket_order_type = '{blanket_order_type}'
 			and bo.company = {company}
 			and bo.docstatus = 1""".format(
-			item_code=frappe.db.escape(filters.get("item")),
+			item_code=capkpi.db.escape(filters.get("item")),
 			blanket_order_type=filters.get("blanket_order_type"),
-			company=frappe.db.escape(filters.get("company")),
+			company=capkpi.db.escape(filters.get("company")),
 		)
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_income_account(doctype, txt, searchfield, start, page_len, filters):
 	from erp.controllers.queries import get_match_cond
 
@@ -569,7 +569,7 @@ def get_income_account(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("company"):
 		condition += "and tabAccount.company = %(company)s"
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select tabAccount.name from `tabAccount`
 			where (tabAccount.report_type = "Profit and Loss"
 					or tabAccount.account_type in ("Income Account", "Temporary"))
@@ -583,8 +583,8 @@ def get_income_account(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_filtered_dimensions(doctype, txt, searchfield, start, page_len, filters):
 	from erp.accounts.doctype.accounting_dimension_filter.accounting_dimension_filter import (
 		get_dimension_filter_map,
@@ -596,9 +596,9 @@ def get_filtered_dimensions(doctype, txt, searchfield, start, page_len, filters)
 	or_filters = []
 	fields = ["name"]
 
-	searchfields = frappe.get_meta(doctype).get_search_fields()
+	searchfields = capkpi.get_meta(doctype).get_search_fields()
 
-	meta = frappe.get_meta(doctype)
+	meta = capkpi.get_meta(doctype)
 	if meta.is_tree:
 		query_filters.append(["is_group", "=", 0])
 
@@ -625,15 +625,15 @@ def get_filtered_dimensions(doctype, txt, searchfield, start, page_len, filters)
 
 		query_filters.append(["name", query_selector, dimensions])
 
-	output = frappe.get_list(
+	output = capkpi.get_list(
 		doctype, fields=fields, filters=query_filters, or_filters=or_filters, as_list=1
 	)
 
 	return [tuple(d) for d in set(output)]
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_expense_account(doctype, txt, searchfield, start, page_len, filters):
 	from erp.controllers.queries import get_match_cond
 
@@ -645,7 +645,7 @@ def get_expense_account(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("company"):
 		condition += "and tabAccount.company = %(company)s"
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""select tabAccount.name from `tabAccount`
 		where (tabAccount.report_type = "Profit and Loss"
 				or tabAccount.account_type in ("Expense Account", "Fixed Asset", "Temporary", "Asset Received But Not Billed", "Capital Work in Progress"))
@@ -659,8 +659,8 @@ def get_expense_account(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def warehouse_query(doctype, txt, searchfield, start, page_len, filters):
 	# Should be used when item code is passed in filters.
 	doctype = "Warehouse"
@@ -686,10 +686,10 @@ def warehouse_query(doctype, txt, searchfield, start, page_len, filters):
 		mcond=get_match_cond(doctype),
 		start=start,
 		page_len=page_len,
-		txt=frappe.db.escape("%{0}%".format(txt)),
+		txt=capkpi.db.escape("%{0}%".format(txt)),
 	)
 
-	return frappe.db.sql(query)
+	return capkpi.db.sql(query)
 
 
 def get_doctype_wise_filters(filters):
@@ -700,31 +700,31 @@ def get_doctype_wise_filters(filters):
 	return filter_dict
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_batch_numbers(doctype, txt, searchfield, start, page_len, filters):
 	query = """select batch_id from `tabBatch`
 			where disabled = 0
 			and (expiry_date >= CURDATE() or expiry_date IS NULL)
 			and name like {txt}""".format(
-		txt=frappe.db.escape("%{0}%".format(txt))
+		txt=capkpi.db.escape("%{0}%".format(txt))
 	)
 
 	if filters and filters.get("item"):
-		query += " and item = {item}".format(item=frappe.db.escape(filters.get("item")))
+		query += " and item = {item}".format(item=capkpi.db.escape(filters.get("item")))
 
-	return frappe.db.sql(query, filters)
+	return capkpi.db.sql(query, filters)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def item_manufacturer_query(doctype, txt, searchfield, start, page_len, filters):
 	item_filters = [
 		["manufacturer", "like", "%" + txt + "%"],
 		["item_code", "=", filters.get("item_code")],
 	]
 
-	item_manufacturers = frappe.get_all(
+	item_manufacturers = capkpi.get_all(
 		"Item Manufacturer",
 		fields=["manufacturer", "manufacturer_part_no"],
 		filters=item_filters,
@@ -735,46 +735,46 @@ def item_manufacturer_query(doctype, txt, searchfield, start, page_len, filters)
 	return item_manufacturers
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_purchase_receipts(doctype, txt, searchfield, start, page_len, filters):
 	query = """
 		select pr.name
 		from `tabPurchase Receipt` pr, `tabPurchase Receipt Item` pritem
 		where pr.docstatus = 1 and pritem.parent = pr.name
 		and pr.name like {txt}""".format(
-		txt=frappe.db.escape("%{0}%".format(txt))
+		txt=capkpi.db.escape("%{0}%".format(txt))
 	)
 
 	if filters and filters.get("item_code"):
 		query += " and pritem.item_code = {item_code}".format(
-			item_code=frappe.db.escape(filters.get("item_code"))
+			item_code=capkpi.db.escape(filters.get("item_code"))
 		)
 
-	return frappe.db.sql(query, filters)
+	return capkpi.db.sql(query, filters)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_purchase_invoices(doctype, txt, searchfield, start, page_len, filters):
 	query = """
 		select pi.name
 		from `tabPurchase Invoice` pi, `tabPurchase Invoice Item` piitem
 		where pi.docstatus = 1 and piitem.parent = pi.name
 		and pi.name like {txt}""".format(
-		txt=frappe.db.escape("%{0}%".format(txt))
+		txt=capkpi.db.escape("%{0}%".format(txt))
 	)
 
 	if filters and filters.get("item_code"):
 		query += " and piitem.item_code = {item_code}".format(
-			item_code=frappe.db.escape(filters.get("item_code"))
+			item_code=capkpi.db.escape(filters.get("item_code"))
 		)
 
-	return frappe.db.sql(query, filters)
+	return capkpi.db.sql(query, filters)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_healthcare_service_units(doctype, txt, searchfield, start, page_len, filters):
 	query = """
 		select name
@@ -783,7 +783,7 @@ def get_healthcare_service_units(doctype, txt, searchfield, start, page_len, fil
 			is_group = 0
 			and company = {company}
 			and name like {txt}""".format(
-		company=frappe.db.escape(filters.get("company")), txt=frappe.db.escape("%{0}%".format(txt))
+		company=capkpi.db.escape(filters.get("company")), txt=capkpi.db.escape("%{0}%".format(txt))
 	)
 
 	if filters and filters.get("inpatient_record"):
@@ -797,32 +797,32 @@ def get_healthcare_service_units(doctype, txt, searchfield, start, page_len, fil
 		# inspite of it being an Inpatient Occupancy service unit
 		if service_unit:
 			query += " and (allow_appointments = 1 or name = {service_unit})".format(
-				service_unit=frappe.db.escape(service_unit)
+				service_unit=capkpi.db.escape(service_unit)
 			)
 		else:
 			query += " and allow_appointments = 1"
 	else:
 		query += " and allow_appointments = 1"
 
-	return frappe.db.sql(query, filters)
+	return capkpi.db.sql(query, filters)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def get_tax_template(doctype, txt, searchfield, start, page_len, filters):
 
-	item_doc = frappe.get_cached_doc("Item", filters.get("item_code"))
+	item_doc = capkpi.get_cached_doc("Item", filters.get("item_code"))
 	item_group = filters.get("item_group")
 	company = filters.get("company")
 	taxes = item_doc.taxes or []
 
 	while item_group:
-		item_group_doc = frappe.get_cached_doc("Item Group", item_group)
+		item_group_doc = capkpi.get_cached_doc("Item Group", item_group)
 		taxes += item_group_doc.taxes or []
 		item_group = item_group_doc.parent_item_group
 
 	if not taxes:
-		return frappe.get_all(
+		return capkpi.get_all(
 			"Item Tax Template", filters={"disabled": 0, "company": company}, as_list=True
 		)
 	else:
@@ -843,7 +843,7 @@ def get_tax_template(doctype, txt, searchfield, start, page_len, filters):
 def get_fields(doctype, fields=None):
 	if fields is None:
 		fields = []
-	meta = frappe.get_meta(doctype)
+	meta = capkpi.get_meta(doctype)
 	fields.extend(meta.get_search_fields())
 
 	if meta.title_field and not meta.title_field.strip() in fields:

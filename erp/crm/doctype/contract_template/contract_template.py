@@ -4,9 +4,9 @@
 
 import json
 
-import frappe
-from frappe.model.document import Document
-from frappe.utils.jinja import validate_template
+import capkpi
+from capkpi.model.document import Document
+from capkpi.utils.jinja import validate_template
 from six import string_types
 
 
@@ -16,15 +16,15 @@ class ContractTemplate(Document):
 			validate_template(self.contract_terms)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_contract_template(template_name, doc):
 	if isinstance(doc, string_types):
 		doc = json.loads(doc)
 
-	contract_template = frappe.get_doc("Contract Template", template_name)
+	contract_template = capkpi.get_doc("Contract Template", template_name)
 	contract_terms = None
 
 	if contract_template.contract_terms:
-		contract_terms = frappe.render_template(contract_template.contract_terms, doc)
+		contract_terms = capkpi.render_template(contract_template.contract_terms, doc)
 
 	return {"contract_template": contract_template, "contract_terms": contract_terms}

@@ -1,4 +1,4 @@
-frappe.listview_settings['Website Item'] = {
+capkpi.listview_settings['Website Item'] = {
 	add_fields: ["item_name", "web_item_name", "published", "website_image", "has_variants", "variant_of"],
 	filters: [["published", "=", "1"]],
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp.accounts");
+capkpi.provide("erp.accounts");
 {% include 'erp/public/js/controllers/buying.js' %};
 
 erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
@@ -145,8 +145,8 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 		this.frm.toggle_reqd("supplier_warehouse", this.frm.doc.is_subcontracted==="Yes");
 
 		if (doc.docstatus == 1 && !doc.inter_company_invoice_reference) {
-			frappe.model.with_doc("Supplier", me.frm.doc.supplier, function() {
-				var supplier = frappe.model.get_doc("Supplier", me.frm.doc.supplier);
+			capkpi.model.with_doc("Supplier", me.frm.doc.supplier, function() {
+				var supplier = capkpi.model.get_doc("Supplier", me.frm.doc.supplier);
 				var internal = supplier.is_internal_supplier;
 				var disabled = supplier.disabled;
 				if (internal == 1 && disabled == 0) {
@@ -162,7 +162,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 
 	unblock_invoice: function() {
 		const me = this;
-		frappe.call({
+		capkpi.call({
 			'method': 'erp.accounts.doctype.purchase_invoice.purchase_invoice.unblock_invoice',
 			'args': {'name': me.frm.doc.name},
 			'callback': (r) => me.frm.reload_doc()
@@ -178,9 +178,9 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 	},
 
 	can_change_release_date: function(date) {
-		const diff = frappe.datetime.get_diff(date, frappe.datetime.nowdate());
+		const diff = capkpi.datetime.get_diff(date, capkpi.datetime.nowdate());
 		if (diff < 0) {
-			frappe.throw(__('New release date should be in the future'));
+			capkpi.throw(__('New release date should be in the future'));
 			return false;
 		} else {
 			return true;
@@ -209,14 +209,14 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 			},
 		];
 
-		this.dialog = new frappe.ui.Dialog({
+		this.dialog = new capkpi.ui.Dialog({
 			title: title,
 			fields: fields
 		});
 
 		this.dialog.set_primary_action(__('Save'), function() {
 			const dialog_data = me.dialog.get_values();
-			frappe.call({
+			capkpi.call({
 				'method': 'erp.accounts.doctype.purchase_invoice.purchase_invoice.block_invoice',
 				'args': {
 					'name': me.frm.doc.name,
@@ -245,7 +245,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 			},
 		];
 
-		this.dialog = new frappe.ui.Dialog({
+		this.dialog = new capkpi.ui.Dialog({
 			title: title,
 			fields: fields
 		});
@@ -263,7 +263,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 	},
 
 	set_release_date: function(data) {
-		return frappe.call({
+		return capkpi.call({
 			'method': 'erp.accounts.doctype.purchase_invoice.purchase_invoice.change_release_date',
 			'args': data,
 			'callback': (r) => this.frm.reload_doc()
@@ -313,7 +313,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 		var me = this;
 		if(this.frm.doc.credit_to) {
 			me.frm.call({
-				method: "frappe.client.get_value",
+				method: "capkpi.client.get_value",
 				args: {
 					doctype: "Account",
 					fieldname: "account_currency",
@@ -330,7 +330,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 	},
 
 	make_inter_company_invoice: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.purchase_invoice.purchase_invoice.make_inter_company_sales_invoice",
 			frm: frm
 		});
@@ -342,7 +342,7 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 			this.frm.set_value("allocate_advances_automatically", 0);
 			if(!this.frm.doc.company) {
 				this.frm.set_value("is_paid", 0)
-				frappe.msgprint(__("Please specify Company to proceed"));
+				capkpi.msgprint(__("Please specify Company to proceed"));
 			}
 		}
 		this.calculate_outstanding_amount();
@@ -367,19 +367,19 @@ erp.accounts.PurchaseInvoice = erp.buying.BuyingController.extend({
 	},
 
 	items_add: function(doc, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
+		var row = capkpi.get_doc(cdt, cdn);
 		this.frm.script_manager.copy_from_first_row("items", row,
 			["expense_account", "discount_account", "cost_center", "project"]);
 	},
 
 	on_submit: function() {
 		$.each(this.frm.doc["items"] || [], function(i, row) {
-			if(row.purchase_receipt) frappe.model.clear_doc("Purchase Receipt", row.purchase_receipt)
+			if(row.purchase_receipt) capkpi.model.clear_doc("Purchase Receipt", row.purchase_receipt)
 		})
 	},
 
 	make_debit_note: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.purchase_invoice.purchase_invoice.make_debit_note",
 			frm: cur_frm
 		})
@@ -397,7 +397,7 @@ function hide_fields(doc) {
 		hide_field(parent_fields);
 	} else {
 		for (var i in parent_fields) {
-			var docfield = frappe.meta.docfield_map[doc.doctype][parent_fields[i]];
+			var docfield = capkpi.meta.docfield_map[doc.doctype][parent_fields[i]];
 			if(!docfield.hidden) unhide_field(parent_fields[i]);
 		}
 
@@ -496,7 +496,7 @@ cur_frm.fields_dict['items'].grid.get_field('project').get_query = function(doc,
 	}
 }
 
-frappe.ui.form.on("Purchase Invoice", {
+capkpi.ui.form.on("Purchase Invoice", {
 	setup: function(frm) {
 		frm.custom_make_buttons = {
 			'Purchase Invoice': 'Return / Debit Note',
@@ -547,11 +547,11 @@ frappe.ui.form.on("Purchase Invoice", {
 
 		if (frm.doc.docstatus == 1 && frm.doc.per_received > 0) {
 			frm.add_custom_button(__('Purchase Receipt'), () => {
-				frappe.route_options = {
+				capkpi.route_options = {
 					'purchase_invoice': frm.doc.name
 				}
 
-				frappe.set_route("List", "Purchase Receipt", "List")
+				capkpi.set_route("List", "Purchase Receipt", "List")
 			}, __('View'));
 		}
 	},
@@ -584,7 +584,7 @@ frappe.ui.form.on("Purchase Invoice", {
 	},
 
 	make_purchase_receipt: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.purchase_invoice.purchase_invoice.make_purchase_receipt",
 			frm: frm,
 			freeze_message: __("Creating Purchase Receipt ...")
@@ -595,7 +595,7 @@ frappe.ui.form.on("Purchase Invoice", {
 		erp.accounts.dimensions.update_dimension(frm, frm.doctype);
 
 		if (frm.doc.company) {
-			frappe.call({
+			capkpi.call({
 				method:
 					"erp.accounts.party.get_party_account",
 				args: {

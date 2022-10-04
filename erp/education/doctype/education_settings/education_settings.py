@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-import frappe.defaults
-from frappe.model.document import Document
+import capkpi
+import capkpi.defaults
+from capkpi.model.document import Document
 
 education_keydict = {
 	# "key in defaults": "key in Global Defaults"
@@ -19,16 +19,16 @@ class EducationSettings(Document):
 	def on_update(self):
 		"""update defaults"""
 		for key in education_keydict:
-			frappe.db.set_default(key, self.get(education_keydict[key], ""))
+			capkpi.db.set_default(key, self.get(education_keydict[key], ""))
 
 		# clear cache
-		frappe.clear_cache()
+		capkpi.clear_cache()
 
 	def get_defaults(self):
-		return frappe.defaults.get_defaults()
+		return capkpi.defaults.get_defaults()
 
 	def validate(self):
-		from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+		from capkpi.custom.doctype.property_setter.property_setter import make_property_setter
 
 		if self.get("instructor_created_by") == "Naming Series":
 			make_property_setter(
@@ -41,4 +41,4 @@ class EducationSettings(Document):
 
 
 def update_website_context(context):
-	context["lms_enabled"] = frappe.get_doc("Education Settings").enable_lms
+	context["lms_enabled"] = capkpi.get_doc("Education Settings").enable_lms

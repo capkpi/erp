@@ -1,12 +1,12 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Exchange Rate Revaluation', {
+capkpi.ui.form.on('Exchange Rate Revaluation', {
 	setup: function(frm) {
 		frm.set_query("party_type", "accounts", function() {
 			return {
 				"filters": {
-					"name": ["in", Object.keys(frappe.boot.party_account_types)],
+					"name": ["in", Object.keys(capkpi.boot.party_account_types)],
 				}
 			};
 		});
@@ -21,7 +21,7 @@ frappe.ui.form.on('Exchange Rate Revaluation', {
 
 	refresh: function(frm) {
 		if(frm.doc.docstatus==1) {
-			frappe.call({
+			capkpi.call({
 				method: 'check_journal_entry_condition',
 				doc: frm.doc,
 				callback: function(r) {
@@ -36,11 +36,11 @@ frappe.ui.form.on('Exchange Rate Revaluation', {
 	},
 
 	get_entries: function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "get_accounts_data",
 			doc: cur_frm.doc,
 			callback: function(r){
-				frappe.model.clear_table(frm.doc, "accounts");
+				capkpi.model.clear_table(frm.doc, "accounts");
 				if(r.message) {
 					r.message.forEach((d) => {
 						cur_frm.add_child("accounts",d);
@@ -66,22 +66,22 @@ frappe.ui.form.on('Exchange Rate Revaluation', {
 	},
 
 	make_jv : function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "make_jv_entry",
 			doc: frm.doc,
 			callback: function(r){
 				if (r.message) {
-					var doc = frappe.model.sync(r.message)[0];
-					frappe.set_route("Form", doc.doctype, doc.name);
+					var doc = capkpi.model.sync(r.message)[0];
+					capkpi.set_route("Form", doc.doctype, doc.name);
 				}
 			}
 		});
 	}
 });
 
-frappe.ui.form.on("Exchange Rate Revaluation Account", {
+capkpi.ui.form.on("Exchange Rate Revaluation Account", {
 	new_exchange_rate: function(frm, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
+		var row = capkpi.get_doc(cdt, cdn);
 		row.new_balance_in_base_currency = flt(row.new_exchange_rate * flt(row.balance_in_account_currency),
 			precision("new_balance_in_base_currency", row));
 		row.gain_loss = row.new_balance_in_base_currency - flt(row.balance_in_base_currency);
@@ -109,11 +109,11 @@ frappe.ui.form.on("Exchange Rate Revaluation Account", {
 });
 
 var get_account_details = function(frm, cdt, cdn) {
-	var row = frappe.get_doc(cdt, cdn);
+	var row = capkpi.get_doc(cdt, cdn);
 	if(!frm.doc.company || !frm.doc.posting_date) {
-		frappe.throw(__("Please select Company and Posting Date to getting entries"));
+		capkpi.throw(__("Please select Company and Posting Date to getting entries"));
 	}
-	frappe.call({
+	capkpi.call({
 		method: "erp.accounts.doctype.exchange_rate_revaluation.exchange_rate_revaluation.get_account_details",
 		args:{
 			account: row.account,

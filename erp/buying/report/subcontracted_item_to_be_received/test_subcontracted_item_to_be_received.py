@@ -1,11 +1,11 @@
 # Python bytecode 2.7 (62211)
-# Embedded file name: /Users/anuragmishra/frappe-develop/apps/erp/erp/buying/report/subcontracted_item_to_be_received/test_subcontracted_item_to_be_received.py
+# Embedded file name: /Users/anuragmishra/capkpi-develop/apps/erp/erp/buying/report/subcontracted_item_to_be_received/test_subcontracted_item_to_be_received.py
 # Compiled at: 2019-05-06 09:51:46
 # Decompiled by https://python-decompiler.com
 
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
 
 from erp.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
 from erp.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
@@ -31,13 +31,13 @@ class TestSubcontractedItemToBeReceived(CapKPITestCase):
 		make_purchase_receipt_against_po(po.name)
 		po.reload()
 		col, data = execute(
-			filters=frappe._dict(
+			filters=capkpi._dict(
 				{
 					"supplier": po.supplier,
-					"from_date": frappe.utils.get_datetime(
-						frappe.utils.add_to_date(po.transaction_date, days=-10)
+					"from_date": capkpi.utils.get_datetime(
+						capkpi.utils.add_to_date(po.transaction_date, days=-10)
 					),
-					"to_date": frappe.utils.get_datetime(frappe.utils.add_to_date(po.transaction_date, days=10)),
+					"to_date": capkpi.utils.get_datetime(capkpi.utils.add_to_date(po.transaction_date, days=10)),
 				}
 			)
 		)

@@ -6,18 +6,18 @@ QUnit.test('Test: Student Applicant', function(assert){
 	let done = assert.async();
 	let guradian_auto_code;
 	let guardian_name;
-	frappe.run_serially([
-		() => frappe.set_route('List', 'Guardian'),
-		() => frappe.timeout(0.5),
+	capkpi.run_serially([
+		() => capkpi.set_route('List', 'Guardian'),
+		() => capkpi.timeout(0.5),
 		() => {$(`a:contains("Test Guardian"):visible`)[0].click();},
-		() => frappe.timeout(1),
+		() => capkpi.timeout(1),
 		() => {
 			guardian_name = cur_frm.doc.guardian_name;
-			guradian_auto_code = frappe.get_route()[2];
+			guradian_auto_code = capkpi.get_route()[2];
 		},
 		// Testing data entry for Student Applicant
 		() => {
-			return frappe.tests.make('Student Applicant',[
+			return capkpi.tests.make('Student Applicant',[
 				{first_name: 'Fname'},
 				{middle_name: 'Mname'},
 				{last_name: 'Lname'},
@@ -75,7 +75,7 @@ QUnit.test('Test: Student Applicant', function(assert){
 			assert.ok(cur_frm.doc.state == 'Test');
 			assert.ok(cur_frm.doc.pincode == '400086');
 		},
-		() => frappe.timeout(1),
+		() => capkpi.timeout(1),
 		() => $('a:contains("Guardian Details"):visible').click(),
 		() => {
 			assert.ok(cur_frm.get_field("guardians").grid.grid_rows[0].doc.guardian == guradian_auto_code, 'Guardian correctly selected from dropdown');

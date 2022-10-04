@@ -4,10 +4,10 @@
 
 import copy
 
-import frappe
-from frappe import _
-from frappe.query_builder.functions import Coalesce, Sum
-from frappe.utils import date_diff, flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.query_builder.functions import Coalesce, Sum
+from capkpi.utils import date_diff, flt, getdate
 
 
 def execute(filters=None):
@@ -29,17 +29,17 @@ def validate_filters(filters):
 	from_date, to_date = filters.get("from_date"), filters.get("to_date")
 
 	if not from_date and to_date:
-		frappe.throw(_("From and To Dates are required."))
+		capkpi.throw(_("From and To Dates are required."))
 	elif date_diff(to_date, from_date) < 0:
-		frappe.throw(_("To Date cannot be before From Date."))
+		capkpi.throw(_("To Date cannot be before From Date."))
 
 
 def get_data(filters):
-	mr = frappe.qb.DocType("Material Request")
-	mr_item = frappe.qb.DocType("Material Request Item")
+	mr = capkpi.qb.DocType("Material Request")
+	mr_item = capkpi.qb.DocType("Material Request Item")
 
 	query = (
-		frappe.qb.from_(mr)
+		capkpi.qb.from_(mr)
 		.join(mr_item)
 		.on(mr_item.parent == mr.name)
 		.select(

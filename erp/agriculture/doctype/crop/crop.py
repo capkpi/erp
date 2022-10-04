@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class Crop(Document):
@@ -14,7 +14,7 @@ class Crop(Document):
 	def validate_crop_tasks(self):
 		for task in self.agriculture_task:
 			if task.start_day > task.end_day:
-				frappe.throw(_("Start day is greater than end day in task '{0}'").format(task.task_name))
+				capkpi.throw(_("Start day is greater than end day in task '{0}'").format(task.task_name))
 
 		# Verify that the crop period is correct
 		max_crop_period = max([task.end_day for task in self.agriculture_task])
@@ -25,7 +25,7 @@ class Crop(Document):
 		self.agriculture_task.sort(key=lambda task: task.start_day)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_item_details(item_code):
-	item = frappe.get_doc("Item", item_code)
+	item = capkpi.get_doc("Item", item_code)
 	return {"uom": item.stock_uom, "rate": item.valuation_rate}

@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.utils import flt
+import capkpi
+from capkpi import _, msgprint
+from capkpi.utils import flt
 
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
 	get_accounting_dimensions,
@@ -38,7 +38,7 @@ def _execute(filters=None, additional_table_columns=None, additional_query_colum
 	suppliers = list(set(d.supplier for d in invoice_list))
 	supplier_details = get_supplier_details(suppliers)
 
-	company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.company, "default_currency")
 
 	data = []
 	for inv in invoice_list:
@@ -130,7 +130,7 @@ def get_columns(invoice_list, additional_table_columns):
 	unrealized_profit_loss_accounts = []
 
 	if invoice_list:
-		expense_accounts = frappe.db.sql_list(
+		expense_accounts = capkpi.db.sql_list(
 			"""select distinct expense_account
 			from `tabPurchase Invoice Item` where docstatus = 1
 			and (expense_account is not null and expense_account != '')
@@ -139,7 +139,7 @@ def get_columns(invoice_list, additional_table_columns):
 			tuple([inv.name for inv in invoice_list]),
 		)
 
-		tax_accounts = frappe.db.sql_list(
+		tax_accounts = capkpi.db.sql_list(
 			"""select distinct account_head
 			from `tabPurchase Taxes and Charges` where parenttype = 'Purchase Invoice'
 			and docstatus = 1 and (account_head is not null and account_head != '')
@@ -149,7 +149,7 @@ def get_columns(invoice_list, additional_table_columns):
 			tuple(inv.name for inv in invoice_list),
 		)
 
-		unrealized_profit_loss_accounts = frappe.db.sql_list(
+		unrealized_profit_loss_accounts = capkpi.db.sql_list(
 			"""SELECT distinct unrealized_profit_loss_account
 			from `tabPurchase Invoice` where docstatus = 1 and name in (%s)
 			and ifnull(unrealized_profit_loss_account, '') != ''
@@ -225,7 +225,7 @@ def get_conditions(filters):
 			"""
 		for dimension in accounting_dimensions:
 			if filters.get(dimension.fieldname):
-				if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+				if capkpi.get_cached_value("DocType", dimension.document_type, "is_tree"):
 					filters[dimension.fieldname] = get_dimension_with_children(
 						dimension.document_type, filters.get(dimension.fieldname)
 					)
@@ -248,7 +248,7 @@ def get_invoices(filters, additional_query_columns):
 		additional_query_columns = ", " + ", ".join(additional_query_columns)
 
 	conditions = get_conditions(filters)
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			name, posting_date, credit_to, supplier, supplier_name, tax_id, bill_no, bill_date,
@@ -266,7 +266,7 @@ def get_invoices(filters, additional_query_columns):
 
 
 def get_invoice_expense_map(invoice_list):
-	expense_details = frappe.db.sql(
+	expense_details = capkpi.db.sql(
 		"""
 		select parent, expense_account, sum(base_net_amount) as amount
 		from `tabPurchase Invoice Item`
@@ -280,14 +280,14 @@ def get_invoice_expense_map(invoice_list):
 
 	invoice_expense_map = {}
 	for d in expense_details:
-		invoice_expense_map.setdefault(d.parent, frappe._dict()).setdefault(d.expense_account, [])
+		invoice_expense_map.setdefault(d.parent, capkpi._dict()).setdefault(d.expense_account, [])
 		invoice_expense_map[d.parent][d.expense_account] = flt(d.amount)
 
 	return invoice_expense_map
 
 
 def get_internal_invoice_map(invoice_list):
-	unrealized_amount_details = frappe.db.sql(
+	unrealized_amount_details = capkpi.db.sql(
 		"""SELECT name, unrealized_profit_loss_account,
 		base_net_total as amount from `tabPurchase Invoice` where name in (%s)
 		and is_internal_supplier = 1 and company = represents_company"""
@@ -305,7 +305,7 @@ def get_internal_invoice_map(invoice_list):
 
 
 def get_invoice_tax_map(invoice_list, invoice_expense_map, expense_accounts):
-	tax_details = frappe.db.sql(
+	tax_details = capkpi.db.sql(
 		"""
 		select parent, account_head, case add_deduct_tax when "Add" then sum(base_tax_amount_after_discount_amount)
 		else sum(base_tax_amount_after_discount_amount) * -1 end as tax_amount
@@ -327,14 +327,14 @@ def get_invoice_tax_map(invoice_list, invoice_expense_map, expense_accounts):
 			else:
 				invoice_expense_map[d.parent][d.account_head] = flt(d.tax_amount)
 		else:
-			invoice_tax_map.setdefault(d.parent, frappe._dict()).setdefault(d.account_head, [])
+			invoice_tax_map.setdefault(d.parent, capkpi._dict()).setdefault(d.account_head, [])
 			invoice_tax_map[d.parent][d.account_head] = flt(d.tax_amount)
 
 	return invoice_expense_map, invoice_tax_map
 
 
 def get_invoice_po_pr_map(invoice_list):
-	pi_items = frappe.db.sql(
+	pi_items = capkpi.db.sql(
 		"""
 		select parent, purchase_order, purchase_receipt, po_detail, project
 		from `tabPurchase Invoice Item`
@@ -348,7 +348,7 @@ def get_invoice_po_pr_map(invoice_list):
 	invoice_po_pr_map = {}
 	for d in pi_items:
 		if d.purchase_order:
-			invoice_po_pr_map.setdefault(d.parent, frappe._dict()).setdefault("purchase_order", []).append(
+			invoice_po_pr_map.setdefault(d.parent, capkpi._dict()).setdefault("purchase_order", []).append(
 				d.purchase_order
 			)
 
@@ -356,17 +356,17 @@ def get_invoice_po_pr_map(invoice_list):
 		if d.purchase_receipt:
 			pr_list = [d.purchase_receipt]
 		elif d.po_detail:
-			pr_list = frappe.db.sql_list(
+			pr_list = capkpi.db.sql_list(
 				"""select distinct parent from `tabPurchase Receipt Item`
 				where docstatus=1 and purchase_order_item=%s""",
 				d.po_detail,
 			)
 
 		if pr_list:
-			invoice_po_pr_map.setdefault(d.parent, frappe._dict()).setdefault("purchase_receipt", pr_list)
+			invoice_po_pr_map.setdefault(d.parent, capkpi._dict()).setdefault("purchase_receipt", pr_list)
 
 		if d.project:
-			invoice_po_pr_map.setdefault(d.parent, frappe._dict()).setdefault("project", []).append(
+			invoice_po_pr_map.setdefault(d.parent, capkpi._dict()).setdefault("project", []).append(
 				d.project
 			)
 
@@ -376,7 +376,7 @@ def get_invoice_po_pr_map(invoice_list):
 def get_account_details(invoice_list):
 	account_map = {}
 	accounts = list(set([inv.credit_to for inv in invoice_list]))
-	for acc in frappe.db.sql(
+	for acc in capkpi.db.sql(
 		"""select name, parent_account from tabAccount
 		where name in (%s)"""
 		% ", ".join(["%s"] * len(accounts)),
@@ -390,7 +390,7 @@ def get_account_details(invoice_list):
 
 def get_supplier_details(suppliers):
 	supplier_details = {}
-	for supp in frappe.db.sql(
+	for supp in capkpi.db.sql(
 		"""select name, supplier_group from `tabSupplier`
 		where name in (%s)"""
 		% ", ".join(["%s"] * len(suppliers)),

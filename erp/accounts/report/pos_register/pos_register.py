@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 from erp.accounts.report.sales_register.sales_register import get_mode_of_payments
 
@@ -58,7 +58,7 @@ def get_pos_entries(filters, group_by_field):
 	elif group_by_field:
 		order_by += ", p.{}".format(group_by_field)
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT
 			p.posting_date, p.name as pos_invoice, p.pos_profile,
@@ -107,27 +107,27 @@ def add_subtotal_row(data, group_invoices, group_by_field, group_by_value):
 
 def validate_filters(filters):
 	if not filters.get("company"):
-		frappe.throw(_("{0} is mandatory").format(_("Company")))
+		capkpi.throw(_("{0} is mandatory").format(_("Company")))
 
 	if not filters.get("from_date") and not filters.get("to_date"):
-		frappe.throw(
-			_("{0} and {1} are mandatory").format(frappe.bold(_("From Date")), frappe.bold(_("To Date")))
+		capkpi.throw(
+			_("{0} and {1} are mandatory").format(capkpi.bold(_("From Date")), capkpi.bold(_("To Date")))
 		)
 
 	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date must be before To Date"))
+		capkpi.throw(_("From Date must be before To Date"))
 
 	if filters.get("pos_profile") and filters.get("group_by") == _("POS Profile"):
-		frappe.throw(_("Can not filter based on POS Profile, if grouped by POS Profile"))
+		capkpi.throw(_("Can not filter based on POS Profile, if grouped by POS Profile"))
 
 	if filters.get("customer") and filters.get("group_by") == _("Customer"):
-		frappe.throw(_("Can not filter based on Customer, if grouped by Customer"))
+		capkpi.throw(_("Can not filter based on Customer, if grouped by Customer"))
 
 	if filters.get("owner") and filters.get("group_by") == _("Cashier"):
-		frappe.throw(_("Can not filter based on Cashier, if grouped by Cashier"))
+		capkpi.throw(_("Can not filter based on Cashier, if grouped by Cashier"))
 
 	if filters.get("mode_of_payment") and filters.get("group_by") == _("Payment Method"):
-		frappe.throw(_("Can not filter based on Payment Method, if grouped by Payment Method"))
+		capkpi.throw(_("Can not filter based on Payment Method, if grouped by Payment Method"))
 
 
 def get_conditions(filters):

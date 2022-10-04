@@ -1,9 +1,9 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.accounts.dimensions");
 
-frappe.ui.form.on('Fee Structure', {
+capkpi.ui.form.on('Fee Structure', {
 	setup: function(frm) {
 		frm.add_fetch('company', 'default_receivable_account', 'receivable_account');
 		frm.add_fetch('company', 'default_income_account', 'income_account');
@@ -54,14 +54,14 @@ frappe.ui.form.on('Fee Structure', {
 	},
 
 	make_fee_schedule: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: 'erp.education.doctype.fee_structure.fee_structure.make_fee_schedule',
 			frm: frm
 		});
 	}
 });
 
-frappe.ui.form.on('Fee Component', {
+capkpi.ui.form.on('Fee Component', {
 	amount: function(frm) {
 		var total_amount = 0;
 		for (var i=0;i<frm.doc.components.length;i++) {

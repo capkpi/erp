@@ -1,4 +1,4 @@
-frappe.views.calendar["Course Schedule"] = {
+capkpi.views.calendar["Course Schedule"] = {
 	field_map: {
 		"start": "from_time",
 		"end": "to_time",

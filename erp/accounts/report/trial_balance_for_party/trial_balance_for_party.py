@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cint, flt
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, flt
 
 from erp.accounts.report.trial_balance.trial_balance import validate_filters
 
@@ -22,7 +22,7 @@ def execute(filters=None):
 
 def get_data(filters, show_party_name):
 	if filters.get("party_type") in ("Customer", "Supplier", "Employee", "Member"):
-		party_name_field = "{0}_name".format(frappe.scrub(filters.get("party_type")))
+		party_name_field = "{0}_name".format(capkpi.scrub(filters.get("party_type")))
 	elif filters.get("party_type") == "Student":
 		party_name_field = "first_name"
 	elif filters.get("party_type") == "Shareholder":
@@ -31,19 +31,19 @@ def get_data(filters, show_party_name):
 		party_name_field = "name"
 
 	party_filters = {"name": filters.get("party")} if filters.get("party") else {}
-	parties = frappe.get_all(
+	parties = capkpi.get_all(
 		filters.get("party_type"),
 		fields=["name", party_name_field],
 		filters=party_filters,
 		order_by="name",
 	)
-	company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.company, "default_currency")
 	opening_balances = get_opening_balances(filters)
 	balances_within_period = get_balances_within_period(filters)
 
 	data = []
 	# total_debit, total_credit = 0, 0
-	total_row = frappe._dict(
+	total_row = capkpi._dict(
 		{
 			"opening_debit": 0,
 			"opening_credit": 0,
@@ -97,9 +97,9 @@ def get_opening_balances(filters):
 
 	account_filter = ""
 	if filters.get("account"):
-		account_filter = "and account = %s" % (frappe.db.escape(filters.get("account")))
+		account_filter = "and account = %s" % (capkpi.db.escape(filters.get("account")))
 
-	gle = frappe.db.sql(
+	gle = capkpi.db.sql(
 		"""
 		select party, sum(debit) as opening_debit, sum(credit) as opening_credit
 		from `tabGL Entry`
@@ -120,7 +120,7 @@ def get_opening_balances(filters):
 		as_dict=True,
 	)
 
-	opening = frappe._dict()
+	opening = capkpi._dict()
 	for d in gle:
 		opening_debit, opening_credit = toggle_debit_credit(d.opening_debit, d.opening_credit)
 		opening.setdefault(d.party, [opening_debit, opening_credit])
@@ -132,9 +132,9 @@ def get_balances_within_period(filters):
 
 	account_filter = ""
 	if filters.get("account"):
-		account_filter = "and account = %s" % (frappe.db.escape(filters.get("account")))
+		account_filter = "and account = %s" % (capkpi.db.escape(filters.get("account")))
 
-	gle = frappe.db.sql(
+	gle = capkpi.db.sql(
 		"""
 		select party, sum(debit) as debit, sum(credit) as credit
 		from `tabGL Entry`
@@ -156,7 +156,7 @@ def get_balances_within_period(filters):
 		as_dict=True,
 	)
 
-	balances_within_period = frappe._dict()
+	balances_within_period = capkpi._dict()
 	for d in gle:
 		balances_within_period.setdefault(d.party, [d.debit, d.credit])
 
@@ -253,9 +253,9 @@ def is_party_name_visible(filters):
 
 	if filters.get("party_type") in ["Customer", "Supplier"]:
 		if filters.get("party_type") == "Customer":
-			party_naming_by = frappe.db.get_single_value("Selling Settings", "cust_master_name")
+			party_naming_by = capkpi.db.get_single_value("Selling Settings", "cust_master_name")
 		else:
-			party_naming_by = frappe.db.get_single_value("Buying Settings", "supp_master_name")
+			party_naming_by = capkpi.db.get_single_value("Buying Settings", "supp_master_name")
 
 		if party_naming_by == "Naming Series":
 			show_party_name = True

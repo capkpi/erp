@@ -4,12 +4,12 @@
 
 import re
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
-class InvalidFormulaVariable(frappe.ValidationError):
+class InvalidFormulaVariable(capkpi.ValidationError):
 	pass
 
 
@@ -34,14 +34,14 @@ class SupplierScorecardCriteria(Document):
 				test_formula = test_formula.replace("{" + match.group(1) + "}", "0")
 
 		try:
-			frappe.safe_eval(test_formula, None, {"max": max, "min": min})
+			capkpi.safe_eval(test_formula, None, {"max": max, "min": min})
 		except Exception:
-			frappe.throw(_("Error evaluating the criteria formula"))
+			capkpi.throw(_("Error evaluating the criteria formula"))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_criteria_list():
-	criteria = frappe.db.sql(
+	criteria = capkpi.db.sql(
 		"""
 		SELECT
 			scs.name
@@ -55,7 +55,7 @@ def get_criteria_list():
 
 
 def get_variables(criteria_name):
-	criteria = frappe.get_doc("Supplier Scorecard Criteria", criteria_name)
+	criteria = capkpi.get_doc("Supplier Scorecard Criteria", criteria_name)
 	return _get_variables(criteria)
 
 
@@ -67,7 +67,7 @@ def _get_variables(criteria):
 	for dummy1, match in enumerate(mylist):
 		for dummy2 in range(0, len(match.groups())):
 			try:
-				var = frappe.db.sql(
+				var = capkpi.db.sql(
 					"""
 					SELECT
 						scv.variable_label, scv.description, scv.param_name, scv.path
@@ -80,6 +80,6 @@ def _get_variables(criteria):
 				)[0]
 				my_variables.append(var)
 			except Exception:
-				frappe.throw(_("Unable to find variable: ") + str(match.group(1)), InvalidFormulaVariable)
+				capkpi.throw(_("Unable to find variable: ") + str(match.group(1)), InvalidFormulaVariable)
 
 	return my_variables

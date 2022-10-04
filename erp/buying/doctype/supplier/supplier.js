@@ -1,7 +1,7 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.ui.form.on("Supplier", {
+capkpi.ui.form.on("Supplier", {
 	setup: function (frm) {
 		frm.set_query('default_price_list', { 'buying': 1 });
 		if (frm.doc.__islocal == 1) {
@@ -45,9 +45,9 @@ frappe.ui.form.on("Supplier", {
 	},
 
 	refresh: function (frm) {
-		frappe.dynamic_link = { doc: frm.doc, fieldname: 'name', doctype: 'Supplier' }
+		capkpi.dynamic_link = { doc: frm.doc, fieldname: 'name', doctype: 'Supplier' }
 
-		if (frappe.defaults.get_default("supp_master_name") != "Naming Series") {
+		if (capkpi.defaults.get_default("supp_master_name") != "Naming Series") {
 			frm.toggle_display("naming_series", false);
 		} else {
 			erp.toggle_naming_series();
@@ -55,20 +55,20 @@ frappe.ui.form.on("Supplier", {
 
 		if (frm.doc.__islocal) {
 			hide_field(['address_html','contact_html']);
-			frappe.contacts.clear_address_and_contact(frm);
+			capkpi.contacts.clear_address_and_contact(frm);
 		}
 		else {
 			unhide_field(['address_html','contact_html']);
-			frappe.contacts.render_address_and_contact(frm);
+			capkpi.contacts.render_address_and_contact(frm);
 
 			// custom buttons
 			frm.add_custom_button(__('Accounting Ledger'), function () {
-				frappe.set_route('query-report', 'General Ledger',
+				capkpi.set_route('query-report', 'General Ledger',
 					{ party_type: 'Supplier', party: frm.doc.name });
 			}, __("View"));
 
 			frm.add_custom_button(__('Accounts Payable'), function () {
-				frappe.set_route('query-report', 'Accounts Payable', { supplier: frm.doc.name });
+				capkpi.set_route('query-report', 'Accounts Payable', { supplier: frm.doc.name });
 			}, __("View"));
 
 			frm.add_custom_button(__('Bank Account'), function () {
@@ -83,7 +83,7 @@ frappe.ui.form.on("Supplier", {
 				frm.trigger("get_supplier_group_details");
 			}, __('Actions'));
 
-			if (cint(frappe.defaults.get_default("enable_common_party_accounting"))) {
+			if (cint(capkpi.defaults.get_default("enable_common_party_accounting"))) {
 				frm.add_custom_button(__('Link with Customer'), function () {
 					frm.trigger('show_party_link_dialog');
 				}, __('Actions'));
@@ -94,7 +94,7 @@ frappe.ui.form.on("Supplier", {
 		}
 	},
 	get_supplier_group_details: function(frm) {
-		frappe.call({
+		capkpi.call({
 			method: "get_supplier_group_details",
 			doc: frm.doc,
 			callback: function() {
@@ -105,8 +105,8 @@ frappe.ui.form.on("Supplier", {
 
 	supplier_primary_address: function(frm) {
 		if (frm.doc.supplier_primary_address) {
-			frappe.call({
-				method: 'frappe.contacts.doctype.address.address.get_address_display',
+			capkpi.call({
+				method: 'capkpi.contacts.doctype.address.address.get_address_display',
 				args: {
 					"address_dict": frm.doc.supplier_primary_address
 				},
@@ -136,14 +136,14 @@ frappe.ui.form.on("Supplier", {
 		}
 	},
 	show_party_link_dialog: function(frm) {
-		const dialog = new frappe.ui.Dialog({
+		const dialog = new capkpi.ui.Dialog({
 			title: __('Select a Customer'),
 			fields: [{
 				fieldtype: 'Link', label: __('Customer'),
 				options: 'Customer', fieldname: 'customer', reqd: 1
 			}],
 			primary_action: function({ customer }) {
-				frappe.call({
+				capkpi.call({
 					method: 'erp.accounts.doctype.party_link.party_link.create_party_link',
 					args: {
 						primary_role: 'Supplier',
@@ -153,14 +153,14 @@ frappe.ui.form.on("Supplier", {
 					freeze: true,
 					callback: function() {
 						dialog.hide();
-						frappe.msgprint({
+						capkpi.msgprint({
 							message: __('Successfully linked to Customer'),
 							alert: true
 						});
 					},
 					error: function() {
 						dialog.hide();
-						frappe.msgprint({
+						capkpi.msgprint({
 							message: __('Linking to Customer Failed. Please try again.'),
 							title: __('Linking Failed'),
 							indicator: 'red'

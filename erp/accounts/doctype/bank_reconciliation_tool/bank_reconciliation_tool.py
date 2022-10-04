@@ -4,11 +4,11 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.query_builder.custom import ConstantColumn
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.query_builder.custom import ConstantColumn
+from capkpi.utils import flt
 
 from erp import get_company_currency
 from erp.accounts.doctype.bank_transaction.bank_transaction import get_paid_amount
@@ -23,7 +23,7 @@ class BankReconciliationTool(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_bank_transactions(bank_account, from_date=None, to_date=None):
 	# returns bank transactions for a bank account
 	filters = []
@@ -34,7 +34,7 @@ def get_bank_transactions(bank_account, from_date=None, to_date=None):
 		filters.append(["date", "<=", to_date])
 	if from_date:
 		filters.append(["date", ">=", from_date])
-	transactions = frappe.get_all(
+	transactions = capkpi.get_all(
 		"Bank Transaction",
 		fields=[
 			"date",
@@ -55,11 +55,11 @@ def get_bank_transactions(bank_account, from_date=None, to_date=None):
 	return transactions
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_account_balance(bank_account, till_date):
 	# returns account balance till the specified date
-	account = frappe.db.get_value("Bank Account", bank_account, "account")
-	filters = frappe._dict(
+	account = capkpi.db.get_value("Bank Account", bank_account, "account")
+	filters = capkpi._dict(
 		{"account": account, "report_date": till_date, "include_pos_transactions": 1}
 	)
 	data = get_entries(filters)
@@ -83,15 +83,15 @@ def get_account_balance(bank_account, till_date):
 	return bank_bal
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def update_bank_transaction(bank_transaction_name, reference_number, party_type=None, party=None):
 	# updates bank transaction based on the new parameters provided by the user from Vouchers
-	bank_transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
+	bank_transaction = capkpi.get_doc("Bank Transaction", bank_transaction_name)
 	bank_transaction.reference_number = reference_number
 	bank_transaction.party_type = party_type
 	bank_transaction.party = party
 	bank_transaction.save()
-	return frappe.db.get_all(
+	return capkpi.db.get_all(
 		"Bank Transaction",
 		filters={"name": bank_transaction_name},
 		fields=[
@@ -111,7 +111,7 @@ def update_bank_transaction(bank_transaction_name, reference_number, party_type=
 	)[0]
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_journal_entry_bts(
 	bank_transaction_name,
 	reference_number=None,
@@ -125,17 +125,17 @@ def create_journal_entry_bts(
 	allow_edit=None,
 ):
 	# Create a new journal entry based on the bank transaction
-	bank_transaction = frappe.db.get_values(
+	bank_transaction = capkpi.db.get_values(
 		"Bank Transaction",
 		bank_transaction_name,
 		fieldname=["name", "deposit", "withdrawal", "bank_account"],
 		as_dict=True,
 	)[0]
-	company_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
-	account_type = frappe.db.get_value("Account", second_account, "account_type")
+	company_account = capkpi.get_value("Bank Account", bank_transaction.bank_account, "account")
+	account_type = capkpi.db.get_value("Account", second_account, "account_type")
 	if account_type in ["Receivable", "Payable"]:
 		if not (party_type and party):
-			frappe.throw(
+			capkpi.throw(
 				_("Party Type and Party is required for Receivable / Payable account {0}").format(
 					second_account
 				)
@@ -165,7 +165,7 @@ def create_journal_entry_bts(
 		}
 	)
 
-	company = frappe.get_value("Account", company_account, "company")
+	company = capkpi.get_value("Account", company_account, "company")
 
 	journal_entry_dict = {
 		"voucher_type": entry_type,
@@ -175,7 +175,7 @@ def create_journal_entry_bts(
 		"cheque_no": reference_number,
 		"mode_of_payment": mode_of_payment,
 	}
-	journal_entry = frappe.new_doc("Journal Entry")
+	journal_entry = capkpi.new_doc("Journal Entry")
 	journal_entry.update(journal_entry_dict)
 	journal_entry.set("accounts", accounts)
 
@@ -197,7 +197,7 @@ def create_journal_entry_bts(
 	return reconcile_vouchers(bank_transaction.name, vouchers)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_payment_entry_bts(
 	bank_transaction_name,
 	reference_number=None,
@@ -211,7 +211,7 @@ def create_payment_entry_bts(
 	allow_edit=None,
 ):
 	# Create a new payment entry based on the bank transaction
-	bank_transaction = frappe.db.get_values(
+	bank_transaction = capkpi.db.get_values(
 		"Bank Transaction",
 		bank_transaction_name,
 		fieldname=["name", "unallocated_amount", "deposit", "bank_account"],
@@ -220,8 +220,8 @@ def create_payment_entry_bts(
 	paid_amount = bank_transaction.unallocated_amount
 	payment_type = "Receive" if bank_transaction.deposit > 0 else "Pay"
 
-	company_account = frappe.get_value("Bank Account", bank_transaction.bank_account, "account")
-	company = frappe.get_value("Account", company_account, "company")
+	company_account = capkpi.get_value("Bank Account", bank_transaction.bank_account, "account")
+	company = capkpi.get_value("Account", company_account, "company")
 	payment_entry_dict = {
 		"company": company,
 		"payment_type": payment_type,
@@ -233,7 +233,7 @@ def create_payment_entry_bts(
 		"paid_amount": paid_amount,
 		"received_amount": paid_amount,
 	}
-	payment_entry = frappe.new_doc("Payment Entry")
+	payment_entry = capkpi.new_doc("Payment Entry")
 
 	payment_entry.update(payment_entry_dict)
 
@@ -262,20 +262,20 @@ def create_payment_entry_bts(
 	return reconcile_vouchers(bank_transaction.name, vouchers)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def reconcile_vouchers(bank_transaction_name, vouchers):
 	# updated clear date of all the vouchers based on the bank transaction
 	vouchers = json.loads(vouchers)
-	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
-	company_account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
+	transaction = capkpi.get_doc("Bank Transaction", bank_transaction_name)
+	company_account = capkpi.db.get_value("Bank Account", transaction.bank_account, "account")
 
 	if transaction.unallocated_amount == 0:
-		frappe.throw(_("This bank transaction is already fully reconciled"))
+		capkpi.throw(_("This bank transaction is already fully reconciled"))
 	total_amount = 0
 	for voucher in vouchers:
-		voucher["payment_entry"] = frappe.get_doc(voucher["payment_doctype"], voucher["payment_name"])
+		voucher["payment_entry"] = capkpi.get_doc(voucher["payment_doctype"], voucher["payment_name"])
 		total_amount += get_paid_amount(
-			frappe._dict(
+			capkpi._dict(
 				{
 					"payment_document": voucher["payment_doctype"],
 					"payment_entry": voucher["payment_name"],
@@ -286,15 +286,15 @@ def reconcile_vouchers(bank_transaction_name, vouchers):
 		)
 
 	if total_amount > transaction.unallocated_amount:
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"The sum total of amounts of all selected vouchers should be less than the unallocated amount of the bank transaction"
 			)
 		)
-	account = frappe.db.get_value("Bank Account", transaction.bank_account, "account")
+	account = capkpi.db.get_value("Bank Account", transaction.bank_account, "account")
 
 	for voucher in vouchers:
-		gl_entry = frappe.db.get_value(
+		gl_entry = capkpi.db.get_value(
 			"GL Entry",
 			dict(
 				account=account, voucher_type=voucher["payment_doctype"], voucher_no=voucher["payment_name"]
@@ -320,14 +320,14 @@ def reconcile_vouchers(bank_transaction_name, vouchers):
 
 	transaction.save()
 	transaction.update_allocations()
-	return frappe.get_doc("Bank Transaction", bank_transaction_name)
+	return capkpi.get_doc("Bank Transaction", bank_transaction_name)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_linked_payments(bank_transaction_name, document_types=None):
 	# get all matching payments for a bank transaction
-	transaction = frappe.get_doc("Bank Transaction", bank_transaction_name)
-	bank_account = frappe.db.get_values(
+	transaction = capkpi.get_doc("Bank Transaction", bank_transaction_name)
+	bank_account = capkpi.db.get_values(
 		"Bank Account", transaction.bank_account, ["account", "company"], as_dict=True
 	)[0]
 	(account, company) = (bank_account.account, bank_account.company)
@@ -353,7 +353,7 @@ def check_matching(bank_account, company, transaction, document_types):
 
 	for query in subquery:
 		matching_vouchers.extend(
-			frappe.db.sql(
+			capkpi.db.sql(
 				query,
 				filters,
 			)
@@ -406,18 +406,18 @@ def get_loan_vouchers(bank_account, transaction, document_types, filters):
 
 
 def get_ld_matching_query(bank_account, amount_condition, filters):
-	loan_disbursement = frappe.qb.DocType("Loan Disbursement")
+	loan_disbursement = capkpi.qb.DocType("Loan Disbursement")
 	matching_reference = loan_disbursement.reference_number == filters.get("reference_number")
 	matching_party = loan_disbursement.applicant_type == filters.get(
 		"party_type"
 	) and loan_disbursement.applicant == filters.get("party")
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	rank = capkpi.qb.terms.Case().when(matching_reference, 1).else_(0)
 
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	rank1 = capkpi.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
-		frappe.qb.from_(loan_disbursement)
+		capkpi.qb.from_(loan_disbursement)
 		.select(
 			rank + rank1 + 1,
 			ConstantColumn("Loan Disbursement").as_("doctype"),
@@ -444,18 +444,18 @@ def get_ld_matching_query(bank_account, amount_condition, filters):
 
 
 def get_lr_matching_query(bank_account, amount_condition, filters):
-	loan_repayment = frappe.qb.DocType("Loan Repayment")
+	loan_repayment = capkpi.qb.DocType("Loan Repayment")
 	matching_reference = loan_repayment.reference_number == filters.get("reference_number")
 	matching_party = loan_repayment.applicant_type == filters.get(
 		"party_type"
 	) and loan_repayment.applicant == filters.get("party")
 
-	rank = frappe.qb.terms.Case().when(matching_reference, 1).else_(0)
+	rank = capkpi.qb.terms.Case().when(matching_reference, 1).else_(0)
 
-	rank1 = frappe.qb.terms.Case().when(matching_party, 1).else_(0)
+	rank1 = capkpi.qb.terms.Case().when(matching_party, 1).else_(0)
 
 	query = (
-		frappe.qb.from_(loan_repayment)
+		capkpi.qb.from_(loan_repayment)
 		.select(
 			rank + rank1 + 1,
 			ConstantColumn("Loan Repayment").as_("doctype"),
@@ -608,7 +608,7 @@ def get_ec_matching_query(bank_account, company, amount_condition):
 	# get matching Expense Claim query
 	mode_of_payments = [
 		x["parent"]
-		for x in frappe.db.get_all(
+		for x in capkpi.db.get_all(
 			"Mode of Payment Account", filters={"default_account": bank_account}, fields=["parent"]
 		)
 	]

@@ -4,12 +4,12 @@
 
 import json
 
-import frappe
-from frappe import _, scrub
-from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.model import core_doctypes_list
-from frappe.model.document import Document
-from frappe.utils import cstr
+import capkpi
+from capkpi import _, scrub
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_field
+from capkpi.model import core_doctypes_list
+from capkpi.model.document import Document
+from capkpi.utils import cstr
 
 
 class AccountingDimension(Document):
@@ -27,36 +27,36 @@ class AccountingDimension(Document):
 		):
 
 			msg = _("Not allowed to create accounting dimension for {0}").format(self.document_type)
-			frappe.throw(msg)
+			capkpi.throw(msg)
 
-		exists = frappe.db.get_value(
+		exists = capkpi.db.get_value(
 			"Accounting Dimension", {"document_type": self.document_type}, ["name"]
 		)
 
 		if exists and self.is_new():
-			frappe.throw(_("Document Type already used as a dimension"))
+			capkpi.throw(_("Document Type already used as a dimension"))
 
 		if not self.is_new():
 			self.validate_document_type_change()
 
 	def validate_document_type_change(self):
-		doctype_before_save = frappe.db.get_value("Accounting Dimension", self.name, "document_type")
+		doctype_before_save = capkpi.db.get_value("Accounting Dimension", self.name, "document_type")
 		if doctype_before_save != self.document_type:
 			message = _("Cannot change Reference Document Type.")
 			message += _("Please create a new Accounting Dimension if required.")
-			frappe.throw(message)
+			capkpi.throw(message)
 
 	def after_insert(self):
-		if frappe.flags.in_test:
+		if capkpi.flags.in_test:
 			make_dimension_in_accounting_doctypes(doc=self)
 		else:
-			frappe.enqueue(make_dimension_in_accounting_doctypes, doc=self, queue="long")
+			capkpi.enqueue(make_dimension_in_accounting_doctypes, doc=self, queue="long")
 
 	def on_trash(self):
-		if frappe.flags.in_test:
+		if capkpi.flags.in_test:
 			delete_accounting_dimension(doc=self)
 		else:
-			frappe.enqueue(delete_accounting_dimension, doc=self, queue="long")
+			capkpi.enqueue(delete_accounting_dimension, doc=self, queue="long")
 
 	def set_fieldname_and_label(self):
 		if not self.label:
@@ -66,7 +66,7 @@ class AccountingDimension(Document):
 			self.fieldname = scrub(self.label)
 
 	def on_update(self):
-		frappe.flags.accounting_dimensions = None
+		capkpi.flags.accounting_dimensions = None
 
 
 def make_dimension_in_accounting_doctypes(doc, doclist=None):
@@ -92,7 +92,7 @@ def make_dimension_in_accounting_doctypes(doc, doclist=None):
 			"owner": "Administrator",
 		}
 
-		meta = frappe.get_meta(doctype, cached=False)
+		meta = capkpi.get_meta(doctype, cached=False)
 		fieldnames = [d.fieldname for d in meta.get("fields")]
 
 		if df["fieldname"] not in fieldnames:
@@ -103,8 +103,8 @@ def make_dimension_in_accounting_doctypes(doc, doclist=None):
 
 		count += 1
 
-		frappe.publish_progress(count * 100 / len(doclist), title=_("Creating Dimensions..."))
-		frappe.clear_cache(doctype=doctype)
+		capkpi.publish_progress(count * 100 / len(doclist), title=_("Creating Dimensions..."))
+		capkpi.clear_cache(doctype=doctype)
 
 
 def add_dimension_to_budget_doctype(df, doc):
@@ -117,16 +117,16 @@ def add_dimension_to_budget_doctype(df, doc):
 
 	create_custom_field("Budget", df, ignore_validate=True)
 
-	property_setter = frappe.db.exists("Property Setter", "Budget-budget_against-options")
+	property_setter = capkpi.db.exists("Property Setter", "Budget-budget_against-options")
 
 	if property_setter:
-		property_setter_doc = frappe.get_doc("Property Setter", "Budget-budget_against-options")
+		property_setter_doc = capkpi.get_doc("Property Setter", "Budget-budget_against-options")
 		property_setter_doc.value = property_setter_doc.value + "\n" + doc.document_type
 		property_setter_doc.save()
 
-		frappe.clear_cache(doctype="Budget")
+		capkpi.clear_cache(doctype="Budget")
 	else:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Property Setter",
 				"doctype_or_field": "DocField",
@@ -142,7 +142,7 @@ def add_dimension_to_budget_doctype(df, doc):
 def delete_accounting_dimension(doc):
 	doclist = get_doctypes_with_dimensions()
 
-	frappe.db.sql(
+	capkpi.db.sql(
 		"""
 		DELETE FROM `tabCustom Field`
 		WHERE fieldname = %s
@@ -151,7 +151,7 @@ def delete_accounting_dimension(doc):
 		tuple([doc.fieldname] + doclist),
 	)
 
-	frappe.db.sql(
+	capkpi.db.sql(
 		"""
 		DELETE FROM `tabProperty Setter`
 		WHERE field_name = %s
@@ -160,7 +160,7 @@ def delete_accounting_dimension(doc):
 		tuple([doc.fieldname] + doclist),
 	)
 
-	budget_against_property = frappe.get_doc("Property Setter", "Budget-budget_against-options")
+	budget_against_property = capkpi.get_doc("Property Setter", "Budget-budget_against-options")
 	value_list = budget_against_property.value.split("\n")[3:]
 
 	if doc.document_type in value_list:
@@ -170,15 +170,15 @@ def delete_accounting_dimension(doc):
 	budget_against_property.save()
 
 	for doctype in doclist:
-		frappe.clear_cache(doctype=doctype)
+		capkpi.clear_cache(doctype=doctype)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def disable_dimension(doc):
-	if frappe.flags.in_test:
+	if capkpi.flags.in_test:
 		toggle_disabling(doc=doc)
 	else:
-		frappe.enqueue(toggle_disabling, doc=doc)
+		capkpi.enqueue(toggle_disabling, doc=doc)
 
 
 def toggle_disabling(doc):
@@ -192,17 +192,17 @@ def toggle_disabling(doc):
 	doclist = get_doctypes_with_dimensions()
 
 	for doctype in doclist:
-		field = frappe.db.get_value("Custom Field", {"dt": doctype, "fieldname": doc.get("fieldname")})
+		field = capkpi.db.get_value("Custom Field", {"dt": doctype, "fieldname": doc.get("fieldname")})
 		if field:
-			custom_field = frappe.get_doc("Custom Field", field)
+			custom_field = capkpi.get_doc("Custom Field", field)
 			custom_field.update(df)
 			custom_field.save()
 
-		frappe.clear_cache(doctype=doctype)
+		capkpi.clear_cache(doctype=doctype)
 
 
 def get_doctypes_with_dimensions():
-	return frappe.get_hooks("accounting_dimension_doctypes")
+	return capkpi.get_hooks("accounting_dimension_doctypes")
 
 
 def get_accounting_dimensions(as_list=True, filters=None):
@@ -210,21 +210,21 @@ def get_accounting_dimensions(as_list=True, filters=None):
 	if not filters:
 		filters = {"disabled": 0}
 
-	if frappe.flags.accounting_dimensions is None:
-		frappe.flags.accounting_dimensions = frappe.get_all(
+	if capkpi.flags.accounting_dimensions is None:
+		capkpi.flags.accounting_dimensions = capkpi.get_all(
 			"Accounting Dimension",
 			fields=["label", "fieldname", "disabled", "document_type"],
 			filters=filters,
 		)
 
 	if as_list:
-		return [d.fieldname for d in frappe.flags.accounting_dimensions]
+		return [d.fieldname for d in capkpi.flags.accounting_dimensions]
 	else:
-		return frappe.flags.accounting_dimensions
+		return capkpi.flags.accounting_dimensions
 
 
 def get_checks_for_pl_and_bs_accounts():
-	dimensions = frappe.db.sql(
+	dimensions = capkpi.db.sql(
 		"""SELECT p.label, p.disabled, p.fieldname, c.default_dimension, c.company, c.mandatory_for_pl, c.mandatory_for_bs
 		FROM `tabAccounting Dimension`p ,`tabAccounting Dimension Detail` c
 		WHERE p.name = c.parent""",
@@ -242,8 +242,8 @@ def get_dimension_with_children(doctype, dimensions):
 	all_dimensions = []
 
 	for dimension in dimensions:
-		lft, rgt = frappe.db.get_value(doctype, dimension, ["lft", "rgt"])
-		children = frappe.get_all(
+		lft, rgt = capkpi.db.get_value(doctype, dimension, ["lft", "rgt"])
+		children = capkpi.get_all(
 			doctype, filters={"lft": [">=", lft], "rgt": ["<=", rgt]}, order_by="lft"
 		)
 		all_dimensions += [c.name for c in children]
@@ -251,9 +251,9 @@ def get_dimension_with_children(doctype, dimensions):
 	return all_dimensions
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_dimensions(with_cost_center_and_project=False):
-	dimension_filters = frappe.db.sql(
+	dimension_filters = capkpi.db.sql(
 		"""
 		SELECT label, fieldname, document_type
 		FROM `tabAccounting Dimension`
@@ -262,7 +262,7 @@ def get_dimensions(with_cost_center_and_project=False):
 		as_dict=1,
 	)
 
-	default_dimensions = frappe.db.sql(
+	default_dimensions = capkpi.db.sql(
 		"""SELECT p.fieldname, c.company, c.default_dimension
 		FROM `tabAccounting Dimension Detail` c, `tabAccounting Dimension` p
 		WHERE c.parent = p.name""",

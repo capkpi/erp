@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cint, cstr
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, cstr
 from six import iteritems
 
 from erp.accounts.report.financial_statements import (
@@ -20,7 +20,7 @@ from erp.accounts.utils import get_fiscal_year
 
 
 def execute(filters=None):
-	if cint(frappe.db.get_single_value("Accounts Settings", "use_custom_cash_flow")):
+	if cint(capkpi.db.get_single_value("Accounts Settings", "use_custom_cash_flow")):
 		from erp.accounts.report.cash_flow.custom_cash_flow import execute as execute_custom
 
 		return execute_custom(filters=filters)
@@ -63,7 +63,7 @@ def execute(filters=None):
 
 	data = []
 	summary_data = {}
-	company_currency = frappe.get_cached_value("Company", filters.company, "default_currency")
+	company_currency = capkpi.get_cached_value("Company", filters.company, "default_currency")
 
 	for cash_flow_account in cash_flow_accounts:
 		section_data = []
@@ -178,21 +178,21 @@ def get_account_type_based_data(company, account_type, period_list, accumulated_
 
 def get_account_type_based_gl_data(company, start_date, end_date, account_type, filters=None):
 	cond = ""
-	filters = frappe._dict(filters or {})
+	filters = capkpi._dict(filters or {})
 
 	if filters.include_default_book_entries:
-		company_fb = frappe.db.get_value("Company", company, "default_finance_book")
+		company_fb = capkpi.db.get_value("Company", company, "default_finance_book")
 		cond = """ AND (finance_book in (%s, %s, '') OR finance_book IS NULL)
 			""" % (
-			frappe.db.escape(filters.finance_book),
-			frappe.db.escape(company_fb),
+			capkpi.db.escape(filters.finance_book),
+			capkpi.db.escape(company_fb),
 		)
 	else:
 		cond = " AND (finance_book in (%s, '') OR finance_book IS NULL)" % (
-			frappe.db.escape(cstr(filters.finance_book))
+			capkpi.db.escape(cstr(filters.finance_book))
 		)
 
-	gl_sum = frappe.db.sql_list(
+	gl_sum = capkpi.db.sql_list(
 		"""
 		select sum(credit) - sum(debit)
 		from `tabGL Entry`

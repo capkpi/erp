@@ -1,15 +1,15 @@
 // Copyright (c) 2016, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.require("assets/erp/js/financial_statements.js", function() {
-	frappe.query_reports["Profitability Analysis"] = {
+capkpi.require("assets/erp/js/financial_statements.js", function() {
+	capkpi.query_reports["Profitability Analysis"] = {
 		"filters": [
 			{
 				"fieldname": "company",
 				"label": __("Company"),
 				"fieldtype": "Link",
 				"options": "Company",
-				"default": frappe.defaults.get_user_default("Company"),
+				"default": capkpi.defaults.get_user_default("Company"),
 				"reqd": 1
 			},
 			{
@@ -25,16 +25,16 @@ frappe.require("assets/erp/js/financial_statements.js", function() {
 				"label": __("Fiscal Year"),
 				"fieldtype": "Link",
 				"options": "Fiscal Year",
-				"default": frappe.defaults.get_user_default("fiscal_year"),
+				"default": capkpi.defaults.get_user_default("fiscal_year"),
 				"reqd": 1,
 				"on_change": function(query_report) {
 					var fiscal_year = query_report.get_values().fiscal_year;
 					if (!fiscal_year) {
 						return;
 					}
-					frappe.model.with_doc("Fiscal Year", fiscal_year, function(r) {
-						var fy = frappe.model.get_doc("Fiscal Year", fiscal_year);
-						frappe.query_report.set_filter_value({
+					capkpi.model.with_doc("Fiscal Year", fiscal_year, function(r) {
+						var fy = capkpi.model.get_doc("Fiscal Year", fiscal_year);
+						capkpi.query_report.set_filter_value({
 							from_date: fy.year_start_date,
 							to_date: fy.year_end_date
 						});
@@ -45,13 +45,13 @@ frappe.require("assets/erp/js/financial_statements.js", function() {
 				"fieldname": "from_date",
 				"label": __("From Date"),
 				"fieldtype": "Date",
-				"default": frappe.defaults.get_user_default("year_start_date"),
+				"default": capkpi.defaults.get_user_default("year_start_date"),
 			},
 			{
 				"fieldname": "to_date",
 				"label": __("To Date"),
 				"fieldtype": "Date",
-				"default": frappe.defaults.get_user_default("year_end_date"),
+				"default": capkpi.defaults.get_user_default("year_end_date"),
 			},
 			{
 				"fieldname": "show_zero_values",
@@ -64,7 +64,7 @@ frappe.require("assets/erp/js/financial_statements.js", function() {
 				value = data.account_name;
 
 				column.link_onclick =
-					"frappe.query_reports['Profitability Analysis'].open_profit_and_loss_statement(" + JSON.stringify(data) + ")";
+					"capkpi.query_reports['Profitability Analysis'].open_profit_and_loss_statement(" + JSON.stringify(data) + ")";
 				column.is_tree = true;
 			}
 
@@ -85,19 +85,19 @@ frappe.require("assets/erp/js/financial_statements.js", function() {
 		"open_profit_and_loss_statement": function(data) {
 			if (!data.account) return;
 
-			frappe.route_options = {
-				"company": frappe.query_report.get_filter_value('company'),
+			capkpi.route_options = {
+				"company": capkpi.query_report.get_filter_value('company'),
 				"from_fiscal_year": data.fiscal_year,
 				"to_fiscal_year": data.fiscal_year
 			};
 
 			if(data.based_on == 'cost_center'){
-				frappe.route_options["cost_center"] = data.account
+				capkpi.route_options["cost_center"] = data.account
 			} else {
-				frappe.route_options["project"] = data.account
+				capkpi.route_options["project"] = data.account
 			}
 
-			frappe.set_route("query-report", "Profit and Loss Statement");
+			capkpi.set_route("query-report", "Profit and Loss Statement");
 		},
 		"tree": true,
 		"name_field": "account",
@@ -106,7 +106,7 @@ frappe.require("assets/erp/js/financial_statements.js", function() {
 	}
 
 	erp.dimension_filters.forEach((dimension) => {
-		frappe.query_reports["Profitability Analysis"].filters[1].options.push(dimension["document_type"]);
+		capkpi.query_reports["Profitability Analysis"].filters[1].options.push(dimension["document_type"]);
 	});
 
 });

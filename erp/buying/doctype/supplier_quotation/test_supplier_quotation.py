@@ -2,19 +2,19 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
 
 
 class TestPurchaseOrder(CapKPITestCase):
 	def test_make_purchase_order(self):
 		from erp.buying.doctype.supplier_quotation.supplier_quotation import make_purchase_order
 
-		sq = frappe.copy_doc(test_records[0]).insert()
+		sq = capkpi.copy_doc(test_records[0]).insert()
 
-		self.assertRaises(frappe.ValidationError, make_purchase_order, sq.name)
+		self.assertRaises(capkpi.ValidationError, make_purchase_order, sq.name)
 
-		sq = frappe.get_doc("Supplier Quotation", sq.name)
+		sq = capkpi.get_doc("Supplier Quotation", sq.name)
 		sq.submit()
 		po = make_purchase_order(sq.name)
 
@@ -30,4 +30,4 @@ class TestPurchaseOrder(CapKPITestCase):
 		po.insert()
 
 
-test_records = frappe.get_test_records("Supplier Quotation")
+test_records = capkpi.get_test_records("Supplier Quotation")

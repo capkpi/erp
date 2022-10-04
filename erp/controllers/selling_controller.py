@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, bold, throw
-from frappe.contacts.doctype.address.address import get_address_display
-from frappe.utils import cint, cstr, flt, get_link_to_form, nowtime
+import capkpi
+from capkpi import _, bold, throw
+from capkpi.contacts.doctype.address.address import get_address_display
+from capkpi.utils import cint, cstr, flt, get_link_to_form, nowtime
 
 from erp.controllers.accounts_controller import get_taxes_and_charges
 from erp.controllers.sales_and_purchase_return import get_rate_for_return
@@ -68,7 +68,7 @@ class SellingController(StockController):
 			from erp.accounts.party import _get_party_details
 
 			fetch_payment_terms_template = False
-			if self.get("__islocal") or self.company != frappe.db.get_value(
+			if self.get("__islocal") or self.company != capkpi.db.get_value(
 				self.doctype, self.name, "company"
 			):
 				fetch_payment_terms_template = True
@@ -110,7 +110,7 @@ class SellingController(StockController):
 
 	def remove_shipping_charge(self):
 		if self.shipping_rule:
-			shipping_rule = frappe.get_doc("Shipping Rule", self.shipping_rule)
+			shipping_rule = capkpi.get_doc("Shipping Rule", self.shipping_rule)
 			existing_shipping_charge = self.get(
 				"taxes",
 				{
@@ -125,7 +125,7 @@ class SellingController(StockController):
 				self.calculate_taxes_and_totals()
 
 	def set_total_in_words(self):
-		from frappe.utils import money_in_words
+		from capkpi.utils import money_in_words
 
 		if self.meta.get_field("base_in_words"):
 			base_amount = abs(
@@ -188,16 +188,16 @@ class SellingController(StockController):
 	def validate_max_discount(self):
 		for d in self.get("items"):
 			if d.item_code:
-				discount = flt(frappe.get_cached_value("Item", d.item_code, "max_discount"))
+				discount = flt(capkpi.get_cached_value("Item", d.item_code, "max_discount"))
 
 				if discount and flt(d.discount_percentage) > discount:
-					frappe.throw(_("Maximum discount for Item {0} is {1}%").format(d.item_code, discount))
+					capkpi.throw(_("Maximum discount for Item {0} is {1}%").format(d.item_code, discount))
 
 	def set_qty_as_per_stock_uom(self):
 		for d in self.get("items"):
 			if d.meta.get_field("stock_qty"):
 				if not d.conversion_factor:
-					frappe.throw(_("Row {0}: Conversion Factor is mandatory").format(d.idx))
+					capkpi.throw(_("Row {0}: Conversion Factor is mandatory").format(d.idx))
 				d.stock_qty = flt(d.qty) * flt(d.conversion_factor)
 
 	def validate_selling_price(self):
@@ -219,7 +219,7 @@ class SellingController(StockController):
 				title=_("Invalid Selling Price"),
 			)
 
-		if self.get("is_return") or not frappe.db.get_single_value(
+		if self.get("is_return") or not capkpi.db.get_single_value(
 			"Selling Settings", "validate_selling_price"
 		):
 			return
@@ -231,7 +231,7 @@ class SellingController(StockController):
 			if not item.item_code or item.is_free_item:
 				continue
 
-			last_purchase_rate, is_stock_item = frappe.get_cached_value(
+			last_purchase_rate, is_stock_item = capkpi.get_cached_value(
 				"Item", item.item_code, ("last_purchase_rate", "is_stock_item")
 			)
 
@@ -249,12 +249,12 @@ class SellingController(StockController):
 			return
 
 		or_conditions = (
-			f"""(item_code = {frappe.db.escape(valuation_rate[0])}
-			and warehouse = {frappe.db.escape(valuation_rate[1])})"""
+			f"""(item_code = {capkpi.db.escape(valuation_rate[0])}
+			and warehouse = {capkpi.db.escape(valuation_rate[1])})"""
 			for valuation_rate in valuation_rate_map
 		)
 
-		valuation_rates = frappe.db.sql(
+		valuation_rates = capkpi.db.sql(
 			f"""
 			select
 				item_code, warehouse, valuation_rate
@@ -288,14 +288,14 @@ class SellingController(StockController):
 		il = []
 		for d in self.get("items"):
 			if d.qty is None:
-				frappe.throw(_("Row {0}: Qty is mandatory").format(d.idx))
+				capkpi.throw(_("Row {0}: Qty is mandatory").format(d.idx))
 
 			if self.has_product_bundle(d.item_code):
 				for p in self.get("packed_items"):
 					if p.parent_detail_docname == d.name and p.parent_item == d.item_code:
 						# the packing details table's qty is already multiplied with parent's qty
 						il.append(
-							frappe._dict(
+							capkpi._dict(
 								{
 									"warehouse": p.warehouse or d.warehouse,
 									"item_code": p.item_code,
@@ -316,7 +316,7 @@ class SellingController(StockController):
 						)
 			else:
 				il.append(
-					frappe._dict(
+					capkpi._dict(
 						{
 							"warehouse": d.warehouse,
 							"item_code": d.item_code,
@@ -340,14 +340,14 @@ class SellingController(StockController):
 		return il
 
 	def has_product_bundle(self, item_code):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"""select name from `tabProduct Bundle`
 			where new_item_code=%s and docstatus != 2""",
 			item_code,
 		)
 
 	def get_already_delivered_qty(self, current_docname, so, so_detail):
-		delivered_via_dn = frappe.db.sql(
+		delivered_via_dn = capkpi.db.sql(
 			"""select sum(qty) from `tabDelivery Note Item`
 			where so_detail = %s and docstatus = 1
 			and against_sales_order = %s
@@ -355,7 +355,7 @@ class SellingController(StockController):
 			(so_detail, so, current_docname),
 		)
 
-		delivered_via_si = frappe.db.sql(
+		delivered_via_si = capkpi.db.sql(
 			"""select sum(si_item.qty)
 			from `tabSales Invoice Item` si_item, `tabSales Invoice` si
 			where si_item.parent = si.name and si.update_stock = 1
@@ -372,7 +372,7 @@ class SellingController(StockController):
 		return total_delivered_qty
 
 	def get_so_qty_and_warehouse(self, so_detail):
-		so_item = frappe.db.sql(
+		so_item = capkpi.db.sql(
 			"""select qty, warehouse from `tabSales Order Item`
 			where name = %s and docstatus = 1""",
 			so_detail,
@@ -385,9 +385,9 @@ class SellingController(StockController):
 	def check_sales_order_on_hold_or_close(self, ref_fieldname):
 		for d in self.get("items"):
 			if d.get(ref_fieldname):
-				status = frappe.db.get_value("Sales Order", d.get(ref_fieldname), "status")
+				status = capkpi.db.get_value("Sales Order", d.get(ref_fieldname), "status")
 				if status in ("Closed", "On Hold"):
-					frappe.throw(_("Sales Order {0} is {1}").format(d.get(ref_fieldname), status))
+					capkpi.throw(_("Sales Order {0} is {1}").format(d.get(ref_fieldname), status))
 
 	def update_reserved_qty(self):
 		so_map = {}
@@ -400,11 +400,11 @@ class SellingController(StockController):
 
 		for so, so_item_rows in so_map.items():
 			if so and so_item_rows:
-				sales_order = frappe.get_doc("Sales Order", so)
+				sales_order = capkpi.get_doc("Sales Order", so)
 
 				if sales_order.status in ["Closed", "Cancelled"]:
-					frappe.throw(
-						_("{0} {1} is cancelled or closed").format(_("Sales Order"), so), frappe.InvalidStatusError
+					capkpi.throw(
+						_("{0} {1} is cancelled or closed").format(_("Sales Order"), so), capkpi.InvalidStatusError
 					)
 
 				sales_order.update_reserved_qty(so_item_rows)
@@ -446,7 +446,7 @@ class SellingController(StockController):
 						rate = flt(d.incoming_rate * d.conversion_factor, d.precision("rate"))
 						if d.rate != rate:
 							d.rate = rate
-							frappe.msgprint(
+							capkpi.msgprint(
 								_(
 									"Row {0}: Item rate has been updated as per valuation rate since its an internal stock transfer"
 								).format(d.idx),
@@ -470,7 +470,7 @@ class SellingController(StockController):
 		sl_entries = []
 		# Loop over items and packed items table
 		for d in self.get_item_list():
-			if frappe.get_cached_value("Item", d.item_code, "is_stock_item") == 1 and flt(d.qty):
+			if capkpi.get_cached_value("Item", d.item_code, "is_stock_item") == 1 and flt(d.qty):
 				if flt(d.conversion_factor) == 0.0:
 					d.conversion_factor = (
 						get_conversion_factor(d.item_code, d.uom).get("conversion_factor") or 1.0
@@ -556,7 +556,7 @@ class SellingController(StockController):
 		if doc_list:
 			po_nos += [
 				d.po_no
-				for d in frappe.get_all(ref_doctype, "po_no", filters={"name": ("in", doc_list)})
+				for d in capkpi.get_all(ref_doctype, "po_no", filters={"name": ("in", doc_list)})
 				if d.get("po_no")
 			]
 
@@ -580,7 +580,7 @@ class SellingController(StockController):
 
 	def validate_for_duplicate_items(self):
 		check_list, chk_dupl_itm = [], []
-		if cint(frappe.db.get_single_value("Selling Settings", "allow_multiple_items")):
+		if cint(capkpi.db.get_single_value("Selling Settings", "allow_multiple_items")):
 			return
 		if self.doctype == "Sales Invoice" and self.is_consolidated:
 			return
@@ -614,20 +614,20 @@ class SellingController(StockController):
 				stock_items = [d.item_code, d.description, d.warehouse, ""]
 				non_stock_items = [d.item_code, d.description]
 
-			duplicate_items_msg = _("Item {0} entered multiple times.").format(frappe.bold(d.item_code))
+			duplicate_items_msg = _("Item {0} entered multiple times.").format(capkpi.bold(d.item_code))
 			duplicate_items_msg += "<br><br>"
 			duplicate_items_msg += _("Please enable {} in {} to allow same item in multiple rows").format(
-				frappe.bold("Allow Item to Be Added Multiple Times in a Transaction"),
+				capkpi.bold("Allow Item to Be Added Multiple Times in a Transaction"),
 				get_link_to_form("Selling Settings", "Selling Settings"),
 			)
-			if frappe.db.get_value("Item", d.item_code, "is_stock_item") == 1:
+			if capkpi.db.get_value("Item", d.item_code, "is_stock_item") == 1:
 				if stock_items in check_list:
-					frappe.throw(duplicate_items_msg)
+					capkpi.throw(duplicate_items_msg)
 				else:
 					check_list.append(stock_items)
 			else:
 				if non_stock_items in chk_dupl_itm:
-					frappe.throw(duplicate_items_msg)
+					capkpi.throw(duplicate_items_msg)
 				else:
 					chk_dupl_itm.append(non_stock_items)
 
@@ -636,8 +636,8 @@ class SellingController(StockController):
 
 		for d in items:
 			if d.get("target_warehouse") and d.get("warehouse") == d.get("target_warehouse"):
-				warehouse = frappe.bold(d.get("target_warehouse"))
-				frappe.throw(
+				warehouse = capkpi.bold(d.get("target_warehouse"))
+				capkpi.throw(
 					_("Row {0}: Delivery Warehouse ({1}) and Customer Warehouse ({2}) can not be same").format(
 						d.idx, warehouse, warehouse
 					)
@@ -646,7 +646,7 @@ class SellingController(StockController):
 		if not self.get("is_internal_customer") and any(d.get("target_warehouse") for d in items):
 			msg = _("Target Warehouse is set for some items but the customer is not an internal customer.")
 			msg += " " + _("This {} will be treated as material transfer.").format(_(self.doctype))
-			frappe.msgprint(msg, title="Internal Transfer", alert=True)
+			capkpi.msgprint(msg, title="Internal Transfer", alert=True)
 
 	def validate_items(self):
 		# validate items to see if they have is_sales_item enabled

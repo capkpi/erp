@@ -1,11 +1,11 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp.buying");
-frappe.provide("erp.accounts.dimensions");
+capkpi.provide("erp.buying");
+capkpi.provide("erp.accounts.dimensions");
 {% include 'erp/public/js/controllers/buying.js' %};
 
-frappe.ui.form.on("Purchase Order", {
+capkpi.ui.form.on("Purchase Order", {
 	setup: function(frm) {
 
 		frm.set_query("reserve_warehouse", "supplied_items", function() {
@@ -37,7 +37,7 @@ frappe.ui.form.on("Purchase Order", {
 	onload: function(frm) {
 		set_schedule_date(frm);
 		if (!frm.doc.transaction_date){
-			frm.set_value('transaction_date', frappe.datetime.get_today())
+			frm.set_value('transaction_date', capkpi.datetime.get_today())
 		}
 
 		erp.queries.setup_queries(frm, "Warehouse", function() {
@@ -77,8 +77,8 @@ frappe.ui.form.on("Purchase Order", {
 					args: { purchase_order: frm.doc.name, po_details: po_details },
 					callback: function(r) {
 						if (r && r.message) {
-							const doc = frappe.model.sync(r.message);
-							frappe.set_route("Form", doc[0].doctype, doc[0].name);
+							const doc = capkpi.model.sync(r.message);
+							capkpi.set_route("Form", doc[0].doctype, doc[0].name);
 						}
 					}
 				});
@@ -87,7 +87,7 @@ frappe.ui.form.on("Purchase Order", {
 	}
 });
 
-frappe.ui.form.on("Purchase Order Item", {
+capkpi.ui.form.on("Purchase Order Item", {
 	schedule_date: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 		if (row.schedule_date) {
@@ -321,7 +321,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 			}
 		]
 
-		me.dialog = new frappe.ui.Dialog({
+		me.dialog = new capkpi.ui.Dialog({
 			title: title, fields: fields
 		});
 
@@ -353,7 +353,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 				me.values.sub_con_rm_items.map((row,i) => {
 					if (!row.item_code || !row.rm_item_code || !row.warehouse || !row.qty || row.qty === 0) {
 						let row_id = i+1;
-						frappe.throw(__("Item Code, warehouse and quantity are required on row {0}", [row_id]));
+						capkpi.throw(__("Item Code, warehouse and quantity are required on row {0}", [row_id]));
 					}
 				})
 				me._make_rm_stock_entry(me.dialog.fields_dict.sub_con_rm_items.grid.get_selected_children())
@@ -369,7 +369,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 	},
 
 	_make_rm_stock_entry: function(rm_items) {
-		frappe.call({
+		capkpi.call({
 			method:"erp.buying.doctype.purchase_order.purchase_order.make_rm_stock_entry",
 			args: {
 				purchase_order: cur_frm.doc.name,
@@ -377,21 +377,21 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 			}
 			,
 			callback: function(r) {
-				var doclist = frappe.model.sync(r.message);
-				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+				var doclist = capkpi.model.sync(r.message);
+				capkpi.set_route("Form", doclist[0].doctype, doclist[0].name);
 			}
 		});
 	},
 
 	make_inter_company_order: function(frm) {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.buying.doctype.purchase_order.purchase_order.make_inter_company_sales_order",
 			frm: frm
 		});
 	},
 
 	make_purchase_receipt: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.buying.doctype.purchase_order.purchase_order.make_purchase_receipt",
 			frm: cur_frm,
 			freeze_message: __("Creating Purchase Receipt ...")
@@ -399,7 +399,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 	},
 
 	make_purchase_invoice: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.buying.doctype.purchase_order.purchase_order.make_purchase_invoice",
 			frm: cur_frm
 		})
@@ -449,7 +449,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 
 		this.frm.add_custom_button(__('Update Rate as per Last Purchase'),
 			function() {
-				frappe.call({
+				capkpi.call({
 					"method": "get_last_purchase_rate",
 					"doc": me.frm.doc,
 					callback: function(r, rt) {
@@ -467,7 +467,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 					my_items.push(me.frm.doc.items[i].item_code);
 				}
 			}
-			frappe.call({
+			capkpi.call({
 				method: "erp.buying.utils.get_linked_material_requests",
 				args:{
 					items: my_items
@@ -490,10 +490,10 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 								me.frm.doc.items[i].stock_qty = my_qty * me.frm.doc.items[i].conversion_factor;
 								me.frm.doc.items[i].qty = my_qty;
 
-								frappe.msgprint("Assigning " + d.mr_name + " to " + d.item_code + " (row " + me.frm.doc.items[i].idx + ")");
+								capkpi.msgprint("Assigning " + d.mr_name + " to " + d.item_code + " (row " + me.frm.doc.items[i].idx + ")");
 								if (qty > 0) {
-									frappe.msgprint("Splitting " + qty + " units of " + d.item_code);
-									var new_row = frappe.model.add_child(me.frm.doc, me.frm.doc.items[i].doctype, "items");
+									capkpi.msgprint("Splitting " + qty + " units of " + d.item_code);
+									var new_row = capkpi.model.add_child(me.frm.doc, me.frm.doc.items[i].doctype, "items");
 									item_length++;
 
 									for (var key in me.frm.doc.items[i]) {
@@ -521,7 +521,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 	},
 
 	items_add: function(doc, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
+		var row = capkpi.get_doc(cdt, cdn);
 		if(doc.schedule_date) {
 			row.schedule_date = doc.schedule_date;
 			refresh_field("schedule_date", cdn, "items");
@@ -536,7 +536,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 
 	hold_purchase_order: function(){
 		var me = this;
-		var d = new frappe.ui.Dialog({
+		var d = new capkpi.ui.Dialog({
 			title: __('Reason for Hold'),
 			fields: [
 				{
@@ -549,14 +549,14 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 				var data = d.get_values();
 				let reason_for_hold = 'Reason for hold: ' + data.reason_for_hold;
 
-				frappe.call({
-					method: "frappe.desk.form.utils.add_comment",
+				capkpi.call({
+					method: "capkpi.desk.form.utils.add_comment",
 					args: {
 						reference_doctype: me.frm.doctype,
 						reference_name: me.frm.docname,
 						content: __(reason_for_hold),
-						comment_email: frappe.session.user,
-						comment_by: frappe.session.user_fullname
+						comment_email: capkpi.session.user,
+						comment_by: capkpi.session.user_fullname
 					},
 					callback: function(r) {
 						if(!r.exc) {
@@ -595,7 +595,7 @@ erp.buying.PurchaseOrderController = erp.buying.BuyingController.extend({
 $.extend(cur_frm.cscript, new erp.buying.PurchaseOrderController({frm: cur_frm}));
 
 cur_frm.cscript.update_status= function(label, status){
-	frappe.call({
+	capkpi.call({
 		method: "erp.buying.doctype.purchase_order.purchase_order.update_status",
 		args: {status: status, name: cur_frm.doc.name},
 		callback: function(r) {
@@ -631,9 +631,9 @@ function set_schedule_date(frm) {
 	}
 }
 
-frappe.provide("erp.buying");
+capkpi.provide("erp.buying");
 
-frappe.ui.form.on("Purchase Order", "is_subcontracted", function(frm) {
+capkpi.ui.form.on("Purchase Order", "is_subcontracted", function(frm) {
 	if (frm.doc.is_subcontracted === "Yes") {
 		erp.buying.get_default_bom(frm);
 	}

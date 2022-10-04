@@ -6,17 +6,17 @@ import hashlib
 import hmac
 import json
 
-import frappe
+import capkpi
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def webhooks():
-	r = frappe.request
+	r = capkpi.request
 	if not r:
 		return
 
 	if not authenticate_signature(r):
-		raise frappe.AuthenticationError
+		raise capkpi.AuthenticationError
 
 	gocardless_events = json.loads(r.get_data()) or []
 	for event in gocardless_events["events"]:
@@ -51,12 +51,12 @@ def set_mandate_status(event):
 		disabled = 1
 
 	for mandate in mandates:
-		frappe.db.set_value("GoCardless Mandate", mandate, "disabled", disabled)
+		capkpi.db.set_value("GoCardless Mandate", mandate, "disabled", disabled)
 
 
 def authenticate_signature(r):
 	"""Returns True if the received signature matches the generated signature"""
-	received_signature = frappe.get_request_header("Webhook-Signature")
+	received_signature = capkpi.get_request_header("Webhook-Signature")
 
 	if not received_signature:
 		return False
@@ -73,7 +73,7 @@ def get_webhook_keys():
 	def _get_webhook_keys():
 		webhook_keys = [
 			d.webhooks_secret
-			for d in frappe.get_all(
+			for d in capkpi.get_all(
 				"GoCardless Settings",
 				fields=["webhooks_secret"],
 			)
@@ -82,8 +82,8 @@ def get_webhook_keys():
 
 		return webhook_keys
 
-	return frappe.cache().get_value("gocardless_webhooks_secret", _get_webhook_keys)
+	return capkpi.cache().get_value("gocardless_webhooks_secret", _get_webhook_keys)
 
 
 def clear_cache():
-	frappe.cache().delete_value("gocardless_webhooks_secret")
+	capkpi.cache().delete_value("gocardless_webhooks_secret")

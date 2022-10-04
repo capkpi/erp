@@ -4,11 +4,11 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.email.inbox import link_communication_to_document
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import cint, get_fullname
+import capkpi
+from capkpi import _
+from capkpi.email.inbox import link_communication_to_document
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import cint, get_fullname
 
 from erp.accounts.party import get_party_account_currency
 from erp.setup.utils import get_exchange_rate
@@ -18,15 +18,15 @@ from erp.utilities.transaction_base import TransactionBase
 class Opportunity(TransactionBase):
 	def after_insert(self):
 		if self.opportunity_from == "Lead":
-			frappe.get_doc("Lead", self.party_name).set_status(update=True)
+			capkpi.get_doc("Lead", self.party_name).set_status(update=True)
 
 	def validate(self):
-		self._prev = frappe._dict(
+		self._prev = capkpi._dict(
 			{
-				"contact_date": frappe.db.get_value("Opportunity", self.name, "contact_date")
+				"contact_date": capkpi.db.get_value("Opportunity", self.name, "contact_date")
 				if (not cint(self.get("__islocal")))
 				else None,
-				"contact_by": frappe.db.get_value("Opportunity", self.name, "contact_by")
+				"contact_by": capkpi.db.get_value("Opportunity", self.name, "contact_by")
 				if (not cint(self.get("__islocal")))
 				else None,
 			}
@@ -49,8 +49,8 @@ class Opportunity(TransactionBase):
 		for field in self.meta.fields:
 			if not self.get(field.fieldname):
 				try:
-					value = frappe.db.get_value(self.opportunity_from, self.party_name, field.fieldname)
-					frappe.db.set(self, field.fieldname, value)
+					value = capkpi.db.get_value(self.opportunity_from, self.party_name, field.fieldname)
+					capkpi.db.set(self, field.fieldname, value)
 				except Exception:
 					continue
 
@@ -58,7 +58,7 @@ class Opportunity(TransactionBase):
 		"""Set lead against new opportunity"""
 		if (not self.get("party_name")) and self.contact_email:
 			# check if customer is already created agains the self.contact_email
-			customer = frappe.db.sql(
+			customer = capkpi.db.sql(
 				"""select
 				distinct `tabDynamic Link`.link_name as customer
 				from
@@ -81,7 +81,7 @@ class Opportunity(TransactionBase):
 				self.opportunity_from = "Customer"
 				return
 
-			lead_name = frappe.db.get_value("Lead", {"email_id": self.contact_email})
+			lead_name = capkpi.db.get_value("Lead", {"email_id": self.contact_email})
 			if not lead_name:
 				sender_name = get_fullname(self.contact_email)
 				if sender_name == self.contact_email:
@@ -95,7 +95,7 @@ class Opportunity(TransactionBase):
 					for s in email_split:
 						sender_name += s.capitalize() + " "
 
-				lead = frappe.get_doc(
+				lead = capkpi.get_doc(
 					{"doctype": "Lead", "email_id": self.contact_email, "lead_name": sender_name or "Unknown"}
 				)
 
@@ -106,13 +106,13 @@ class Opportunity(TransactionBase):
 			self.opportunity_from = "Lead"
 			self.party_name = lead_name
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def declare_enquiry_lost(self, lost_reasons_list, detailed_reason=None):
 		if not self.has_active_quotation():
-			frappe.db.set(self, "status", "Lost")
+			capkpi.db.set(self, "status", "Lost")
 
 			if detailed_reason:
-				frappe.db.set(self, "order_lost_reason", detailed_reason)
+				capkpi.db.set(self, "order_lost_reason", detailed_reason)
 
 			for reason in lost_reasons_list:
 				self.append("lost_reasons", reason)
@@ -120,20 +120,20 @@ class Opportunity(TransactionBase):
 			self.save()
 
 		else:
-			frappe.throw(_("Cannot declare as lost, because Quotation has been made."))
+			capkpi.throw(_("Cannot declare as lost, because Quotation has been made."))
 
 	def on_trash(self):
 		self.delete_events()
 
 	def has_active_quotation(self):
 		if not self.with_items:
-			return frappe.get_all(
+			return capkpi.get_all(
 				"Quotation",
 				{"opportunity": self.name, "status": ("not in", ["Lost", "Closed"]), "docstatus": 1},
 				"name",
 			)
 		else:
-			return frappe.db.sql(
+			return capkpi.db.sql(
 				"""
 				select q.name
 				from `tabQuotation` q, `tabQuotation Item` qi
@@ -144,11 +144,11 @@ class Opportunity(TransactionBase):
 
 	def has_ordered_quotation(self):
 		if not self.with_items:
-			return frappe.get_all(
+			return capkpi.get_all(
 				"Quotation", {"opportunity": self.name, "status": "Ordered", "docstatus": 1}, "name"
 			)
 		else:
-			return frappe.db.sql(
+			return capkpi.db.sql(
 				"""
 				select q.name
 				from `tabQuotation` q, `tabQuotation Item` qi
@@ -158,7 +158,7 @@ class Opportunity(TransactionBase):
 			)
 
 	def has_lost_quotation(self):
-		lost_quotation = frappe.db.sql(
+		lost_quotation = capkpi.db.sql(
 			"""
 			select name
 			from `tabQuotation`
@@ -174,9 +174,9 @@ class Opportunity(TransactionBase):
 
 	def validate_cust_name(self):
 		if self.party_name and self.opportunity_from == "Customer":
-			self.customer_name = frappe.db.get_value("Customer", self.party_name, "customer_name")
+			self.customer_name = capkpi.db.get_value("Customer", self.party_name, "customer_name")
 		elif self.party_name and self.opportunity_from == "Lead":
-			lead_name, company_name = frappe.db.get_value(
+			lead_name, company_name = capkpi.db.get_value(
 				"Lead", self.party_name, ["lead_name", "company_name"]
 			)
 			self.customer_name = company_name or lead_name
@@ -186,7 +186,7 @@ class Opportunity(TransactionBase):
 
 	def add_calendar_event(self, opts=None, force=False):
 		if not opts:
-			opts = frappe._dict()
+			opts = capkpi._dict()
 
 		opts.description = ""
 		opts.contact_date = self.contact_date
@@ -206,7 +206,7 @@ class Opportunity(TransactionBase):
 		opts.description += f". By : {self.contact_by}"
 
 		if self.to_discuss:
-			opts.description += f" To Discuss : {frappe.render_template(self.to_discuss, {'doc': self})}"
+			opts.description += f" To Discuss : {capkpi.render_template(self.to_discuss, {'doc': self})}"
 
 		super(Opportunity, self).add_calendar_event(opts, force)
 
@@ -221,15 +221,15 @@ class Opportunity(TransactionBase):
 			if not d.item_code:
 				continue
 
-			item = frappe.db.get_value("Item", d.item_code, item_fields, as_dict=True)
+			item = capkpi.db.get_value("Item", d.item_code, item_fields, as_dict=True)
 			for key in item_fields:
 				if not d.get(key):
 					d.set(key, item.get(key))
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_item_details(item_code):
-	item = frappe.db.sql(
+	item = capkpi.db.sql(
 		"""select item_name, stock_uom, image, description, item_group, brand
 		from `tabItem` where name = %s""",
 		item_code,
@@ -245,14 +245,14 @@ def get_item_details(item_code):
 	}
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_quotation(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		from erp.controllers.accounts_controller import get_default_taxes_and_charges
 
-		quotation = frappe.get_doc(target)
+		quotation = capkpi.get_doc(target)
 
-		company_currency = frappe.get_cached_value("Company", quotation.company, "default_currency")
+		company_currency = capkpi.get_cached_value("Company", quotation.company, "default_currency")
 
 		if quotation.quotation_to == "Customer" and quotation.party_name:
 			party_account_currency = get_party_account_currency(
@@ -312,7 +312,7 @@ def make_quotation(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_request_for_quotation(source_name, target_doc=None):
 	def update_item(obj, target, source_parent):
 		target.conversion_factor = 1.0
@@ -334,7 +334,7 @@ def make_request_for_quotation(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_customer(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.opportunity_name = source.name
@@ -358,7 +358,7 @@ def make_customer(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_supplier_quotation(source_name, target_doc=None):
 	doclist = get_mapped_doc(
 		"Opportunity",
@@ -373,11 +373,11 @@ def make_supplier_quotation(source_name, target_doc=None):
 	return doclist
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def set_multiple_status(names, status):
 	names = json.loads(names)
 	for name in names:
-		opp = frappe.get_doc("Opportunity", name)
+		opp = capkpi.get_doc("Opportunity", name)
 		opp.status = status
 		opp.save()
 
@@ -385,10 +385,10 @@ def set_multiple_status(names, status):
 def auto_close_opportunity():
 	"""auto close the `Replied` Opportunities after 7 days"""
 	auto_close_after_days = (
-		frappe.db.get_single_value("Selling Settings", "close_opportunity_after_days") or 15
+		capkpi.db.get_single_value("Selling Settings", "close_opportunity_after_days") or 15
 	)
 
-	opportunities = frappe.db.sql(
+	opportunities = capkpi.db.sql(
 		""" select name from tabOpportunity where status='Replied' and
 		modified<DATE_SUB(CURDATE(), INTERVAL %s DAY) """,
 		(auto_close_after_days),
@@ -396,18 +396,18 @@ def auto_close_opportunity():
 	)
 
 	for opportunity in opportunities:
-		doc = frappe.get_doc("Opportunity", opportunity.get("name"))
+		doc = capkpi.get_doc("Opportunity", opportunity.get("name"))
 		doc.status = "Closed"
 		doc.flags.ignore_permissions = True
 		doc.flags.ignore_mandatory = True
 		doc.save()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_opportunity_from_communication(communication, company, ignore_communication_links=False):
 	from erp.crm.doctype.lead.lead import make_lead_from_communication
 
-	doc = frappe.get_doc("Communication", communication)
+	doc = capkpi.get_doc("Communication", communication)
 
 	lead = doc.reference_name if doc.reference_doctype == "Lead" else None
 	if not lead:
@@ -415,7 +415,7 @@ def make_opportunity_from_communication(communication, company, ignore_communica
 
 	opportunity_from = "Lead"
 
-	opportunity = frappe.get_doc(
+	opportunity = capkpi.get_doc(
 		{
 			"doctype": "Opportunity",
 			"company": company,
@@ -429,18 +429,18 @@ def make_opportunity_from_communication(communication, company, ignore_communica
 	return opportunity.name
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_events(start, end, filters=None):
 	"""Returns events for Gantt / Calendar view rendering.
 	:param start: Start date-time.
 	:param end: End date-time.
 	:param filters: Filters (JSON).
 	"""
-	from frappe.desk.calendar import get_event_conditions
+	from capkpi.desk.calendar import get_event_conditions
 
 	conditions = get_event_conditions("Opportunity", filters)
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		"""
 		select
 			distinct `tabOpportunity`.name, `tabOpportunity`.customer_name, `tabOpportunity`.opportunity_amount,

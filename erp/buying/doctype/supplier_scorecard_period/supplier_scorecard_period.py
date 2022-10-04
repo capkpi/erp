@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, throw
-from frappe.model.document import Document
-from frappe.model.mapper import get_mapped_doc
+import capkpi
+from capkpi import _, throw
+from capkpi.model.document import Document
+from capkpi.model.mapper import get_mapped_doc
 
 import erp.buying.doctype.supplier_scorecard_variable.supplier_scorecard_variable as variable_functions
 from erp.buying.doctype.supplier_scorecard_criteria.supplier_scorecard_criteria import (
@@ -44,15 +44,15 @@ class SupplierScorecardPeriod(Document):
 				crit.score = min(
 					crit.max_score,
 					max(
-						0, frappe.safe_eval(self.get_eval_statement(crit.formula), None, {"max": max, "min": min})
+						0, capkpi.safe_eval(self.get_eval_statement(crit.formula), None, {"max": max, "min": min})
 					),
 				)
 			except Exception:
-				frappe.throw(
+				capkpi.throw(
 					_("Could not solve criteria score function for {0}. Make sure the formula is valid.").format(
 						crit.criteria_name
 					),
-					frappe.ValidationError,
+					capkpi.ValidationError,
 				)
 				crit.score = 0
 
@@ -64,13 +64,13 @@ class SupplierScorecardPeriod(Document):
 
 	def calculate_weighted_score(self, weighing_function):
 		try:
-			weighed_score = frappe.safe_eval(
+			weighed_score = capkpi.safe_eval(
 				self.get_eval_statement(weighing_function), None, {"max": max, "min": min}
 			)
 		except Exception:
-			frappe.throw(
+			capkpi.throw(
 				_("Could not solve weighted score function. Make sure the formula is valid."),
-				frappe.ValidationError,
+				capkpi.ValidationError,
 			)
 			weighed_score = 0
 		return weighed_score
@@ -99,10 +99,10 @@ def import_string_path(path):
 	return mod
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_supplier_scorecard(source_name, target_doc=None):
 	def update_criteria_fields(obj, target, source_parent):
-		target.max_score, target.formula = frappe.db.get_value(
+		target.max_score, target.formula = capkpi.db.get_value(
 			"Supplier Scorecard Criteria", obj.criteria_name, ["max_score", "formula"]
 		)
 

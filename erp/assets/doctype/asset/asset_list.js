@@ -1,4 +1,4 @@
-frappe.listview_settings['Asset'] = {
+capkpi.listview_settings['Asset'] = {
 	add_fields: ['status'],
 	get_indicator: function (doc) {
 		if (doc.status === "Fully Depreciated") {
@@ -35,7 +35,7 @@ frappe.listview_settings['Asset'] = {
 	onload: function(me) {
 		me.page.add_action_item('Make Asset Movement', function() {
 			const assets = me.get_checked_items();
-			frappe.call({
+			capkpi.call({
 				method: "erp.assets.doctype.asset.asset.make_asset_movement",
 				freeze: true,
 				args:{
@@ -43,8 +43,8 @@ frappe.listview_settings['Asset'] = {
 				},
 				callback: function (r) {
 					if (r.message) {
-						var doc = frappe.model.sync(r.message)[0];
-						frappe.set_route("Form", doc.doctype, doc.name);
+						var doc = capkpi.model.sync(r.message)[0];
+						capkpi.set_route("Form", doc.doctype, doc.name);
 					}
 				}
 			});

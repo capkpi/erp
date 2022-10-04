@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import flt
+import capkpi
+from capkpi import _
+from capkpi.utils import flt
 
 
 def execute(filters=None):
@@ -131,14 +131,14 @@ def get_conditions(filters):
 	conditions = ""
 
 	if filters.get("company"):
-		conditions += " AND parent.company=%s" % frappe.db.escape(filters.get("company"))
+		conditions += " AND parent.company=%s" % capkpi.db.escape(filters.get("company"))
 
 	if filters.get("cost_center") or filters.get("project"):
 		conditions += """
 			AND (child.`cost_center`=%s OR child.`project`=%s)
 			""" % (
-			frappe.db.escape(filters.get("cost_center")),
-			frappe.db.escape(filters.get("project")),
+			capkpi.db.escape(filters.get("cost_center")),
+			capkpi.db.escape(filters.get("project")),
 		)
 
 	if filters.get("from_date"):
@@ -189,7 +189,7 @@ def get_data(filters):
 
 def get_mapped_mr_details(conditions):
 	mr_records = {}
-	mr_details = frappe.db.sql(
+	mr_details = capkpi.db.sql(
 		"""
 		SELECT
 			parent.transaction_date,
@@ -219,7 +219,7 @@ def get_mapped_mr_details(conditions):
 	procurement_record_against_mr = []
 	for record in mr_details:
 		if record.per_ordered:
-			mr_records.setdefault(record.name, []).append(frappe._dict(record))
+			mr_records.setdefault(record.name, []).append(capkpi._dict(record))
 		else:
 			procurement_record_details = dict(
 				material_request_date=record.transaction_date,
@@ -241,8 +241,8 @@ def get_mapped_mr_details(conditions):
 
 
 def get_mapped_pi_records():
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			"""
 		SELECT
 			pi_item.po_detail,
@@ -260,8 +260,8 @@ def get_mapped_pi_records():
 
 
 def get_mapped_pr_records():
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			"""
 		SELECT
 			pr_item.purchase_order_item,
@@ -278,7 +278,7 @@ def get_mapped_pr_records():
 
 
 def get_po_entries(conditions):
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		SELECT
 			child.name,

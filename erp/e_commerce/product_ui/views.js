@@ -24,7 +24,7 @@ erp.ProductView =  class {
 		this.prepare_search();
 		this.prepare_view_toggler();
 
-		frappe.require('/assets/js/e-commerce.min.js', function() {
+		capkpi.require('/assets/js/e-commerce.min.js', function() {
 			new erp.ProductSearch();
 		});
 	}
@@ -46,7 +46,7 @@ erp.ProductView =  class {
 
 		this.disable_view_toggler(true);
 
-		frappe.call({
+		capkpi.call({
 			method: "erp.e_commerce.api.get_product_filter_data",
 			args: {
 				query_args: args
@@ -103,7 +103,7 @@ erp.ProductView =  class {
 		let me = this;
 		this.prepare_product_area_wrapper("grid");
 
-		frappe.require('/assets/js/e-commerce.min.js', function() {
+		capkpi.require('/assets/js/e-commerce.min.js', function() {
 			new erp.ProductGrid({
 				items: items,
 				products_section: $("#products-grid-area"),
@@ -117,7 +117,7 @@ erp.ProductView =  class {
 		let me = this;
 		this.prepare_product_area_wrapper("list");
 
-		frappe.require('/assets/js/e-commerce.min.js', function() {
+		capkpi.require('/assets/js/e-commerce.min.js', function() {
 			new erp.ProductList({
 				items: items,
 				products_section: $("#products-list-area"),
@@ -137,7 +137,7 @@ erp.ProductView =  class {
 	}
 
 	get_query_filters() {
-		const filters = frappe.utils.get_query_params();
+		const filters = capkpi.utils.get_query_params();
 		let {field_filters, attribute_filters} = filters;
 
 		field_filters = field_filters ? JSON.parse(field_filters) : {};
@@ -162,7 +162,7 @@ erp.ProductView =  class {
 					</div>
 					<div class="col-9 text-right">
 			`;
-			let query_params = frappe.utils.get_query_params();
+			let query_params = capkpi.utils.get_query_params();
 			let start = query_params.start ? cint(JSON.parse(query_params.start)) : 0;
 			let page_length = settings.products_per_page || 0;
 
@@ -274,9 +274,9 @@ erp.ProductView =  class {
 			$btn.prop('disabled', true);
 			const start = $btn.data('start');
 
-			let query_params = frappe.utils.get_query_params();
+			let query_params = capkpi.utils.get_query_params();
 			query_params.start = start;
-			let path = window.location.pathname + '?' + frappe.utils.get_url_from_dict(query_params);
+			let path = window.location.pathname + '?' + capkpi.utils.get_url_from_dict(query_params);
 			window.location.href = path;
 		});
 	}
@@ -328,7 +328,7 @@ erp.ProductView =  class {
 	}
 
 	restore_discount_filter() {
-		const filters = frappe.utils.get_query_params();
+		const filters = capkpi.utils.get_query_params();
 		let field_filters = filters.field_filters;
 		if (!field_filters) return;
 
@@ -426,7 +426,7 @@ erp.ProductView =  class {
 		});
 
 		// bind filter lookup input box
-		$('.filter-lookup-input').on('keydown', frappe.utils.debounce((e) => {
+		$('.filter-lookup-input').on('keydown', capkpi.utils.debounce((e) => {
 			const $input = $(e.target);
 			const keyword = ($input.val() || '').toLowerCase();
 			const $filter_options = $input.next('.filter-options');
@@ -443,7 +443,7 @@ erp.ProductView =  class {
 	}
 
 	change_route_with_filters() {
-		let route_params = frappe.utils.get_query_params();
+		let route_params = capkpi.utils.get_query_params();
 
 		let start = this.if_key_exists(route_params.start) || 0;
 		if (this.from_filters) {
@@ -464,7 +464,7 @@ erp.ProductView =  class {
 	}
 
 	restore_filters_state() {
-		const filters = frappe.utils.get_query_params();
+		const filters = capkpi.utils.get_query_params();
 		let {field_filters, attribute_filters} = filters;
 
 		if (field_filters) {
@@ -498,7 +498,7 @@ erp.ProductView =  class {
 			</div>
 		`;
 		let no_results_section = `
-			<div class="cart-empty frappe-card mt-4">
+			<div class="cart-empty capkpi-card mt-4">
 				<div class="cart-empty-state">
 					<img src="/assets/erp/images/ui-states/cart-empty-state.png" alt="Empty Cart">
 				</div>

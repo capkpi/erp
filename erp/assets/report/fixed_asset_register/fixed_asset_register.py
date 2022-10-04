@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cstr, flt, formatdate, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr, flt, formatdate, getdate
 
 from erp.accounts.report.financial_statements import (
 	get_fiscal_year_data,
@@ -14,7 +14,7 @@ from erp.accounts.report.financial_statements import (
 
 
 def execute(filters=None):
-	filters = frappe._dict(filters or {})
+	filters = capkpi._dict(filters or {})
 	columns = get_columns(filters)
 	data = get_data(filters)
 	chart = (
@@ -29,7 +29,7 @@ def execute(filters=None):
 def get_conditions(filters):
 	conditions = {"docstatus": 1}
 	status = filters.status
-	date_field = frappe.scrub(filters.date_based_on or "Purchase Date")
+	date_field = capkpi.scrub(filters.date_based_on or "Purchase Date")
 
 	if filters.get("company"):
 		conditions["company"] = filters.company
@@ -69,15 +69,15 @@ def get_data(filters):
 	pr_supplier_map = get_purchase_receipt_supplier_map()
 	pi_supplier_map = get_purchase_invoice_supplier_map()
 
-	group_by = frappe.scrub(filters.get("group_by"))
+	group_by = capkpi.scrub(filters.get("group_by"))
 
 	if group_by == "asset_category":
 		fields = ["asset_category", "gross_purchase_amount", "opening_accumulated_depreciation"]
-		assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields, group_by=group_by)
+		assets_record = capkpi.db.get_all("Asset", filters=conditions, fields=fields, group_by=group_by)
 
 	elif group_by == "location":
 		fields = ["location", "gross_purchase_amount", "opening_accumulated_depreciation"]
-		assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields, group_by=group_by)
+		assets_record = capkpi.db.get_all("Asset", filters=conditions, fields=fields, group_by=group_by)
 
 	else:
 		fields = [
@@ -95,7 +95,7 @@ def get_data(filters):
 			"purchase_invoice",
 			"opening_accumulated_depreciation",
 		]
-		assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields)
+		assets_record = capkpi.db.get_all("Asset", filters=conditions, fields=fields)
 
 	for asset in assets_record:
 		asset_value = (
@@ -127,7 +127,7 @@ def get_data(filters):
 
 def prepare_chart_data(data, filters):
 	labels_values_map = {}
-	date_field = frappe.scrub(filters.date_based_on)
+	date_field = capkpi.scrub(filters.date_based_on)
 
 	period_list = get_period_list(
 		filters.from_fiscal_year,
@@ -141,7 +141,7 @@ def prepare_chart_data(data, filters):
 
 	for d in period_list:
 		labels_values_map.setdefault(
-			d.get("label"), frappe._dict({"asset_value": 0, "depreciated_amount": 0})
+			d.get("label"), capkpi._dict({"asset_value": 0, "depreciated_amount": 0})
 		)
 
 	for d in data:
@@ -173,8 +173,8 @@ def prepare_chart_data(data, filters):
 def get_finance_book_value_map(filters):
 	date = filters.to_date if filters.filter_based_on == "Date Range" else filters.year_end_date
 
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			""" Select
 		parent, SUM(depreciation_amount)
 		FROM `tabDepreciation Schedule`
@@ -190,8 +190,8 @@ def get_finance_book_value_map(filters):
 
 
 def get_purchase_receipt_supplier_map():
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			""" Select
 		pr.name, pr.supplier
 		FROM `tabPurchase Receipt` pr, `tabPurchase Receipt Item` pri
@@ -205,8 +205,8 @@ def get_purchase_receipt_supplier_map():
 
 
 def get_purchase_invoice_supplier_map():
-	return frappe._dict(
-		frappe.db.sql(
+	return capkpi._dict(
+		capkpi.db.sql(
 			""" Select
 		pi.name, pi.supplier
 		FROM `tabPurchase Invoice` pi, `tabPurchase Invoice Item` pii
@@ -225,7 +225,7 @@ def get_columns(filters):
 			{
 				"label": _("{}").format(filters.get("group_by")),
 				"fieldtype": "Link",
-				"fieldname": frappe.scrub(filters.get("group_by")),
+				"fieldname": capkpi.scrub(filters.get("group_by")),
 				"options": filters.get("group_by"),
 				"width": 120,
 			},

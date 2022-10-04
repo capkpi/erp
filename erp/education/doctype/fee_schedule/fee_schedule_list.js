@@ -1,4 +1,4 @@
-frappe.listview_settings['Fee Schedule'] = {
+capkpi.listview_settings['Fee Schedule'] = {
 	add_fields: ["fee_creation_status", "due_date", "grand_total"],
 	get_indicator: function(doc) {
 		if (doc.fee_creation_status=="Successful") {

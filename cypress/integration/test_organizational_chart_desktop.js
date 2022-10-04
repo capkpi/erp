@@ -9,7 +9,7 @@ context('Organizational Chart', () => {
 		cy.visit('/app/organizational-chart');
 		cy.url().should('include', '/organizational-chart');
 
-		cy.window().its('frappe.csrf_token').then(csrf_token => {
+		cy.window().its('capkpi.csrf_token').then(csrf_token => {
 			return cy.request({
 				url: `/api/method/erp.tests.ui_test_helpers.create_employee_records`,
 				method: 'POST',
@@ -21,7 +21,7 @@ context('Organizational Chart', () => {
 				timeout: 60000
 			}).then(res => {
 				expect(res.status).eq(200);
-				cy.get('.frappe-control[data-fieldname=company] input').focus().as('input');
+				cy.get('.capkpi-control[data-fieldname=company] input').focus().as('input');
 				cy.get('@input')
 					.clear({ force: true })
 					.type('Test Org Chart{downarrow}{enter}', { force: true })

@@ -1,11 +1,11 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp.accounts");
-frappe.provide("erp.journal_entry");
+capkpi.provide("erp.accounts");
+capkpi.provide("erp.journal_entry");
 
 
-frappe.ui.form.on("Journal Entry", {
+capkpi.ui.form.on("Journal Entry", {
 	setup: function(frm) {
 		frm.add_fetch("bank_account", "account", "account");
 		frm.ignore_doctypes_on_cancel_all = ['Sales Invoice', 'Purchase Invoice'];
@@ -16,7 +16,7 @@ frappe.ui.form.on("Journal Entry", {
 
 		if(frm.doc.docstatus > 0) {
 			frm.add_custom_button(__('Ledger'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					"voucher_no": frm.doc.name,
 					"from_date": frm.doc.posting_date,
 					"to_date": moment(frm.doc.modified).format('YYYY-MM-DD'),
@@ -25,7 +25,7 @@ frappe.ui.form.on("Journal Entry", {
 					"group_by": '',
 					"show_cancelled_entries": frm.doc.docstatus === 2
 				};
-				frappe.set_route("query-report", "General Ledger");
+				capkpi.set_route("query-report", "General Ledger");
 			}, __('View'));
 		}
 
@@ -53,7 +53,7 @@ frappe.ui.form.on("Journal Entry", {
 	},
 
 	make_inter_company_journal_entry: function(frm) {
-		var d = new frappe.ui.Dialog({
+		var d = new capkpi.ui.Dialog({
 			title: __("Select Company"),
 			fields: [
 				{
@@ -75,7 +75,7 @@ frappe.ui.form.on("Journal Entry", {
 		d.set_primary_action(__('Create'), function() {
 			d.hide();
 			var args = d.get_values();
-			frappe.call({
+			capkpi.call({
 				args: {
 					"name": frm.doc.name,
 					"voucher_type": frm.doc.voucher_type,
@@ -84,8 +84,8 @@ frappe.ui.form.on("Journal Entry", {
 				method: "erp.accounts.doctype.journal_entry.journal_entry.make_inter_company_journal_entry",
 				callback: function (r) {
 					if (r.message) {
-						var doc = frappe.model.sync(r.message)[0];
-						frappe.set_route("Form", doc.doctype, doc.name);
+						var doc = capkpi.model.sync(r.message)[0];
+						capkpi.set_route("Form", doc.doctype, doc.name);
 					}
 				}
 			});
@@ -106,8 +106,8 @@ frappe.ui.form.on("Journal Entry", {
 	},
 
 	company: function(frm) {
-		frappe.call({
-			method: "frappe.client.get_value",
+		capkpi.call({
+			method: "capkpi.client.get_value",
 			args: {
 				doctype: "Company",
 				filters: {"name": frm.doc.company},
@@ -116,7 +116,7 @@ frappe.ui.form.on("Journal Entry", {
 			callback: function(r){
 				if(r.message){
 					$.each(frm.doc.accounts || [], function(i, jvd) {
-						frappe.model.set_value(jvd.doctype, jvd.name, "cost_center", r.message.cost_center);
+						capkpi.model.set_value(jvd.doctype, jvd.name, "cost_center", r.message.cost_center);
 					});
 				}
 			}
@@ -131,7 +131,7 @@ frappe.ui.form.on("Journal Entry", {
 
 		if((!(frm.doc.accounts || []).length) || ((frm.doc.accounts || []).length === 1 && !frm.doc.accounts[0].account)) {
 			if(in_list(["Bank Entry", "Cash Entry"], frm.doc.voucher_type)) {
-				return frappe.call({
+				return capkpi.call({
 					type: "GET",
 					method: "erp.accounts.doctype.journal_entry.journal_entry.get_default_bank_cash_account",
 					args: {
@@ -154,9 +154,9 @@ frappe.ui.form.on("Journal Entry", {
 
 	from_template: function(frm){
 		if (frm.doc.from_template){
-			frappe.db.get_doc("Journal Entry Template", frm.doc.from_template)
+			capkpi.db.get_doc("Journal Entry Template", frm.doc.from_template)
 				.then((doc) => {
-					frappe.model.clear_table(frm.doc, "accounts");
+					capkpi.model.clear_table(frm.doc, "accounts");
 					frm.set_value({
 						"company": doc.company,
 						"voucher_type": doc.voucher_type,
@@ -172,14 +172,14 @@ frappe.ui.form.on("Journal Entry", {
 
 var update_jv_details = function(doc, r) {
 	$.each(r, function(i, d) {
-		var row = frappe.model.add_child(doc, "Journal Entry Account", "accounts");
+		var row = capkpi.model.add_child(doc, "Journal Entry Account", "accounts");
 		row.account = d.account;
 		row.balance = d.balance;
 	});
 	refresh_field("accounts");
 }
 
-erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
+erp.accounts.JournalEntry = capkpi.ui.form.Controller.extend({
 	onload: function() {
 		this.load_defaults();
 		this.setup_queries();
@@ -194,12 +194,12 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 	load_defaults: function() {
 		//this.frm.show_print_first = true;
 		if(this.frm.doc.__islocal && this.frm.doc.company) {
-			frappe.model.set_default_values(this.frm.doc);
+			capkpi.model.set_default_values(this.frm.doc);
 			$.each(this.frm.doc.accounts || [], function(i, jvd) {
-				frappe.model.set_default_values(jvd);
+				capkpi.model.set_default_values(jvd);
 			});
 			var posting_date = this.frm.doc.posting_date;
-			if(!this.frm.doc.amended_from) this.frm.set_value('posting_date', posting_date || frappe.datetime.get_today());
+			if(!this.frm.doc.amended_from) this.frm.set_value('posting_date', posting_date || capkpi.datetime.get_today());
 		}
 	},
 
@@ -222,7 +222,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 		});
 
 		me.frm.set_query("reference_name", "accounts", function(doc, cdt, cdn) {
-			var jvd = frappe.get_doc(cdt, cdn);
+			var jvd = capkpi.get_doc(cdt, cdn);
 
 			// expense claim
 			if(jvd.reference_type==="Expense Claim") {
@@ -245,7 +245,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 
 			// journal entry
 			if(jvd.reference_type==="Journal Entry") {
-				frappe.model.validate_missing(jvd, "account");
+				capkpi.model.validate_missing(jvd, "account");
 				return {
 					query: "erp.accounts.doctype.journal_entry.journal_entry.get_against_jv",
 					filters: {
@@ -275,7 +275,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 					out.filters.push([jvd.reference_type, "cost_center", "in", ["", jvd.cost_center]]);
 				}
 				// account filter
-				frappe.model.validate_missing(jvd, "account");
+				capkpi.model.validate_missing(jvd, "account");
 				var party_account_field = jvd.reference_type==="Sales Invoice" ? "debit_to": "credit_to";
 				out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
 
@@ -286,8 +286,8 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 
 			if(in_list(["Sales Order", "Purchase Order"], jvd.reference_type)) {
 				// party_type and party mandatory
-				frappe.model.validate_missing(jvd, "party_type");
-				frappe.model.validate_missing(jvd, "party");
+				capkpi.model.validate_missing(jvd, "party_type");
+				capkpi.model.validate_missing(jvd, "party");
 
 				out.filters.push([jvd.reference_type, "per_billed", "<", 100]);
 			}
@@ -313,7 +313,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 
 	setup_balance_formatter: function() {
 		const formatter = function(value, df, options, doc) {
-			var currency = frappe.meta.get_field_currency(df, doc);
+			var currency = capkpi.meta.get_field_currency(df, doc);
 			var dr_or_cr = value ? ('<label>' + (value > 0.0 ? __("Dr") : __("Cr")) + '</label>') : "";
 			return "<div style='text-align: right'>"
 				+ ((value==null || value==="") ? "" : format_currency(Math.abs(value), currency))
@@ -325,7 +325,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 	},
 
 	reference_name: function(doc, cdt, cdn) {
-		var d = frappe.get_doc(cdt, cdn);
+		var d = capkpi.get_doc(cdt, cdn);
 
 		if(d.reference_name) {
 			if (d.reference_type==="Purchase Invoice" && !flt(d.debit)) {
@@ -349,13 +349,13 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 			"company": company
 		}
 
-		return frappe.call({
+		return capkpi.call({
 			method: "erp.accounts.doctype.journal_entry.journal_entry.get_outstanding",
 			args: { args: args},
 			callback: function(r) {
 				if(r.message) {
 					$.each(r.message, function(field, value) {
-						frappe.model.set_value(child.doctype, child.name, field, value);
+						capkpi.model.set_value(child.doctype, child.name, field, value);
 					})
 				}
 			}
@@ -363,7 +363,7 @@ erp.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 	},
 
 	accounts_add: function(doc, cdt, cdn) {
-		var row = frappe.get_doc(cdt, cdn);
+		var row = capkpi.get_doc(cdt, cdn);
 		$.each(doc.accounts, function(i, d) {
 			if(d.account && d.party && d.party_type) {
 				row.account = d.account;
@@ -414,11 +414,11 @@ cur_frm.cscript.validate = function(doc,cdt,cdn) {
 	cur_frm.cscript.update_totals(doc);
 }
 
-frappe.ui.form.on("Journal Entry Account", {
+capkpi.ui.form.on("Journal Entry Account", {
 	party: function(frm, cdt, cdn) {
-		var d = frappe.get_doc(cdt, cdn);
+		var d = capkpi.get_doc(cdt, cdn);
 		if(!d.account && d.party_type && d.party) {
-			if(!frm.doc.company) frappe.throw(__("Please select Company"));
+			if(!frm.doc.company) capkpi.throw(__("Please select Company"));
 			return frm.call({
 				method: "erp.accounts.doctype.journal_entry.journal_entry.get_party_account_and_balance",
 				child: d,
@@ -456,18 +456,18 @@ frappe.ui.form.on("Journal Entry Account", {
 	},
 
 	exchange_rate: function(frm, cdt, cdn) {
-		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
+		var company_currency = capkpi.get_doc(":Company", frm.doc.company).default_currency;
 		var row = locals[cdt][cdn];
 
 		if(row.account_currency == company_currency || !frm.doc.multi_currency) {
-			frappe.model.set_value(cdt, cdn, "exchange_rate", 1);
+			capkpi.model.set_value(cdt, cdn, "exchange_rate", 1);
 		}
 
 		erp.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
 	}
 })
 
-frappe.ui.form.on("Journal Entry Account", "accounts_remove", function(frm) {
+capkpi.ui.form.on("Journal Entry Account", "accounts_remove", function(frm) {
 	cur_frm.cscript.update_totals(frm.doc);
 });
 
@@ -496,24 +496,24 @@ $.extend(erp.journal_entry, {
 	set_debit_credit_in_company_currency: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 
-		frappe.model.set_value(cdt, cdn, "debit",
+		capkpi.model.set_value(cdt, cdn, "debit",
 			flt(flt(row.debit_in_account_currency)*row.exchange_rate, precision("debit", row)));
 
-		frappe.model.set_value(cdt, cdn, "credit",
+		capkpi.model.set_value(cdt, cdn, "credit",
 			flt(flt(row.credit_in_account_currency)*row.exchange_rate, precision("credit", row)));
 
 		cur_frm.cscript.update_totals(frm.doc);
 	},
 
 	set_exchange_rate: function(frm, cdt, cdn) {
-		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
+		var company_currency = capkpi.get_doc(":Company", frm.doc.company).default_currency;
 		var row = locals[cdt][cdn];
 
 		if(row.account_currency == company_currency || !frm.doc.multi_currency) {
 			row.exchange_rate = 1;
 			erp.journal_entry.set_debit_credit_in_company_currency(frm, cdt, cdn);
 		} else if (!row.exchange_rate || row.exchange_rate == 1 || row.account_type == "Bank") {
-			frappe.call({
+			capkpi.call({
 				method: "erp.accounts.doctype.journal_entry.journal_entry.get_exchange_rate",
 				args: {
 					posting_date: frm.doc.posting_date,
@@ -543,7 +543,7 @@ $.extend(erp.journal_entry, {
 		var naming_series_options = frm.fields_dict.naming_series.df.options;
 		var naming_series_default = frm.fields_dict.naming_series.df.default || naming_series_options.split("\n")[0];
 
-		var dialog = new frappe.ui.Dialog({
+		var dialog = new capkpi.ui.Dialog({
 			title: __("Quick Journal Entry"),
 			fields: [
 				{fieldtype: "Currency", fieldname: "debit", label: __("Amount"), reqd: 1},
@@ -583,12 +583,12 @@ $.extend(erp.journal_entry, {
 			// this is required because triggers try to refresh the grid
 
 			var debit_row = frm.fields_dict.accounts.grid.add_new_row();
-			frappe.model.set_value(debit_row.doctype, debit_row.name, "account", values.debit_account);
-			frappe.model.set_value(debit_row.doctype, debit_row.name, "debit_in_account_currency", values.debit);
+			capkpi.model.set_value(debit_row.doctype, debit_row.name, "account", values.debit_account);
+			capkpi.model.set_value(debit_row.doctype, debit_row.name, "debit_in_account_currency", values.debit);
 
 			var credit_row = frm.fields_dict.accounts.grid.add_new_row();
-			frappe.model.set_value(credit_row.doctype, credit_row.name, "account", values.credit_account);
-			frappe.model.set_value(credit_row.doctype, credit_row.name, "credit_in_account_currency", values.debit);
+			capkpi.model.set_value(credit_row.doctype, credit_row.name, "account", values.credit_account);
+			capkpi.model.set_value(credit_row.doctype, credit_row.name, "credit_in_account_currency", values.debit);
 
 			frm.save();
 
@@ -605,14 +605,14 @@ $.extend(erp.journal_entry, {
 		};
 		if(!frm.doc.multi_currency) {
 			$.extend(filters, {
-				account_currency: frappe.get_doc(":Company", frm.doc.company).default_currency
+				account_currency: capkpi.get_doc(":Company", frm.doc.company).default_currency
 			});
 		}
 		return { filters: filters };
 	},
 
 	reverse_journal_entry: function() {
-		frappe.model.open_mapped_doc({
+		capkpi.model.open_mapped_doc({
 			method: "erp.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry",
 			frm: cur_frm
 		})
@@ -623,10 +623,10 @@ $.extend(erp.journal_entry, {
 	set_account_balance: function(frm, dt, dn) {
 		var d = locals[dt][dn];
 		if(d.account) {
-			if(!frm.doc.company) frappe.throw(__("Please select Company first"));
-			if(!frm.doc.posting_date) frappe.throw(__("Please select Posting Date first"));
+			if(!frm.doc.company) capkpi.throw(__("Please select Company first"));
+			if(!frm.doc.posting_date) capkpi.throw(__("Please select Posting Date first"));
 
-			return frappe.call({
+			return capkpi.call({
 				method: "erp.accounts.doctype.journal_entry.journal_entry.get_account_balance_and_party_type",
 				args: {
 					account: d.account,

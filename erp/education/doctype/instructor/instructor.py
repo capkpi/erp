@@ -2,23 +2,23 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.model.naming import set_name_by_naming_series
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.model.naming import set_name_by_naming_series
 
 
 class Instructor(Document):
 	def autoname(self):
-		naming_method = frappe.db.get_value("Education Settings", None, "instructor_created_by")
+		naming_method = capkpi.db.get_value("Education Settings", None, "instructor_created_by")
 		if not naming_method:
-			frappe.throw(_("Please setup Instructor Naming System in Education > Education Settings"))
+			capkpi.throw(_("Please setup Instructor Naming System in Education > Education Settings"))
 		else:
 			if naming_method == "Naming Series":
 				set_name_by_naming_series(self)
 			elif naming_method == "Employee Number":
 				if not self.employee:
-					frappe.throw(_("Please select Employee"))
+					capkpi.throw(_("Please select Employee"))
 				self.name = self.employee
 			elif naming_method == "Full Name":
 				self.name = self.instructor_name
@@ -27,16 +27,16 @@ class Instructor(Document):
 		self.validate_duplicate_employee()
 
 	def validate_duplicate_employee(self):
-		if self.employee and frappe.db.get_value(
+		if self.employee and capkpi.db.get_value(
 			"Instructor", {"employee": self.employee, "name": ["!=", self.name]}, "name"
 		):
-			frappe.throw(_("Employee ID is linked with another instructor"))
+			capkpi.throw(_("Employee ID is linked with another instructor"))
 
 
 def get_timeline_data(doctype, name):
 	"""Return timeline for course schedule"""
 	return dict(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""
 			SELECT unix_timestamp(`schedule_date`), count(*)
 			FROM `tabCourse Schedule`

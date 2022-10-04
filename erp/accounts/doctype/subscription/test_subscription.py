@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils.data import (
+import capkpi
+from capkpi.utils.data import (
 	add_days,
 	add_months,
 	add_to_date,
@@ -20,8 +20,8 @@ test_dependencies = ("UOM", "Item Group", "Item")
 
 
 def create_plan():
-	if not frappe.db.exists("Subscription Plan", "_Test Plan Name"):
-		plan = frappe.new_doc("Subscription Plan")
+	if not capkpi.db.exists("Subscription Plan", "_Test Plan Name"):
+		plan = capkpi.new_doc("Subscription Plan")
 		plan.plan_name = "_Test Plan Name"
 		plan.item = "_Test Non Stock Item"
 		plan.price_determination = "Fixed Rate"
@@ -30,8 +30,8 @@ def create_plan():
 		plan.billing_interval_count = 1
 		plan.insert()
 
-	if not frappe.db.exists("Subscription Plan", "_Test Plan Name 2"):
-		plan = frappe.new_doc("Subscription Plan")
+	if not capkpi.db.exists("Subscription Plan", "_Test Plan Name 2"):
+		plan = capkpi.new_doc("Subscription Plan")
 		plan.plan_name = "_Test Plan Name 2"
 		plan.item = "_Test Non Stock Item"
 		plan.price_determination = "Fixed Rate"
@@ -40,8 +40,8 @@ def create_plan():
 		plan.billing_interval_count = 1
 		plan.insert()
 
-	if not frappe.db.exists("Subscription Plan", "_Test Plan Name 3"):
-		plan = frappe.new_doc("Subscription Plan")
+	if not capkpi.db.exists("Subscription Plan", "_Test Plan Name 3"):
+		plan = capkpi.new_doc("Subscription Plan")
 		plan.plan_name = "_Test Plan Name 3"
 		plan.item = "_Test Non Stock Item"
 		plan.price_determination = "Fixed Rate"
@@ -51,8 +51,8 @@ def create_plan():
 		plan.insert()
 
 	# Defined a quarterly Subscription Plan
-	if not frappe.db.exists("Subscription Plan", "_Test Plan Name 4"):
-		plan = frappe.new_doc("Subscription Plan")
+	if not capkpi.db.exists("Subscription Plan", "_Test Plan Name 4"):
+		plan = capkpi.new_doc("Subscription Plan")
 		plan.plan_name = "_Test Plan Name 4"
 		plan.item = "_Test Non Stock Item"
 		plan.price_determination = "Monthly Rate"
@@ -61,8 +61,8 @@ def create_plan():
 		plan.billing_interval_count = 3
 		plan.insert()
 
-	if not frappe.db.exists("Subscription Plan", "_Test Plan Multicurrency"):
-		plan = frappe.new_doc("Subscription Plan")
+	if not capkpi.db.exists("Subscription Plan", "_Test Plan Multicurrency"):
+		plan = capkpi.new_doc("Subscription Plan")
 		plan.plan_name = "_Test Plan Multicurrency"
 		plan.item = "_Test Non Stock Item"
 		plan.price_determination = "Fixed Rate"
@@ -74,14 +74,14 @@ def create_plan():
 
 
 def create_parties():
-	if not frappe.db.exists("Supplier", "_Test Supplier"):
-		supplier = frappe.new_doc("Supplier")
+	if not capkpi.db.exists("Supplier", "_Test Supplier"):
+		supplier = capkpi.new_doc("Supplier")
 		supplier.supplier_name = "_Test Supplier"
 		supplier.supplier_group = "All Supplier Groups"
 		supplier.insert()
 
-	if not frappe.db.exists("Customer", "_Test Subscription Customer"):
-		customer = frappe.new_doc("Customer")
+	if not capkpi.db.exists("Customer", "_Test Subscription Customer"):
+		customer = capkpi.new_doc("Customer")
 		customer.customer_name = "_Test Subscription Customer"
 		customer.billing_currency = "USD"
 		customer.append(
@@ -96,7 +96,7 @@ class TestSubscription(unittest.TestCase):
 		create_parties()
 
 	def test_create_subscription_with_trial_with_correct_period(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.trial_period_start = nowdate()
@@ -119,7 +119,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_create_subscription_without_trial_with_correct_period(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -136,18 +136,18 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_create_subscription_trial_with_wrong_dates(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.trial_period_end = nowdate()
 		subscription.trial_period_start = add_days(nowdate(), 30)
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
 
-		self.assertRaises(frappe.ValidationError, subscription.save)
+		self.assertRaises(capkpi.ValidationError, subscription.save)
 		subscription.delete()
 
 	def test_create_subscription_multi_with_different_billing_fails(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.trial_period_end = nowdate()
@@ -155,11 +155,11 @@ class TestSubscription(unittest.TestCase):
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
 		subscription.append("plans", {"plan": "_Test Plan Name 3", "qty": 1})
 
-		self.assertRaises(frappe.ValidationError, subscription.save)
+		self.assertRaises(capkpi.ValidationError, subscription.save)
 		subscription.delete()
 
 	def test_invoice_is_generated_at_end_of_billing_period(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.start_date = "2018-01-01"
@@ -178,7 +178,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_status_goes_back_to_active_after_invoice_is_paid(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -206,12 +206,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_cancel_after_grace_period(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		default_grace_period_action = settings.cancel_after_grace
 		settings.cancel_after_grace = 1
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -230,12 +230,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_unpaid_after_grace_period(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		default_grace_period_action = settings.cancel_after_grace
 		settings.cancel_after_grace = 0
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -251,7 +251,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_invoice_days_until_due(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -265,12 +265,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_is_past_due_doesnt_change_within_grace_period(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		grace_period = settings.grace_period
 		settings.grace_period = 1000
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -295,7 +295,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_remains_active_during_invoice_period(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -322,7 +322,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_cancelation(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -334,12 +334,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_cancellation_invoices(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		to_prorate = settings.prorate
 		settings.prorate = 1
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -377,12 +377,12 @@ class TestSubscription(unittest.TestCase):
 		settings.save()
 
 	def test_subscription_cancellation_invoices_with_prorata_false(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		to_prorate = settings.prorate
 		settings.prorate = 0
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -398,12 +398,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_cancellation_invoices_with_prorata_true(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		to_prorate = settings.prorate
 		settings.prorate = 1
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -425,12 +425,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subcription_cancellation_and_process(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		default_grace_period_action = settings.cancel_after_grace
 		settings.cancel_after_grace = 1
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -456,13 +456,13 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_restart_and_process(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		default_grace_period_action = settings.cancel_after_grace
 		settings.grace_period = 0
 		settings.cancel_after_grace = 0
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -493,12 +493,12 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_unpaid_back_to_active(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		default_grace_period_action = settings.cancel_after_grace
 		settings.cancel_after_grace = 0
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -525,18 +525,18 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_restart_active_subscription(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
 		subscription.save()
 
-		self.assertRaises(frappe.ValidationError, subscription.restart_subscription)
+		self.assertRaises(capkpi.ValidationError, subscription.restart_subscription)
 
 		subscription.delete()
 
 	def test_subscription_invoice_discount_percentage(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.additional_discount_percentage = 10
@@ -552,7 +552,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_invoice_discount_amount(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.additional_discount_amount = 11
@@ -570,7 +570,7 @@ class TestSubscription(unittest.TestCase):
 	def test_prepaid_subscriptions(self):
 		# Create a non pre-billed subscription, processing should not create
 		# invoices.
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.append("plans", {"plan": "_Test Plan Name", "qty": 1})
@@ -588,12 +588,12 @@ class TestSubscription(unittest.TestCase):
 		self.assertEqual(len(subscription.invoices), 1)
 
 	def test_prepaid_subscriptions_with_prorate_true(self):
-		settings = frappe.get_single("Subscription Settings")
+		settings = capkpi.get_single("Subscription Settings")
 		to_prorate = settings.prorate
 		settings.prorate = 1
 		settings.save()
 
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Customer"
 		subscription.generate_invoice_at_period_start = True
@@ -617,7 +617,7 @@ class TestSubscription(unittest.TestCase):
 		subscription.delete()
 
 	def test_subscription_with_follow_calendar_months(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Supplier"
 		subscription.party = "_Test Supplier"
 		subscription.generate_invoice_at_period_start = 1
@@ -634,7 +634,7 @@ class TestSubscription(unittest.TestCase):
 		self.assertEqual(get_date_str(subscription.current_invoice_end), "2018-03-31")
 
 	def test_subscription_generate_invoice_past_due(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Supplier"
 		subscription.party = "_Test Supplier"
 		subscription.generate_invoice_at_period_start = 1
@@ -658,7 +658,7 @@ class TestSubscription(unittest.TestCase):
 		self.assertEqual(len(subscription.invoices), 2)
 
 	def test_subscription_without_generate_invoice_past_due(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Supplier"
 		subscription.party = "_Test Supplier"
 		subscription.generate_invoice_at_period_start = 1
@@ -677,7 +677,7 @@ class TestSubscription(unittest.TestCase):
 		self.assertEqual(len(subscription.invoices), 1)
 
 	def test_multicurrency_subscription(self):
-		subscription = frappe.new_doc("Subscription")
+		subscription = capkpi.new_doc("Subscription")
 		subscription.party_type = "Customer"
 		subscription.party = "_Test Subscription Customer"
 		subscription.generate_invoice_at_period_start = 1
@@ -692,5 +692,5 @@ class TestSubscription(unittest.TestCase):
 		self.assertEqual(subscription.status, "Unpaid")
 
 		# Check the currency of the created invoice
-		currency = frappe.db.get_value("Sales Invoice", subscription.invoices[0].invoice, "currency")
+		currency = capkpi.db.get_value("Sales Invoice", subscription.invoices[0].invoice, "currency")
 		self.assertEqual(currency, "USD")

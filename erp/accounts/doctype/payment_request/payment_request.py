@@ -4,12 +4,12 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.integrations.utils import get_payment_gateway_controller
-from frappe.model.document import Document
-from frappe.utils import flt, get_url, nowdate
-from frappe.utils.background_jobs import enqueue
+import capkpi
+from capkpi import _
+from capkpi.integrations.utils import get_payment_gateway_controller
+from capkpi.model.document import Document
+from capkpi.utils import flt, get_url, nowdate
+from capkpi.utils.background_jobs import enqueue
 
 from erp.accounts.doctype.payment_entry.payment_entry import (
 	get_company_defaults,
@@ -32,7 +32,7 @@ class PaymentRequest(Document):
 
 	def validate_reference_document(self):
 		if not self.reference_doctype or not self.reference_name:
-			frappe.throw(_("To create a Payment Request reference document is required"))
+			capkpi.throw(_("To create a Payment Request reference document is required"))
 
 	def validate_payment_request_amount(self):
 		existing_payment_request_amount = get_existing_payment_request_amount(
@@ -40,33 +40,33 @@ class PaymentRequest(Document):
 		)
 
 		if existing_payment_request_amount:
-			ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+			ref_doc = capkpi.get_doc(self.reference_doctype, self.reference_name)
 			if hasattr(ref_doc, "order_type") and getattr(ref_doc, "order_type") != "Shopping Cart":
 				ref_amount = get_amount(ref_doc, self.payment_account)
 
 				if existing_payment_request_amount + flt(self.grand_total) > ref_amount:
-					frappe.throw(
+					capkpi.throw(
 						_("Total Payment Request amount cannot be greater than {0} amount").format(
 							self.reference_doctype
 						)
 					)
 
 	def validate_currency(self):
-		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
-		if self.payment_account and ref_doc.currency != frappe.db.get_value(
+		ref_doc = capkpi.get_doc(self.reference_doctype, self.reference_name)
+		if self.payment_account and ref_doc.currency != capkpi.db.get_value(
 			"Account", self.payment_account, "account_currency"
 		):
-			frappe.throw(_("Transaction currency must be same as Payment Gateway currency"))
+			capkpi.throw(_("Transaction currency must be same as Payment Gateway currency"))
 
 	def validate_subscription_details(self):
 		if self.is_a_subscription:
 			amount = 0
 			for subscription_plan in self.subscription_plans:
-				payment_gateway = frappe.db.get_value(
+				payment_gateway = capkpi.db.get_value(
 					"Subscription Plan", subscription_plan.plan, "payment_gateway"
 				)
 				if payment_gateway != self.payment_gateway_account:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"The payment gateway account in plan {0} is different from the payment gateway account in this payment request"
 						).format(subscription_plan.name)
@@ -77,7 +77,7 @@ class PaymentRequest(Document):
 				amount += rate
 
 			if amount != self.grand_total:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_(
 						"The amount of {0} set in this payment request is different from the calculated amount of all payment plans: {1}. Make sure this is correct before submitting the document."
 					).format(self.grand_total, amount)
@@ -91,7 +91,7 @@ class PaymentRequest(Document):
 			self.db_set("status", "Requested")
 
 		send_mail = self.payment_gateway_validation() if self.payment_gateway else None
-		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+		ref_doc = capkpi.get_doc(self.reference_doctype, self.reference_name)
 
 		if (
 			hasattr(ref_doc, "order_type") and getattr(ref_doc, "order_type") == "Shopping Cart"
@@ -124,7 +124,7 @@ class PaymentRequest(Document):
 		controller.request_for_payment(**payment_record)
 
 	def get_request_amount(self):
-		data_of_completed_requests = frappe.get_all(
+		data_of_completed_requests = capkpi.get_all(
 			"Integration Request",
 			filters={
 				"reference_doctype": self.doctype,
@@ -145,7 +145,7 @@ class PaymentRequest(Document):
 		self.set_as_cancelled()
 
 	def make_invoice(self):
-		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+		ref_doc = capkpi.get_doc(self.reference_doctype, self.reference_name)
 		if hasattr(ref_doc, "order_type") and getattr(ref_doc, "order_type") == "Shopping Cart":
 			from erp.selling.doctype.sales_order.sales_order import make_sales_invoice
 
@@ -180,14 +180,14 @@ class PaymentRequest(Document):
 
 	def get_payment_url(self):
 		if self.reference_doctype != "Fees":
-			data = frappe.db.get_value(
+			data = capkpi.db.get_value(
 				self.reference_doctype, self.reference_name, ["company", "customer_name"], as_dict=1
 			)
 		else:
-			data = frappe.db.get_value(
+			data = capkpi.db.get_value(
 				self.reference_doctype, self.reference_name, ["student_name"], as_dict=1
 			)
-			data.update({"company": frappe.defaults.get_defaults().company})
+			data.update({"company": capkpi.defaults.get_defaults().company})
 
 		controller = get_payment_gateway_controller(self.payment_gateway)
 		controller.validate_transaction_currency(self.currency)
@@ -202,8 +202,8 @@ class PaymentRequest(Document):
 				"description": self.subject.encode("utf-8"),
 				"reference_doctype": "Payment Request",
 				"reference_docname": self.name,
-				"payer_email": self.email_to or frappe.session.user,
-				"payer_name": frappe.safe_encode(data.customer_name),
+				"payer_email": self.email_to or capkpi.session.user,
+				"payer_name": capkpi.safe_encode(data.customer_name),
 				"order_id": self.name,
 				"currency": self.currency,
 			}
@@ -221,9 +221,9 @@ class PaymentRequest(Document):
 
 	def create_payment_entry(self, submit=True):
 		"""create entry"""
-		frappe.flags.ignore_account_permission = True
+		capkpi.flags.ignore_account_permission = True
 
-		ref_doc = frappe.get_doc(self.reference_doctype, self.reference_name)
+		ref_doc = capkpi.get_doc(self.reference_doctype, self.reference_name)
 
 		if self.reference_doctype in ["Sales Invoice", "POS Invoice"]:
 			party_account = ref_doc.debit_to
@@ -289,7 +289,7 @@ class PaymentRequest(Document):
 			"message": self.get_message(),
 			"now": True,
 			"attachments": [
-				frappe.attach_print(
+				capkpi.attach_print(
 					self.reference_doctype,
 					self.reference_name,
 					file_name=self.reference_name,
@@ -297,18 +297,18 @@ class PaymentRequest(Document):
 				)
 			],
 		}
-		enqueue(method=frappe.sendmail, queue="short", timeout=300, is_async=True, **email_args)
+		enqueue(method=capkpi.sendmail, queue="short", timeout=300, is_async=True, **email_args)
 
 	def get_message(self):
 		"""return message with payment gateway link"""
 
 		context = {
-			"doc": frappe.get_doc(self.reference_doctype, self.reference_name),
+			"doc": capkpi.get_doc(self.reference_doctype, self.reference_name),
 			"payment_url": self.payment_url,
 		}
 
 		if self.message:
-			return frappe.render_template(self.message, context)
+			return capkpi.render_template(self.message, context)
 
 	def set_failed(self):
 		pass
@@ -318,17 +318,17 @@ class PaymentRequest(Document):
 
 	def check_if_payment_entry_exists(self):
 		if self.status == "Paid":
-			if frappe.get_all(
+			if capkpi.get_all(
 				"Payment Entry Reference",
 				filters={"reference_name": self.reference_name, "docstatus": ["<", 2]},
 				fields=["parent"],
 				limit=1,
 			):
-				frappe.throw(_("Payment Entry already exists"), title=_("Error"))
+				capkpi.throw(_("Payment Entry already exists"), title=_("Error"))
 
 	def make_communication_entry(self):
 		"""Make communication entry"""
-		comm = frappe.get_doc(
+		comm = capkpi.get_doc(
 			{
 				"doctype": "Communication",
 				"subject": self.subject,
@@ -347,7 +347,7 @@ class PaymentRequest(Document):
 		if not status:
 			return
 
-		shopping_cart_settings = frappe.get_doc("E Commerce Settings")
+		shopping_cart_settings = capkpi.get_doc("E Commerce Settings")
 
 		if status in ["Authorized", "Completed"]:
 			redirect_to = None
@@ -356,8 +356,8 @@ class PaymentRequest(Document):
 			# if shopping cart enabled and in session
 			if (
 				shopping_cart_settings.enabled
-				and hasattr(frappe.local, "session")
-				and frappe.local.session.user != "Guest"
+				and hasattr(capkpi.local, "session")
+				and capkpi.local.session.user != "Guest"
 			) and self.payment_channel != "Phone":
 
 				success_url = shopping_cart_settings.payment_success_url
@@ -375,24 +375,24 @@ class PaymentRequest(Document):
 			return create_stripe_subscription(gateway_controller, data)
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def make_payment_request(**args):
 	"""Make payment request"""
 
-	args = frappe._dict(args)
+	args = capkpi._dict(args)
 
-	ref_doc = frappe.get_doc(args.dt, args.dn)
-	gateway_account = get_gateway_details(args) or frappe._dict()
+	ref_doc = capkpi.get_doc(args.dt, args.dn)
+	gateway_account = get_gateway_details(args) or capkpi._dict()
 
 	grand_total = get_amount(ref_doc, gateway_account.get("payment_account"))
 	if args.loyalty_points and args.dt == "Sales Order":
 		from erp.accounts.doctype.loyalty_program.loyalty_program import validate_loyalty_points
 
 		loyalty_amount = validate_loyalty_points(ref_doc, int(args.loyalty_points))
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Sales Order", args.dn, "loyalty_points", int(args.loyalty_points), update_modified=False
 		)
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Sales Order", args.dn, "loyalty_amount", loyalty_amount, update_modified=False
 		)
 		grand_total = grand_total - loyalty_amount
@@ -405,16 +405,16 @@ def make_payment_request(**args):
 
 	existing_payment_request = None
 	if args.order_type == "Shopping Cart":
-		existing_payment_request = frappe.db.get_value(
+		existing_payment_request = capkpi.db.get_value(
 			"Payment Request",
 			{"reference_doctype": args.dt, "reference_name": args.dn, "docstatus": ("!=", 2)},
 		)
 
 	if existing_payment_request:
-		frappe.db.set_value(
+		capkpi.db.set_value(
 			"Payment Request", existing_payment_request, "grand_total", grand_total, update_modified=False
 		)
-		pr = frappe.get_doc("Payment Request", existing_payment_request)
+		pr = capkpi.get_doc("Payment Request", existing_payment_request)
 	else:
 		if args.order_type != "Shopping Cart":
 			existing_payment_request_amount = get_existing_payment_request_amount(args.dt, args.dn)
@@ -422,7 +422,7 @@ def make_payment_request(**args):
 			if existing_payment_request_amount:
 				grand_total -= existing_payment_request_amount
 
-		pr = frappe.new_doc("Payment Request")
+		pr = capkpi.new_doc("Payment Request")
 		pr.update(
 			{
 				"payment_gateway_account": gateway_account.get("name"),
@@ -452,9 +452,9 @@ def make_payment_request(**args):
 			pr.submit()
 
 	if args.order_type == "Shopping Cart":
-		frappe.db.commit()
-		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = pr.get_payment_url()
+		capkpi.db.commit()
+		capkpi.local.response["type"] = "redirect"
+		capkpi.local.response["location"] = pr.get_payment_url()
 
 	if args.return_doc:
 		return pr
@@ -490,7 +490,7 @@ def get_amount(ref_doc, payment_account=None):
 		return grand_total
 
 	else:
-		frappe.throw(_("Payment Entry is already created"))
+		capkpi.throw(_("Payment Entry is already created"))
 
 
 def get_existing_payment_request_amount(ref_dt, ref_dn):
@@ -498,7 +498,7 @@ def get_existing_payment_request_amount(ref_dt, ref_dn):
 	Get the existing payment request which are unpaid or partially paid for payment channel other than Phone
 	and get the summation of existing paid payment request for Phone payment channel.
 	"""
-	existing_payment_request_amount = frappe.db.sql(
+	existing_payment_request_amount = capkpi.db.sql(
 		"""
 		select sum(grand_total)
 		from `tabPayment Request`
@@ -521,7 +521,7 @@ def get_gateway_details(args):
 		return get_payment_gateway_account(args.get("payment_gateway_account"))
 
 	if args.order_type == "Shopping Cart":
-		payment_gateway_account = frappe.get_doc("E Commerce Settings").payment_gateway_account
+		payment_gateway_account = capkpi.get_doc("E Commerce Settings").payment_gateway_account
 		return get_payment_gateway_account(payment_gateway_account)
 
 	gateway_account = get_payment_gateway_account({"is_default": 1})
@@ -530,7 +530,7 @@ def get_gateway_details(args):
 
 
 def get_payment_gateway_account(args):
-	return frappe.db.get_value(
+	return capkpi.db.get_value(
 		"Payment Gateway Account",
 		args,
 		["name", "payment_gateway", "payment_account", "message"],
@@ -538,25 +538,25 @@ def get_payment_gateway_account(args):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_print_format_list(ref_doctype):
 	print_format_list = ["Standard"]
 
 	print_format_list.extend(
-		[p.name for p in frappe.get_all("Print Format", filters={"doc_type": ref_doctype})]
+		[p.name for p in capkpi.get_all("Print Format", filters={"doc_type": ref_doctype})]
 	)
 
 	return {"print_format": print_format_list}
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def resend_payment_email(docname):
-	return frappe.get_doc("Payment Request", docname).send_email()
+	return capkpi.get_doc("Payment Request", docname).send_email()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_payment_entry(docname):
-	doc = frappe.get_doc("Payment Request", docname)
+	doc = capkpi.get_doc("Payment Request", docname)
 	return doc.create_payment_entry(submit=False).as_dict()
 
 
@@ -564,7 +564,7 @@ def update_payment_req_status(doc, method):
 	from erp.accounts.doctype.payment_entry.payment_entry import get_reference_details
 
 	for ref in doc.references:
-		payment_request_name = frappe.db.get_value(
+		payment_request_name = capkpi.db.get_value(
 			"Payment Request",
 			{
 				"reference_doctype": ref.reference_doctype,
@@ -577,7 +577,7 @@ def update_payment_req_status(doc, method):
 			ref_details = get_reference_details(
 				ref.reference_doctype, ref.reference_name, doc.party_account_currency
 			)
-			pay_req_doc = frappe.get_doc("Payment Request", payment_request_name)
+			pay_req_doc = capkpi.get_doc("Payment Request", payment_request_name)
 			status = pay_req_doc.status
 
 			if status != "Paid" and not ref_details.outstanding_amount:
@@ -594,7 +594,7 @@ def update_payment_req_status(doc, method):
 
 
 def get_dummy_message(doc):
-	return frappe.render_template(
+	return capkpi.render_template(
 		"""{% if doc.contact_person -%}
 <p>Dear {{ doc.contact_person }},</p>
 {%- else %}<p>Hello,</p>{% endif %}
@@ -612,25 +612,25 @@ def get_dummy_message(doc):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_subscription_details(reference_doctype, reference_name):
 	if reference_doctype == "Sales Invoice":
-		subscriptions = frappe.db.sql(
+		subscriptions = capkpi.db.sql(
 			"""SELECT parent as sub_name FROM `tabSubscription Invoice` WHERE invoice=%s""",
 			reference_name,
 			as_dict=1,
 		)
 		subscription_plans = []
 		for subscription in subscriptions:
-			plans = frappe.get_doc("Subscription", subscription.sub_name).plans
+			plans = capkpi.get_doc("Subscription", subscription.sub_name).plans
 			for plan in plans:
 				subscription_plans.append(plan)
 		return subscription_plans
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_payment_order(source_name, target_doc=None):
-	from frappe.model.mapper import get_mapped_doc
+	from capkpi.model.mapper import get_mapped_doc
 
 	def set_missing_values(source, target):
 		target.payment_order_type = "Payment Request"
@@ -665,11 +665,11 @@ def make_payment_order(source_name, target_doc=None):
 
 def validate_payment(doc, method=None):
 	if doc.reference_doctype != "Payment Request" or (
-		frappe.db.get_value(doc.reference_doctype, doc.reference_docname, "status") != "Paid"
+		capkpi.db.get_value(doc.reference_doctype, doc.reference_docname, "status") != "Paid"
 	):
 		return
 
-	frappe.throw(
+	capkpi.throw(
 		_("The Payment Request {0} is already paid, cannot process payment twice").format(
 			doc.reference_docname
 		)

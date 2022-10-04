@@ -4,10 +4,10 @@
 
 import ast
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import add_days
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import add_days
 
 
 class CropCycle(Document):
@@ -22,7 +22,7 @@ class CropCycle(Document):
 		self.create_tasks_for_diseases()
 
 	def set_missing_values(self):
-		crop = frappe.get_doc("Crop", self.crop)
+		crop = capkpi.get_doc("Crop", self.crop)
 
 		if not self.crop_spacing_uom:
 			self.crop_spacing_uom = crop.crop_spacing_uom
@@ -31,7 +31,7 @@ class CropCycle(Document):
 			self.row_spacing_uom = crop.row_spacing_uom
 
 	def create_crop_cycle_project(self):
-		crop = frappe.get_doc("Crop", self.crop)
+		crop = capkpi.get_doc("Crop", self.crop)
 
 		self.project = self.create_project(crop.period, crop.agriculture_task)
 		self.create_task(crop.agriculture_task, self.project, self.start_date)
@@ -42,18 +42,18 @@ class CropCycle(Document):
 				self.import_disease_tasks(disease.disease, disease.start_date)
 				disease.tasks_created = True
 
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("Tasks have been created for managing the {0} disease (on row {1})").format(
 						disease.disease, disease.idx
 					)
 				)
 
 	def import_disease_tasks(self, disease, start_date):
-		disease_doc = frappe.get_doc("Disease", disease)
+		disease_doc = capkpi.get_doc("Disease", disease)
 		self.create_task(disease_doc.treatment_task, self.project, start_date)
 
 	def create_project(self, period, crop_tasks):
-		project = frappe.get_doc(
+		project = capkpi.get_doc(
 			{
 				"doctype": "Project",
 				"project_name": self.title,
@@ -66,7 +66,7 @@ class CropCycle(Document):
 
 	def create_task(self, crop_tasks, project_name, start_date):
 		for crop_task in crop_tasks:
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Task",
 					"subject": crop_task.get("task_name"),
@@ -77,23 +77,23 @@ class CropCycle(Document):
 				}
 			).insert()
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def reload_linked_analysis(self):
 		linked_doctypes = ["Soil Texture", "Soil Analysis", "Plant Analysis"]
 		required_fields = ["location", "name", "collection_datetime"]
 		output = {}
 
 		for doctype in linked_doctypes:
-			output[doctype] = frappe.get_all(doctype, fields=required_fields)
+			output[doctype] = capkpi.get_all(doctype, fields=required_fields)
 
 		output["Location"] = []
 
 		for location in self.linked_location:
-			output["Location"].append(frappe.get_doc("Location", location.location))
+			output["Location"].append(capkpi.get_doc("Location", location.location))
 
-		frappe.publish_realtime("List of Linked Docs", output, user=frappe.session.user)
+		capkpi.publish_realtime("List of Linked Docs", output, user=capkpi.session.user)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def append_to_child(self, obj_to_append):
 		for doctype in obj_to_append:
 			for doc_name in set(obj_to_append[doctype]):

@@ -3,20 +3,20 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, nowdate
+import capkpi
+from capkpi.utils import add_days, nowdate
 
 
 class TestContract(unittest.TestCase):
 	def setUp(self):
-		frappe.db.sql("delete from `tabContract`")
+		capkpi.db.sql("delete from `tabContract`")
 		self.contract_doc = get_contract()
 
 	def test_validate_start_date_before_end_date(self):
 		self.contract_doc.start_date = nowdate()
 		self.contract_doc.end_date = add_days(nowdate(), -1)
 
-		self.assertRaises(frappe.ValidationError, self.contract_doc.insert)
+		self.assertRaises(capkpi.ValidationError, self.contract_doc.insert)
 
 	def test_unsigned_contract_status(self):
 		self.contract_doc.insert()
@@ -102,7 +102,7 @@ class TestContract(unittest.TestCase):
 
 
 def get_contract():
-	doc = frappe.new_doc("Contract")
+	doc = capkpi.new_doc("Contract")
 	doc.party_type = "Customer"
 	doc.party_name = "_Test Customer"
 	doc.contract_terms = "This is a test customer contract."

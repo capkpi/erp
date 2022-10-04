@@ -3,9 +3,9 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 
 class TestFertilizer(unittest.TestCase):
 	def test_fertilizer_creation(self):
-		self.assertEqual(frappe.db.exists("Fertilizer", "Urea"), "Urea")
+		self.assertEqual(capkpi.db.exists("Fertilizer", "Urea"), "Urea")

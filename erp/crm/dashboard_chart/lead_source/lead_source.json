@@ -6,7 +6,7 @@
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "Lead",
- "dynamic_filters_json": "[[\"Lead\",\"company\",\"=\",\"frappe.defaults.get_user_default(\\\"Company\\\")\"]]",
+ "dynamic_filters_json": "[[\"Lead\",\"company\",\"=\",\"capkpi.defaults.get_user_default(\\\"Company\\\")\"]]",
  "filters_json": "[]",
  "group_by_based_on": "source",
  "group_by_type": "Count",

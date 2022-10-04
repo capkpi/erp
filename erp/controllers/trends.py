@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import getdate
 
 
 def get_columns(filters, trans):
@@ -47,13 +47,13 @@ def get_columns(filters, trans):
 def validate_filters(filters):
 	for f in ["Fiscal Year", "Based On", "Period", "Company"]:
 		if not filters.get(f.lower().replace(" ", "_")):
-			frappe.throw(_("{0} is mandatory").format(f))
+			capkpi.throw(_("{0} is mandatory").format(f))
 
-	if not frappe.db.exists("Fiscal Year", filters.get("fiscal_year")):
-		frappe.throw(_("Fiscal Year {0} Does Not Exist").format(filters.get("fiscal_year")))
+	if not capkpi.db.exists("Fiscal Year", filters.get("fiscal_year")):
+		capkpi.throw(_("Fiscal Year {0} Does Not Exist").format(filters.get("fiscal_year")))
 
 	if filters.get("based_on") == filters.get("group_by"):
-		frappe.throw(_("'Based On' and 'Group By' can not be same"))
+		capkpi.throw(_("'Based On' and 'Group By' can not be same"))
 
 
 def get_data(filters, conditions):
@@ -80,7 +80,7 @@ def get_data(filters, conditions):
 	if conditions.get("trans") == "Quotation" and filters.get("group_by") == "Customer":
 		cond += " and t1.quotation_to = 'Customer'"
 
-	year_start_date, year_end_date = frappe.db.get_value(
+	year_start_date, year_end_date = capkpi.db.get_value(
 		"Fiscal Year", filters.get("fiscal_year"), ["year_start_date", "year_end_date"]
 	)
 
@@ -99,7 +99,7 @@ def get_data(filters, conditions):
 			inc = 2
 		else:
 			inc = 1
-		data1 = frappe.db.sql(
+		data1 = capkpi.db.sql(
 			""" select %s from `tab%s` t1, `tab%s Item` t2 %s
 					where t2.parent = t1.name and t1.company = %s and %s between %s and %s and
 					t1.docstatus = 1 %s %s
@@ -129,7 +129,7 @@ def get_data(filters, conditions):
 			data.append(dt)
 
 			# to get distinct value of col specified by group_by in filter
-			row = frappe.db.sql(
+			row = capkpi.db.sql(
 				"""select DISTINCT(%s) from `tab%s` t1, `tab%s Item` t2 %s
 						where t2.parent = t1.name and t1.company = %s and %s between %s and %s
 						and t1.docstatus = 1 and %s = %s %s %s
@@ -156,7 +156,7 @@ def get_data(filters, conditions):
 				des = ["" for q in range(len(conditions["columns"]))]
 
 				# get data for group_by filter
-				row1 = frappe.db.sql(
+				row1 = capkpi.db.sql(
 					""" select %s , %s from `tab%s` t1, `tab%s Item` t2 %s
 							where t2.parent = t1.name and t1.company = %s and %s between %s and %s
 							and t1.docstatus = 1 and %s = %s and %s = %s %s %s
@@ -189,7 +189,7 @@ def get_data(filters, conditions):
 
 				data.append(des)
 	else:
-		data = frappe.db.sql(
+		data = capkpi.db.sql(
 			""" select %s from `tab%s` t1, `tab%s Item` t2 %s
 					where t2.parent = t1.name and t1.company = %s and %s between %s and %s and
 					t1.docstatus = 1 %s %s
@@ -270,12 +270,12 @@ def get_period_wise_query(bet_dates, trans_date, query_details):
 	return query_details
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def get_period_date_ranges(period, fiscal_year=None, year_start_date=None):
 	from dateutil.relativedelta import relativedelta
 
 	if not year_start_date:
-		year_start_date, year_end_date = frappe.db.get_value(
+		year_start_date, year_end_date = capkpi.db.get_value(
 			"Fiscal Year", fiscal_year, ["year_start_date", "year_end_date"]
 		)
 
@@ -377,7 +377,7 @@ def based_wise_columns_query(based_on, trans):
 			based_on_details["based_on_group_by"] = "t2.project"
 			based_on_details["addl_tables"] = ""
 		else:
-			frappe.throw(_("Project-wise data is not available for Quotation"))
+			capkpi.throw(_("Project-wise data is not available for Quotation"))
 
 	return based_on_details
 

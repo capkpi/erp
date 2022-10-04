@@ -10,7 +10,7 @@
 	{% else %}
 	<div class="placeholder-div" style="max-height: 200px;">
 		<span class="placeholder">
-			{{ frappe.utils.get_abbr(title or '') }}
+			{{ capkpi.utils.get_abbr(title or '') }}
 		</span>
 	</div>
 	{% endif %}
@@ -35,7 +35,7 @@
 			{%- for index in ['1', '2', '3', '4', '5', '6', '7', '8'] -%}
 			{%- set category = values['category_' + index] -%}
 				{%- if category -%}
-					{%- set category = frappe.get_doc("Item Group", category) -%}
+					{%- set category = capkpi.get_doc("Item Group", category) -%}
 					{{ card(category.name, category.image, category.route) }}
 				{%- endif -%}
 			{%- endfor -%}

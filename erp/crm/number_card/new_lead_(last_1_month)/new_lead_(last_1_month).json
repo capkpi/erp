@@ -3,7 +3,7 @@
  "docstatus": 0,
  "doctype": "Number Card",
  "document_type": "Lead",
- "dynamic_filters_json": "[[\"Lead\",\"company\",\"=\",\"frappe.defaults.get_user_default(\\\"Company\\\")\"]]",
+ "dynamic_filters_json": "[[\"Lead\",\"company\",\"=\",\"capkpi.defaults.get_user_default(\\\"Company\\\")\"]]",
  "filters_json": "[[\"Lead\",\"creation\",\"Timespan\",\"last month\",false]]",
  "function": "Count",
  "idx": 0,

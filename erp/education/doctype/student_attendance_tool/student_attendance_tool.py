@@ -2,23 +2,23 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class StudentAttendanceTool(Document):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_student_attendance_records(based_on, date=None, student_group=None, course_schedule=None):
 	student_list = []
 	student_attendance_list = []
 
 	if based_on == "Course Schedule":
-		student_group = frappe.db.get_value("Course Schedule", course_schedule, "student_group")
+		student_group = capkpi.db.get_value("Course Schedule", course_schedule, "student_group")
 		if student_group:
-			student_list = frappe.get_all(
+			student_list = capkpi.get_all(
 				"Student Group Student",
 				fields=["student", "student_name", "group_roll_number"],
 				filters={"parent": student_group, "active": 1},
@@ -26,24 +26,24 @@ def get_student_attendance_records(based_on, date=None, student_group=None, cour
 			)
 
 	if not student_list:
-		student_list = frappe.get_all(
+		student_list = capkpi.get_all(
 			"Student Group Student",
 			fields=["student", "student_name", "group_roll_number"],
 			filters={"parent": student_group, "active": 1},
 			order_by="group_roll_number",
 		)
 
-	table = frappe.qb.DocType("Student Attendance")
+	table = capkpi.qb.DocType("Student Attendance")
 
 	if course_schedule:
 		student_attendance_list = (
-			frappe.qb.from_(table)
+			capkpi.qb.from_(table)
 			.select(table.student, table.status)
 			.where((table.course_schedule == course_schedule))
 		).run(as_dict=True)
 	else:
 		student_attendance_list = (
-			frappe.qb.from_(table)
+			capkpi.qb.from_(table)
 			.select(table.student, table.status)
 			.where(
 				(table.student_group == student_group) & (table.date == date) & (table.course_schedule == "")

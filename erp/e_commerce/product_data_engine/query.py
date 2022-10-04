@@ -1,8 +1,8 @@
 # Copyright (c) 2021, CapKPI Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-import frappe
-from frappe.utils import flt
+import capkpi
+from capkpi.utils import flt
 
 from erp.e_commerce.doctype.item_review.item_review import get_customer
 from erp.e_commerce.shopping_cart.product_info import get_product_info_for_website
@@ -21,7 +21,7 @@ class ProductQuery:
 	"""
 
 	def __init__(self):
-		self.settings = frappe.get_doc("E Commerce Settings")
+		self.settings = capkpi.get_doc("E Commerce Settings")
 		self.page_length = self.settings.products_per_page or 20
 
 		self.or_filters = []
@@ -92,9 +92,9 @@ class ProductQuery:
 	def query_items(self, start=0):
 		"""Build a query to fetch Website Items based on field filters."""
 		# MySQL does not support offset without limit,
-		# frappe does not accept two parameters for limit
+		# capkpi does not accept two parameters for limit
 		# https://dev.mysql.com/doc/refman/8.0/en/select.html#id4651989
-		count_items = frappe.db.get_all(
+		count_items = capkpi.db.get_all(
 			"Website Item",
 			filters=self.filters,
 			or_filters=self.or_filters,
@@ -110,7 +110,7 @@ class ProductQuery:
 		# Discounts are fetched on computing Pricing Rules so we cannot query them directly.
 		page_length = 184467440737095516 if self.filter_with_discount else self.page_length
 
-		items = frappe.db.get_all(
+		items = capkpi.db.get_all(
 			"Website Item",
 			fields=self.fields,
 			filters=self.filters,
@@ -131,7 +131,7 @@ class ProductQuery:
 				values = [values]
 
 			# get items that have selected attribute & value
-			item_code_list = frappe.db.get_all(
+			item_code_list = capkpi.db.get_all(
 				"Item",
 				fields=["item_code"],
 				filters=[
@@ -161,12 +161,12 @@ class ProductQuery:
 				continue
 
 			# handle multiselect fields in filter addition
-			meta = frappe.get_meta("Website Item", cached=True)
+			meta = capkpi.get_meta("Website Item", cached=True)
 			df = meta.get_field(field)
 
 			if df.fieldtype == "Table MultiSelect":
 				child_doctype = df.options
-				child_meta = frappe.get_meta(child_doctype, cached=True)
+				child_meta = capkpi.get_meta(child_doctype, cached=True)
 				fields = child_meta.get("fields")
 				if fields:
 					self.filters.append([child_doctype, fields[0].fieldname, "IN", values])
@@ -187,7 +187,7 @@ class ProductQuery:
 		# Consider Website Item Groups
 		item_group_filters.append(["Website Item Group", "item_group", "=", item_group])
 
-		if frappe.db.get_value("Item Group", item_group, "include_descendants"):
+		if capkpi.db.get_value("Item Group", item_group, "include_descendants"):
 			# include child item group's items as well
 			# eg. Group Node A, will show items of child 1 and child 2 as well
 			# on it's web page
@@ -207,12 +207,12 @@ class ProductQuery:
 		default_fields = {"item_code", "item_name", "web_long_description", "item_group"}
 
 		# Get meta search fields
-		meta = frappe.get_meta("Website Item")
+		meta = capkpi.get_meta("Website Item")
 		meta_fields = set(meta.get_search_fields())
 
 		# Join the meta fields and default fields set
 		search_fields = default_fields.union(meta_fields)
-		if frappe.db.count("Website Item", cache=True) > 50000:
+		if capkpi.db.count("Website Item", cache=True) > 50000:
 			search_fields.discard("web_long_description")
 
 		# Build or filters for query
@@ -237,8 +237,8 @@ class ProductQuery:
 			item.in_cart = item.item_code in cart_items
 
 			item.wished = False
-			if frappe.db.exists(
-				"Wishlist Item", {"item_code": item.item_code, "parent": frappe.session.user}
+			if capkpi.db.exists(
+				"Wishlist Item", {"item_code": item.item_code, "parent": capkpi.session.user}
 			):
 				item.wished = True
 
@@ -263,7 +263,7 @@ class ProductQuery:
 		"""Modify item object and add stock details."""
 		item.in_stock = False
 		warehouse = item.get("website_warehouse")
-		is_stock_item = frappe.get_cached_value("Item", item.item_code, "is_stock_item")
+		is_stock_item = capkpi.get_cached_value("Item", item.item_code, "is_stock_item")
 
 		if item.get("on_backorder"):
 			return
@@ -276,7 +276,7 @@ class ProductQuery:
 				item.in_stock = True
 		elif warehouse:
 			# stock item and has warehouse
-			actual_qty = frappe.db.get_value(
+			actual_qty = capkpi.db.get_value(
 				"Bin", {"item_code": item.item_code, "warehouse": item.get("website_warehouse")}, "actual_qty"
 			)
 			item.in_stock = bool(flt(actual_qty))
@@ -284,12 +284,12 @@ class ProductQuery:
 	def get_cart_items(self):
 		customer = get_customer(silent=True)
 		if customer:
-			quotation = frappe.get_all(
+			quotation = capkpi.get_all(
 				"Quotation",
 				fields=["name"],
 				filters={
 					"party_name": customer,
-					"contact_email": frappe.session.user,
+					"contact_email": capkpi.session.user,
 					"order_type": "Shopping Cart",
 					"docstatus": 0,
 				},
@@ -297,7 +297,7 @@ class ProductQuery:
 				limit_page_length=1,
 			)
 			if quotation:
-				items = frappe.get_all(
+				items = capkpi.get_all(
 					"Quotation Item", fields=["item_code"], filters={"parent": quotation[0].get("name")}
 				)
 				items = [row.item_code for row in items]
@@ -307,7 +307,7 @@ class ProductQuery:
 
 	def filter_results_by_discount(self, fields, result):
 		if fields and fields.get("discount"):
-			discount_percent = frappe.utils.flt(fields["discount"][0])
+			discount_percent = capkpi.utils.flt(fields["discount"][0])
 			result = [
 				row
 				for row in result

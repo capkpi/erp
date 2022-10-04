@@ -2,7 +2,7 @@
 // License: GNU General Public License v3. See license.txt
 
 // render
-frappe.listview_settings['Sales Invoice'] = {
+capkpi.listview_settings['Sales Invoice'] = {
 	add_fields: ["customer", "customer_name", "base_grand_total", "outstanding_amount", "due_date", "company",
 		"currency", "is_return"],
 	get_indicator: function(doc) {

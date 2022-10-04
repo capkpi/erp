@@ -4,21 +4,21 @@
 
 import json
 
-import frappe
+import capkpi
 import tweepy
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import get_url_to_form
-from frappe.utils.file_manager import get_file_path
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import get_url_to_form
+from capkpi.utils.file_manager import get_file_path
 from tweepy.error import TweepError
 
 
 class TwitterSettings(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_authorize_url(self):
 		callback_url = (
 			"{0}/api/method/erp.crm.doctype.twitter_settings.twitter_settings.callback?".format(
-				frappe.utils.get_url()
+				capkpi.utils.get_url()
 			)
 		)
 		auth = tweepy.OAuthHandler(
@@ -28,9 +28,9 @@ class TwitterSettings(Document):
 			redirect_url = auth.get_authorization_url()
 			return redirect_url
 		except tweepy.TweepError as e:
-			frappe.msgprint(_("Error! Failed to get request token."))
-			frappe.throw(
-				_("Invalid {0} or {1}").format(frappe.bold("Consumer Key"), frappe.bold("Consumer Secret Key"))
+			capkpi.msgprint(_("Error! Failed to get request token."))
+			capkpi.throw(
+				_("Invalid {0} or {1}").format(capkpi.bold("Consumer Key"), capkpi.bold("Consumer Secret Key"))
 			)
 
 	def get_access_token(self, oauth_token, oauth_verifier):
@@ -45,7 +45,7 @@ class TwitterSettings(Document):
 			user = api.me()
 			profile_pic = (user._json["profile_image_url"]).replace("_normal", "")
 
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				self.doctype,
 				self.name,
 				{
@@ -57,11 +57,11 @@ class TwitterSettings(Document):
 				},
 			)
 
-			frappe.local.response["type"] = "redirect"
-			frappe.local.response["location"] = get_url_to_form("Twitter Settings", "Twitter Settings")
+			capkpi.local.response["type"] = "redirect"
+			capkpi.local.response["location"] = get_url_to_form("Twitter Settings", "Twitter Settings")
 		except TweepError as e:
-			frappe.msgprint(_("Error! Failed to get access token."))
-			frappe.throw(_("Invalid Consumer Key or Consumer Secret Key"))
+			capkpi.msgprint(_("Error! Failed to get access token."))
+			capkpi.throw(_("Invalid Consumer Key or Consumer Secret Key"))
 
 	def get_api(self):
 		# authentication of consumer key and secret
@@ -120,19 +120,19 @@ class TwitterSettings(Document):
 		content = content["errors"][0]
 		if e.response.status_code == 401:
 			self.db_set("session_status", "Expired")
-			frappe.db.commit()
-		frappe.throw(
+			capkpi.db.commit()
+		capkpi.throw(
 			content["message"],
 			title=_("Twitter Error {0} : {1}").format(e.response.status_code, e.response.reason),
 		)
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def callback(oauth_token=None, oauth_verifier=None):
 	if oauth_token and oauth_verifier:
-		twitter_settings = frappe.get_single("Twitter Settings")
+		twitter_settings = capkpi.get_single("Twitter Settings")
 		twitter_settings.get_access_token(oauth_token, oauth_verifier)
-		frappe.db.commit()
+		capkpi.db.commit()
 	else:
-		frappe.local.response["type"] = "redirect"
-		frappe.local.response["location"] = get_url_to_form("Twitter Settings", "Twitter Settings")
+		capkpi.local.response["type"] = "redirect"
+		capkpi.local.response["location"] = get_url_to_form("Twitter Settings", "Twitter Settings")

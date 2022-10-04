@@ -1,4 +1,4 @@
-frappe.ui.form.on('Course', {
+capkpi.ui.form.on('Course', {
 	refresh: function(frm) {
 		if (!cur_frm.doc.__islocal) {
 			frm.add_custom_button(__('Add to Programs'), function() {
@@ -18,7 +18,7 @@ frappe.ui.form.on('Course', {
 	add_course_to_programs: function(frm) {
 		get_programs_without_course(frm.doc.name).then(r => {
 			if (r.message.length) {
-				frappe.prompt([
+				capkpi.prompt([
 					{
 						fieldname: 'programs',
 						label: __('Programs'),
@@ -34,7 +34,7 @@ frappe.ui.form.on('Course', {
 					}
 				],
 				function(data) {
-					frappe.call({
+					capkpi.call({
 						method: 'erp.education.doctype.course.course.add_course_to_programs',
 						args: {
 							'course': frm.doc.name,
@@ -51,13 +51,13 @@ frappe.ui.form.on('Course', {
 					})
 				}, __('Add Course to Programs'), __('Add'));
 			} else {
-				frappe.msgprint(__('This course is already added to the existing programs'));
+				capkpi.msgprint(__('This course is already added to the existing programs'));
 			}
 		});
 	}
 });
 
-frappe.ui.form.on('Course Topic', {
+capkpi.ui.form.on('Course Topic', {
 	topics_add: function(frm){
 		frm.fields_dict['topics'].grid.get_field('topic').get_query = function(doc){
 			var topics_list = [];
@@ -71,7 +71,7 @@ frappe.ui.form.on('Course Topic', {
 });
 
 let get_programs_without_course = function(course) {
-	return frappe.call({
+	return capkpi.call({
 		type: 'GET',
 		method: 'erp.education.doctype.course.course.get_programs_without_course',
 		args: {'course': course}

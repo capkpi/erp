@@ -55,7 +55,7 @@ erp.ProductList = class {
 					<a class="product-link product-list-link" href="/${ item.route || '#' }"
 						style="text-decoration: none">
 						<div class="card-img-top no-image-list">
-							${ frappe.get_abbr(title) }
+							${ capkpi.get_abbr(title) }
 						</div>
 					</a>
 					${ wishlist_enabled ? this.get_wishlist_icon(item): '' }

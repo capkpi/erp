@@ -36,7 +36,7 @@
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Ack. Date</label></div>
-				<div class="col-xs-8 value">{{ frappe.utils.format_datetime(einvoice.AckDt, "dd/MM/yyyy hh:mm:ss") }}</div>
+				<div class="col-xs-8 value">{{ capkpi.utils.format_datetime(einvoice.AckDt, "dd/MM/yyyy hh:mm:ss") }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Category</label></div>
@@ -65,7 +65,7 @@
 			<p>{{ seller.Addr1 }}</p>
 			{%- if seller.Addr2 -%} <p>{{ seller.Addr2 }}</p> {% endif %}
 			<p>{{ seller.Loc }}</p>
-			<p>{{ frappe.db.get_value("Address", doc.company_address, "gst_state") }} - {{ seller.Pin }}</p>
+			<p>{{ capkpi.db.get_value("Address", doc.company_address, "gst_state") }} - {{ seller.Pin }}</p>
 
 			{%- if einvoice.ShipDtls -%}
 				{%- set shipping = einvoice.ShipDtls -%}
@@ -75,7 +75,7 @@
 				<p>{{ shipping.Addr1 }}</p>
 				{%- if shipping.Addr2 -%} <p>{{ shipping.Addr2 }}</p> {% endif %}
 				<p>{{ shipping.Loc }}</p>
-				<p>{{ frappe.db.get_value("Address", doc.shipping_address_name, "gst_state") }} - {{ shipping.Pin }}</p>
+				<p>{{ capkpi.db.get_value("Address", doc.shipping_address_name, "gst_state") }} - {{ shipping.Pin }}</p>
 			{% endif %}
 		</div>
 		{%- set buyer = einvoice.BuyerDtls -%}
@@ -86,7 +86,7 @@
 			<p>{{ buyer.Addr1 }}</p>
 			{%- if buyer.Addr2 -%} <p>{{ buyer.Addr2 }}</p> {% endif %}
 			<p>{{ buyer.Loc }}</p>
-			<p>{{ frappe.db.get_value("Address", doc.customer_address, "gst_state") }} - {{ buyer.Pin }}</p>
+			<p>{{ capkpi.db.get_value("Address", doc.customer_address, "gst_state") }} - {{ buyer.Pin }}</p>
 
 			{%- if einvoice.DispDtls -%}
 				{%- set dispatch = einvoice.DispDtls -%}
@@ -96,7 +96,7 @@
 				<p>{{ dispatch.Addr1 }}</p>
 				{%- if dispatch.Addr2 -%} <p>{{ dispatch.Addr2 }}</p> {% endif %}
 				<p>{{ dispatch.Loc }}</p>
-				<p>{{ frappe.db.get_value("Address", doc.dispatch_address_name, "gst_state") }} - {{ dispatch.Pin }}</p>
+				<p>{{ capkpi.db.get_value("Address", doc.dispatch_address_name, "gst_state") }} - {{ dispatch.Pin }}</p>
 			{% endif %}
 		</div>
 	</div>
@@ -126,12 +126,12 @@
 						<td class="text-left" style="width: 10%;">{{ item.HsnCd }}</td>
 						<td class="text-right" style="width: 5%;">{{ item.Qty }}</td>
 						<td class="text-left" style="width: 5%;">{{ item.Unit }}</td>
-						<td class="text-right">{{ frappe.utils.fmt_money(item.UnitPrice, None, "INR") }}</td>
-						<td class="text-right" style="width: 5%;">{{ frappe.utils.fmt_money(item.Discount, None, "INR") }}</td>
-						<td class="text-right">{{ frappe.utils.fmt_money(item.AssAmt, None, "INR") }}</td>
+						<td class="text-right">{{ capkpi.utils.fmt_money(item.UnitPrice, None, "INR") }}</td>
+						<td class="text-right" style="width: 5%;">{{ capkpi.utils.fmt_money(item.Discount, None, "INR") }}</td>
+						<td class="text-right">{{ capkpi.utils.fmt_money(item.AssAmt, None, "INR") }}</td>
 						<td class="text-right" style="width: 7%;">{{ item.GstRt + item.CesRt }} %</td>
-						<td class="text-right" style="width: 5%;">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
-						<td class="text-right">{{ frappe.utils.fmt_money(item.TotItemVal, None, "INR") }}</td>
+						<td class="text-right" style="width: 5%;">{{ capkpi.utils.fmt_money(0, None, "INR") }}</td>
+						<td class="text-right">{{ capkpi.utils.fmt_money(item.TotItemVal, None, "INR") }}</td>
 					</tr>
 				{% endfor %}
 			</tbody>
@@ -157,16 +157,16 @@
 			<tbody>
 				{%- set value_details = einvoice.ValDtls -%}
 				<tr>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.AssVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.SgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.IgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CesVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.Discount, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.OthChrg, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.RndOffAmt, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.TotInvVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.AssVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.CgstVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.SgstVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.IgstVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.CesVal, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(0, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.Discount, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.OthChrg, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.RndOffAmt, None, "INR") }}</td>
+					<td class="text-right">{{ capkpi.utils.fmt_money(value_details.TotInvVal, None, "INR") }}</td>
 				</tr>
 			</tbody>
 		</table>

@@ -4,8 +4,8 @@
 
 from datetime import datetime
 
-import frappe
-from frappe.tests.utils import CapKPITestCase
+import capkpi
+from capkpi.tests.utils import CapKPITestCase
 
 from erp.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
 from erp.buying.report.procurement_tracker.procurement_tracker import execute
@@ -24,8 +24,8 @@ class TestProcurementTracker(CapKPITestCase):
 		self.assertEqual(expected_data, report[1][length - 1])
 
 	def generate_expected_data(self):
-		if not frappe.db.exists("Company", "_Test Procurement Company"):
-			frappe.get_doc(
+		if not capkpi.db.exists("Company", "_Test Procurement Company"):
+			capkpi.get_doc(
 				dict(
 					doctype="Company",
 					company_name="_Test Procurement Company",

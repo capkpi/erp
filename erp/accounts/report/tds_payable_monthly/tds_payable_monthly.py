@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -19,7 +19,7 @@ def execute(filters=None):
 def validate_filters(filters):
 	"""Validate if dates are properly set"""
 	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date must be before To Date"))
+		capkpi.throw(_("From Date must be before To Date"))
 
 
 def get_result(filters, tds_docs, tds_accounts, tax_category_map, journal_entry_party_map):
@@ -55,7 +55,7 @@ def get_result(filters, tds_docs, tds_accounts, tax_category_map, journal_entry_
 		if tds_deducted:
 			row = {
 				"pan"
-				if frappe.db.has_column("Supplier", "pan")
+				if capkpi.db.has_column("Supplier", "pan")
 				else "tax_id": supplier_map.get(supplier, {}).get("pan"),
 				"supplier": supplier_map.get(supplier, {}).get("name"),
 			}
@@ -82,8 +82,8 @@ def get_result(filters, tds_docs, tds_accounts, tax_category_map, journal_entry_
 
 
 def get_supplier_pan_map():
-	supplier_map = frappe._dict()
-	suppliers = frappe.db.get_all(
+	supplier_map = capkpi._dict()
+	suppliers = capkpi.db.get_all(
 		"Supplier", fields=["name", "pan", "supplier_type", "supplier_name", "tax_withholding_category"]
 	)
 
@@ -98,7 +98,7 @@ def get_gle_map(documents):
 	# {"purchase_invoice": list of dict of all gle created for this invoice}
 	gle_map = {}
 
-	gle = frappe.db.get_all(
+	gle = capkpi.db.get_all(
 		"GL Entry",
 		{"voucher_no": ["in", documents], "is_cancelled": 0},
 		["credit", "debit", "account", "voucher_no", "posting_date", "voucher_type", "against", "party"],
@@ -114,9 +114,9 @@ def get_gle_map(documents):
 
 
 def get_columns(filters):
-	pan = "pan" if frappe.db.has_column("Supplier", "pan") else "tax_id"
+	pan = "pan" if capkpi.db.has_column("Supplier", "pan") else "tax_id"
 	columns = [
-		{"label": _(frappe.unscrub(pan)), "fieldname": pan, "fieldtype": "Data", "width": 90},
+		{"label": _(capkpi.unscrub(pan)), "fieldname": pan, "fieldtype": "Data", "width": 90},
 		{
 			"label": _("Supplier"),
 			"options": "Supplier",
@@ -182,9 +182,9 @@ def get_tds_docs(filters):
 	tax_category_map = {}
 	or_filters = {}
 	journal_entry_party_map = {}
-	bank_accounts = frappe.get_all("Account", {"is_group": 0, "account_type": "Bank"}, pluck="name")
+	bank_accounts = capkpi.get_all("Account", {"is_group": 0, "account_type": "Bank"}, pluck="name")
 
-	tds_accounts = frappe.get_all(
+	tds_accounts = capkpi.get_all(
 		"Tax Withholding Account", {"company": filters.get("company")}, pluck="account"
 	)
 
@@ -200,7 +200,7 @@ def get_tds_docs(filters):
 		del query_filters["against"]
 		or_filters = {"against": filters.get("supplier"), "party": filters.get("supplier")}
 
-	tds_docs = frappe.get_all(
+	tds_docs = capkpi.get_all(
 		"GL Entry",
 		filters=query_filters,
 		or_filters=or_filters,
@@ -232,7 +232,7 @@ def get_tds_docs(filters):
 
 def get_journal_entry_party_map(journal_entries):
 	journal_entry_party_map = {}
-	for d in frappe.db.get_all(
+	for d in capkpi.db.get_all(
 		"Journal Entry Account",
 		{"parent": ("in", journal_entries), "party_type": "Supplier", "party": ("is", "set")},
 		["parent", "party"],
@@ -246,8 +246,8 @@ def get_journal_entry_party_map(journal_entries):
 
 def get_tax_category_map(vouchers, doctype, tax_category_map):
 	tax_category_map.update(
-		frappe._dict(
-			frappe.get_all(
+		capkpi._dict(
+			capkpi.get_all(
 				doctype,
 				filters={"name": ("in", vouchers)},
 				fields=["name", "tax_withholding_category"],
@@ -258,7 +258,7 @@ def get_tax_category_map(vouchers, doctype, tax_category_map):
 
 
 def get_tax_rate_map(filters):
-	rate_map = frappe.get_all(
+	rate_map = capkpi.get_all(
 		"Tax Withholding Rate",
 		filters={
 			"from_date": ("<=", filters.get("from_date")),
@@ -268,4 +268,4 @@ def get_tax_rate_map(filters):
 		as_list=1,
 	)
 
-	return frappe._dict(rate_map)
+	return capkpi._dict(rate_map)

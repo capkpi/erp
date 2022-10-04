@@ -5,14 +5,14 @@ import json
 import random
 from datetime import datetime
 
-import frappe
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils.make_random import get_random
 
 from erp.demo.setup.setup_data import import_json
 
 
 def setup_data():
-	frappe.flags.mute_emails = True
+	capkpi.flags.mute_emails = True
 	make_masters()
 	setup_item()
 	make_student_applicants()
@@ -20,8 +20,8 @@ def setup_data():
 	make_fees_category()
 	make_fees_structure()
 	make_assessment_groups()
-	frappe.db.commit()
-	frappe.clear_cache()
+	capkpi.db.commit()
+	capkpi.clear_cache()
 
 
 def make_masters():
@@ -33,18 +33,18 @@ def make_masters():
 	import_json("Student Batch Name")
 	import_json("Assessment Criteria")
 	import_json("Grading Scale")
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def setup_item():
 	items = json.loads(
-		open(frappe.get_app_path("erp", "demo", "data", "item_education.json")).read()
+		open(capkpi.get_app_path("erp", "demo", "data", "item_education.json")).read()
 	)
 	for i in items:
-		item = frappe.new_doc("Item")
+		item = capkpi.new_doc("Item")
 		item.update(i)
 		item.min_order_qty = random.randint(10, 30)
-		item.item_defaults[0].default_warehouse = frappe.get_all(
+		item.item_defaults[0].default_warehouse = capkpi.get_all(
 			"Warehouse", filters={"warehouse_name": item.item_defaults[0].default_warehouse}, limit=1
 		)[0].name
 		item.insert()
@@ -68,7 +68,7 @@ def make_student_applicants():
 				female_names.append(d.get("first_name").title())
 
 		for idx, d in enumerate(random_student_data):
-			student_applicant = frappe.new_doc("Student Applicant")
+			student_applicant = capkpi.new_doc("Student Applicant")
 			student_applicant.first_name = d.get("first_name").title()
 			student_applicant.last_name = d.get("last_name").title()
 			student_applicant.image = d.get("image")
@@ -95,23 +95,23 @@ def make_student_applicants():
 			)
 			if count < 5:
 				student_applicant.insert()
-				frappe.db.commit()
+				capkpi.db.commit()
 			else:
 				student_applicant.submit()
-				frappe.db.commit()
+				capkpi.db.commit()
 			count += 1
 
 
 def make_student_group():
-	for term in frappe.db.get_list("Academic Term"):
-		for program in frappe.db.get_list("Program"):
-			sg_tool = frappe.new_doc("Student Group Creation Tool")
+	for term in capkpi.db.get_list("Academic Term"):
+		for program in capkpi.db.get_list("Program"):
+			sg_tool = capkpi.new_doc("Student Group Creation Tool")
 			sg_tool.academic_year = "2017-18"
 			sg_tool.academic_term = term.name
 			sg_tool.program = program.name
 			for d in sg_tool.get_courses():
-				d = frappe._dict(d)
-				student_group = frappe.new_doc("Student Group")
+				d = capkpi._dict(d)
+				student_group = capkpi.new_doc("Student Group")
 				student_group.student_group_name = d.student_group_name
 				student_group.group_based_on = d.group_based_on
 				student_group.program = program.name
@@ -120,7 +120,7 @@ def make_student_group():
 				student_group.academic_term = term.name
 				student_group.academic_year = "2017-18"
 				student_group.save()
-			frappe.db.commit()
+			capkpi.db.commit()
 
 
 def make_fees_category():
@@ -143,23 +143,23 @@ def make_fees_category():
 	}
 
 	for i in fee_type:
-		fee_category = frappe.new_doc("Fee Category")
+		fee_category = capkpi.new_doc("Fee Category")
 		fee_category.category_name = i
 		fee_category.description = fee_desc[i]
 		fee_category.insert()
-		frappe.db.commit()
+		capkpi.db.commit()
 
 
 def make_fees_structure():
-	for d in frappe.db.get_list("Program"):
-		program = frappe.get_doc("Program", d.name)
+	for d in capkpi.db.get_list("Program"):
+		program = capkpi.get_doc("Program", d.name)
 		for academic_term in ["2017-18 (Semester 1)", "2017-18 (Semester 2)", "2017-18 (Semester 3)"]:
-			fee_structure = frappe.new_doc("Fee Structure")
+			fee_structure = capkpi.new_doc("Fee Structure")
 			fee_structure.program = d.name
-			fee_structure.academic_term = random.choice(frappe.db.get_list("Academic Term")).name
+			fee_structure.academic_term = random.choice(capkpi.db.get_list("Academic Term")).name
 			for j in range(1, 4):
 				temp = {
-					"fees_category": random.choice(frappe.db.get_list("Fee Category")).name,
+					"fees_category": random.choice(capkpi.db.get_list("Fee Category")).name,
 					"amount": random.randint(500, 1000),
 				}
 				fee_structure.append("components", temp)
@@ -173,32 +173,32 @@ def make_fees_structure():
 				},
 			)
 		program.save()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def make_assessment_groups():
-	for year in frappe.db.get_list("Academic Year"):
-		ag = frappe.new_doc("Assessment Group")
+	for year in capkpi.db.get_list("Academic Year"):
+		ag = capkpi.new_doc("Assessment Group")
 		ag.assessment_group_name = year.name
 		ag.parent_assessment_group = "All Assessment Groups"
 		ag.is_group = 1
 		ag.insert()
-		for term in frappe.db.get_list("Academic Term", filters={"academic_year": year.name}):
-			ag1 = frappe.new_doc("Assessment Group")
+		for term in capkpi.db.get_list("Academic Term", filters={"academic_year": year.name}):
+			ag1 = capkpi.new_doc("Assessment Group")
 			ag1.assessment_group_name = term.name
 			ag1.parent_assessment_group = ag.name
 			ag1.is_group = 1
 			ag1.insert()
 			for assessment_group in ["Term I", "Term II"]:
-				ag2 = frappe.new_doc("Assessment Group")
+				ag2 = capkpi.new_doc("Assessment Group")
 				ag2.assessment_group_name = ag1.name + " " + assessment_group
 				ag2.parent_assessment_group = ag1.name
 				ag2.insert()
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def get_json_path(doctype):
-	return frappe.get_app_path("erp", "demo", "data", frappe.scrub(doctype) + ".json")
+	return capkpi.get_app_path("erp", "demo", "data", capkpi.scrub(doctype) + ".json")
 
 
 def weighted_choice(weights):

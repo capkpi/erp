@@ -5,7 +5,7 @@ import unittest
 
 from erp.education.api import get_grade
 
-# test_records = frappe.get_test_records('Assessment Result')
+# test_records = capkpi.get_test_records('Assessment Result')
 
 
 class TestAssessmentResult(unittest.TestCase):

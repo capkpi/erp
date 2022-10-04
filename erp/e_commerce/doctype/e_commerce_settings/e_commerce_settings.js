@@ -1,7 +1,7 @@
 // Copyright (c) 2021, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("E Commerce Settings", {
+capkpi.ui.form.on("E Commerce Settings", {
 	onload: function(frm) {
 		if(frm.doc.__onload && frm.doc.__onload.quotation_series) {
 			frm.fields_dict.quotation_series.df.options = frm.doc.__onload.quotation_series;
@@ -24,8 +24,8 @@ frappe.ui.form.on("E Commerce Settings", {
 			);
 		}
 
-		frappe.model.with_doctype("Website Item", () => {
-			const web_item_meta = frappe.get_meta('Website Item');
+		capkpi.model.with_doctype("Website Item", () => {
+			const web_item_meta = capkpi.get_meta('Website Item');
 
 			const valid_fields = web_item_meta.fields.filter(
 				df => ["Link", "Table MultiSelect"].includes(df.fieldtype) && !df.hidden

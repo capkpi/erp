@@ -2,11 +2,11 @@
 <head>
 
 
-	<link href="/assets/frappe/css/c3.min.css" rel="stylesheet" type="text/css">
+	<link href="/assets/capkpi/css/c3.min.css" rel="stylesheet" type="text/css">
 
 
-	<script type="text/javascript" src="/assets/frappe/js/lib/d3.min.js"></script>
-	<script type="text/javascript" src="/assets/frappe/js/lib/c3.min.js"></script>
+	<script type="text/javascript" src="/assets/capkpi/js/lib/d3.min.js"></script>
+	<script type="text/javascript" src="/assets/capkpi/js/lib/c3.min.js"></script>
     <script type="text/javascript">
 
 		onReady("#chart_div", function() {
@@ -95,7 +95,7 @@
 
  </head>
 <div style="margin-bottom: 7px;" class="text-center">
-	{%= frappe.boot.letter_heads[frappe.defaults.get_default("letter_head")] %}
+	{%= capkpi.boot.letter_heads[capkpi.defaults.get_default("letter_head")] %}
 </div>
 <h2 class="text-center">{%= __(report.report_name) %}</h2>
 <h4 class="text-center">{%= filters.item %} </h4>
@@ -129,4 +129,4 @@
 
 
 
-<p class="text-right text-muted">Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>
+<p class="text-right text-muted">Printed On {%= capkpi.datetime.str_to_user(capkpi.datetime.get_datetime_as_string()) %}</p>

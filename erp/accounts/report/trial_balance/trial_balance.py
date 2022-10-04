@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cstr, flt, formatdate, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import cstr, flt, formatdate, getdate
 
 import erp
 from erp.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -36,13 +36,13 @@ def execute(filters=None):
 
 def validate_filters(filters):
 	if not filters.fiscal_year:
-		frappe.throw(_("Fiscal Year {0} is required").format(filters.fiscal_year))
+		capkpi.throw(_("Fiscal Year {0} is required").format(filters.fiscal_year))
 
-	fiscal_year = frappe.db.get_value(
+	fiscal_year = capkpi.db.get_value(
 		"Fiscal Year", filters.fiscal_year, ["year_start_date", "year_end_date"], as_dict=True
 	)
 	if not fiscal_year:
-		frappe.throw(_("Fiscal Year {0} does not exist").format(filters.fiscal_year))
+		capkpi.throw(_("Fiscal Year {0} does not exist").format(filters.fiscal_year))
 	else:
 		filters.year_start_date = getdate(fiscal_year.year_start_date)
 		filters.year_end_date = getdate(fiscal_year.year_end_date)
@@ -57,10 +57,10 @@ def validate_filters(filters):
 	filters.to_date = getdate(filters.to_date)
 
 	if filters.from_date > filters.to_date:
-		frappe.throw(_("From Date cannot be greater than To Date"))
+		capkpi.throw(_("From Date cannot be greater than To Date"))
 
 	if (filters.from_date < filters.year_start_date) or (filters.from_date > filters.year_end_date):
-		frappe.msgprint(
+		capkpi.msgprint(
 			_("From Date should be within the Fiscal Year. Assuming From Date = {0}").format(
 				formatdate(filters.year_start_date)
 			)
@@ -69,7 +69,7 @@ def validate_filters(filters):
 		filters.from_date = filters.year_start_date
 
 	if (filters.to_date < filters.year_start_date) or (filters.to_date > filters.year_end_date):
-		frappe.msgprint(
+		capkpi.msgprint(
 			_("To Date should be within the Fiscal Year. Assuming To Date = {0}").format(
 				formatdate(filters.year_end_date)
 			)
@@ -79,7 +79,7 @@ def validate_filters(filters):
 
 def get_data(filters):
 
-	accounts = frappe.db.sql(
+	accounts = capkpi.db.sql(
 		"""select name, account_number, parent_account, account_name, root_type, report_type, lft, rgt
 
 		from `tabAccount` where company=%s order by lft""",
@@ -93,7 +93,7 @@ def get_data(filters):
 
 	accounts, accounts_by_name, parent_children_map = filter_accounts(accounts)
 
-	min_lft, max_rgt = frappe.db.sql(
+	min_lft, max_rgt = capkpi.db.sql(
 		"""select min(lft), max(rgt) from `tabAccount`
 		where company=%s""",
 		(filters.company,),
@@ -150,7 +150,7 @@ def get_rootwise_opening_balances(filters, report_type):
 		additional_conditions += " and ifnull(voucher_type, '')!='Period Closing Voucher'"
 
 	if filters.cost_center:
-		lft, rgt = frappe.db.get_value("Cost Center", filters.cost_center, ["lft", "rgt"])
+		lft, rgt = capkpi.db.get_value("Cost Center", filters.cost_center, ["lft", "rgt"])
 		additional_conditions += """ and cost_center in (select name from `tabCost Center`
 			where lft >= %s and rgt <= %s)""" % (
 			lft,
@@ -177,13 +177,13 @@ def get_rootwise_opening_balances(filters, report_type):
 		"year_start_date": filters.year_start_date,
 		"project": filters.project,
 		"finance_book": filters.finance_book,
-		"company_fb": frappe.db.get_value("Company", filters.company, "default_finance_book"),
+		"company_fb": capkpi.db.get_value("Company", filters.company, "default_finance_book"),
 	}
 
 	if accounting_dimensions:
 		for dimension in accounting_dimensions:
 			if filters.get(dimension.fieldname):
-				if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+				if capkpi.get_cached_value("DocType", dimension.document_type, "is_tree"):
 					filters[dimension.fieldname] = get_dimension_with_children(
 						dimension.document_type, filters.get(dimension.fieldname)
 					)
@@ -193,7 +193,7 @@ def get_rootwise_opening_balances(filters, report_type):
 
 				query_filters.update({dimension.fieldname: filters.get(dimension.fieldname)})
 
-	gle = frappe.db.sql(
+	gle = capkpi.db.sql(
 		"""
 		select
 			account, sum(debit) as opening_debit, sum(credit) as opening_credit
@@ -211,7 +211,7 @@ def get_rootwise_opening_balances(filters, report_type):
 		as_dict=True,
 	)
 
-	opening = frappe._dict()
+	opening = capkpi._dict()
 	for d in gle:
 		opening.setdefault(d.account, d)
 

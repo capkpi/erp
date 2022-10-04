@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.model.document import Document
-from frappe.utils import get_link_to_form, now
+import capkpi
+from capkpi import _, msgprint
+from capkpi.model.document import Document
+from capkpi.utils import get_link_to_form, now
 from six import iteritems
 
 
@@ -18,7 +18,7 @@ class POSProfile(Document):
 
 	def validate_default_profile(self):
 		for row in self.applicable_for_users:
-			res = frappe.db.sql(
+			res = capkpi.db.sql(
 				"""select pf.name
 				from
 					`tabPOS Profile User` pfu, `tabPOS Profile` pf
@@ -51,40 +51,40 @@ class POSProfile(Document):
 
 		for link_dt, dn_list in iteritems(accounts):
 			for link_dn in dn_list:
-				if link_dn and not frappe.db.exists(
+				if link_dn and not capkpi.db.exists(
 					{"doctype": link_dt, "company": self.company, "name": link_dn}
 				):
-					frappe.throw(_("{0} does not belong to Company {1}").format(link_dn, self.company))
+					capkpi.throw(_("{0} does not belong to Company {1}").format(link_dn, self.company))
 
 	def validate_duplicate_groups(self):
 		item_groups = [d.item_group for d in self.item_groups]
 		customer_groups = [d.customer_group for d in self.customer_groups]
 
 		if len(item_groups) != len(set(item_groups)):
-			frappe.throw(
+			capkpi.throw(
 				_("Duplicate item group found in the item group table"), title="Duplicate Item Group"
 			)
 
 		if len(customer_groups) != len(set(customer_groups)):
-			frappe.throw(
+			capkpi.throw(
 				_("Duplicate customer group found in the cutomer group table"),
 				title="Duplicate Customer Group",
 			)
 
 	def validate_payment_methods(self):
 		if not self.payments:
-			frappe.throw(_("Payment methods are mandatory. Please add at least one payment method."))
+			capkpi.throw(_("Payment methods are mandatory. Please add at least one payment method."))
 
 		default_mode = [d.default for d in self.payments if d.default]
 		if not default_mode:
-			frappe.throw(_("Please select a default mode of payment"))
+			capkpi.throw(_("Please select a default mode of payment"))
 
 		if len(default_mode) > 1:
-			frappe.throw(_("You can only select one mode of payment as default"))
+			capkpi.throw(_("You can only select one mode of payment as default"))
 
 		invalid_modes = []
 		for d in self.payments:
-			account = frappe.db.get_value(
+			account = capkpi.db.get_value(
 				"Mode of Payment Account",
 				{"parent": d.mode_of_payment, "company": self.company},
 				"default_account",
@@ -98,7 +98,7 @@ class POSProfile(Document):
 				msg = _("Please set default Cash or Bank account in Mode of Payment {}")
 			else:
 				msg = _("Please set default Cash or Bank account in Mode of Payments {}")
-			frappe.throw(msg.format(", ".join(invalid_modes)), title=_("Missing Account"))
+			capkpi.throw(msg.format(", ".join(invalid_modes)), title=_("Missing Account"))
 
 	def on_update(self):
 		self.set_defaults()
@@ -107,14 +107,14 @@ class POSProfile(Document):
 		self.set_defaults(include_current_pos=False)
 
 	def set_defaults(self, include_current_pos=True):
-		frappe.defaults.clear_default("is_pos")
+		capkpi.defaults.clear_default("is_pos")
 
 		if not include_current_pos:
 			condition = " where pfu.name != '%s' and pfu.default = 1 " % self.name.replace("'", "'")
 		else:
 			condition = " where pfu.default = 1 "
 
-		pos_view_users = frappe.db.sql_list(
+		pos_view_users = capkpi.db.sql_list(
 			"""select pfu.user
 			from `tabPOS Profile User` as pfu {0}""".format(
 				condition
@@ -123,28 +123,28 @@ class POSProfile(Document):
 
 		for user in pos_view_users:
 			if user:
-				frappe.defaults.set_user_default("is_pos", 1, user)
+				capkpi.defaults.set_user_default("is_pos", 1, user)
 			else:
-				frappe.defaults.set_global_default("is_pos", 1)
+				capkpi.defaults.set_global_default("is_pos", 1)
 
 
 def get_item_groups(pos_profile):
 	item_groups = []
-	pos_profile = frappe.get_cached_doc("POS Profile", pos_profile)
+	pos_profile = capkpi.get_cached_doc("POS Profile", pos_profile)
 
 	if pos_profile.get("item_groups"):
 		# Get items based on the item groups defined in the POS profile
 		for data in pos_profile.get("item_groups"):
 			item_groups.extend(
-				["%s" % frappe.db.escape(d.name) for d in get_child_nodes("Item Group", data.item_group)]
+				["%s" % capkpi.db.escape(d.name) for d in get_child_nodes("Item Group", data.item_group)]
 			)
 
 	return list(set(item_groups))
 
 
 def get_child_nodes(group_type, root):
-	lft, rgt = frappe.db.get_value(group_type, root, ["lft", "rgt"])
-	return frappe.db.sql(
+	lft, rgt = capkpi.db.get_value(group_type, root, ["lft", "rgt"])
+	return capkpi.db.sql(
 		""" Select name, lft, rgt from `tab{tab}` where
 			lft >= {lft} and rgt <= {rgt} order by lft""".format(
 			tab=group_type, lft=lft, rgt=rgt
@@ -153,11 +153,11 @@ def get_child_nodes(group_type, root):
 	)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
+@capkpi.whitelist()
+@capkpi.validate_and_sanitize_search_inputs
 def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
-	user = frappe.session["user"]
-	company = filters.get("company") or frappe.defaults.get_user_default("company")
+	user = capkpi.session["user"]
+	company = filters.get("company") or capkpi.defaults.get_user_default("company")
 
 	args = {
 		"user": user,
@@ -167,7 +167,7 @@ def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
 		"txt": "%%%s%%" % txt,
 	}
 
-	pos_profile = frappe.db.sql(
+	pos_profile = capkpi.db.sql(
 		"""select pf.name
 		from
 			`tabPOS Profile` pf, `tabPOS Profile User` pfu
@@ -181,7 +181,7 @@ def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
 	if not pos_profile:
 		del args["user"]
 
-		pos_profile = frappe.db.sql(
+		pos_profile = capkpi.db.sql(
 			"""select pf.name
 			from
 				`tabPOS Profile` pf left join `tabPOS Profile User` pfu
@@ -198,13 +198,13 @@ def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
 	return pos_profile
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def set_default_profile(pos_profile, company):
 	modified = now()
-	user = frappe.session.user
+	user = capkpi.session.user
 
 	if pos_profile and company:
-		frappe.db.sql(
+		capkpi.db.sql(
 			""" update `tabPOS Profile User` pfu, `tabPOS Profile` pf
 			set
 				pfu.default = 0, pf.modified = %s, pf.modified_by = %s
@@ -215,7 +215,7 @@ def set_default_profile(pos_profile, company):
 			auto_commit=1,
 		)
 
-		frappe.db.sql(
+		capkpi.db.sql(
 			""" update `tabPOS Profile User` pfu, `tabPOS Profile` pf
 			set
 				pfu.default = 1, pf.modified = %s, pf.modified_by = %s

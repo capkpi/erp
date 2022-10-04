@@ -3,8 +3,8 @@
 
 import unittest
 
-import frappe
-from frappe.utils import add_days, getdate
+import capkpi
+from capkpi.utils import add_days, getdate
 
 from erp.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 
@@ -16,7 +16,7 @@ class TestPaymentReconciliation(unittest.TestCase):
 		make_invoice_and_payment()
 
 	def test_payment_reconciliation(self):
-		payment_reco = frappe.get_doc("Payment Reconciliation")
+		payment_reco = capkpi.get_doc("Payment Reconciliation")
 		payment_reco.company = "_Test Company"
 		payment_reco.party_type = "Customer"
 		payment_reco.party = "_Test Payment Reco Customer"
@@ -47,13 +47,13 @@ class TestPaymentReconciliation(unittest.TestCase):
 		)
 		payment_reco.reconcile()
 
-		payment_entry_doc = frappe.get_doc("Payment Entry", payment_entry)
+		payment_entry_doc = capkpi.get_doc("Payment Entry", payment_entry)
 		self.assertEqual(payment_entry_doc.get("references")[0].reference_name, invoice)
 
 
 def make_customer():
-	if not frappe.db.get_value("Customer", "_Test Payment Reco Customer"):
-		frappe.get_doc(
+	if not capkpi.db.get_value("Customer", "_Test Payment Reco Customer"):
+		capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"customer_name": "_Test Payment Reco Customer",
@@ -72,7 +72,7 @@ def make_invoice_and_payment():
 	si.save()
 	si.submit()
 
-	pe = frappe.get_doc(
+	pe = capkpi.get_doc(
 		{
 			"doctype": "Payment Entry",
 			"payment_type": "Receive",

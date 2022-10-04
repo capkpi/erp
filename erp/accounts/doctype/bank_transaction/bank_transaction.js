@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Bank Transaction", {
+capkpi.ui.form.on("Bank Transaction", {
 	onload(frm) {
 		frm.set_query("payment_document", "payment_entries", function () {
 			return {
@@ -28,14 +28,14 @@ frappe.ui.form.on("Bank Transaction", {
 		frm.set_query("party_type", function () {
 			return {
 				filters: {
-					name: ["in", Object.keys(frappe.boot.party_account_types)],
+					name: ["in", Object.keys(capkpi.boot.party_account_types)],
 				},
 			};
 		});
 	},
 });
 
-frappe.ui.form.on("Bank Transaction Payments", {
+capkpi.ui.form.on("Bank Transaction Payments", {
 	payment_entries_remove: function (frm, cdt, cdn) {
 		update_clearance_date(frm, cdt, cdn);
 	},
@@ -43,14 +43,14 @@ frappe.ui.form.on("Bank Transaction Payments", {
 
 const update_clearance_date = (frm, cdt, cdn) => {
 	if (frm.doc.docstatus === 1) {
-		frappe
+		capkpi
 			.xcall(
 				"erp.accounts.doctype.bank_transaction.bank_transaction.unclear_reference_payment",
 				{ doctype: cdt, docname: cdn }
 			)
 			.then((e) => {
 				if (e == "success") {
-					frappe.show_alert({
+					capkpi.show_alert({
 						message: __("Document {0} successfully uncleared", [e]),
 						indicator: "green",
 					});

@@ -1,9 +1,9 @@
 import copy
 from collections import defaultdict
 
-import frappe
-from frappe import _
-from frappe.utils import cint, flt, get_link_to_form
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, flt, get_link_to_form
 
 from erp.stock.doctype.serial_no.serial_no import get_serial_nos
 
@@ -27,13 +27,13 @@ class Subcontracting:
 		self.__set_supplied_items()
 
 	def initialized_fields(self):
-		self.available_materials = frappe._dict()
-		self.__transferred_items = frappe._dict()
-		self.alternative_item_details = frappe._dict()
+		self.available_materials = capkpi._dict()
+		self.__transferred_items = capkpi._dict()
+		self.alternative_item_details = capkpi._dict()
 		self.__get_backflush_based_on()
 
 	def __get_backflush_based_on(self):
-		self.backflush_based_on = frappe.db.get_single_value(
+		self.backflush_based_on = capkpi.db.get_single_value(
 			"Buying Settings", "backflush_raw_materials_of_subcontract_based_on"
 		)
 
@@ -92,7 +92,7 @@ class Subcontracting:
 			if key not in self.available_materials:
 				self.available_materials.setdefault(
 					key,
-					frappe._dict(
+					capkpi._dict(
 						{
 							"qty": 0,
 							"serial_no": [],
@@ -185,7 +185,7 @@ class Subcontracting:
 			["Stock Entry", "purchase_order", "in", self.purchase_orders],
 		]
 
-		return frappe.get_all("Stock Entry", fields=fields, filters=filters)
+		return capkpi.get_all("Stock Entry", fields=fields, filters=filters)
 
 	def __get_received_items(self, doctype):
 		fields = []
@@ -201,10 +201,10 @@ class Subcontracting:
 		if doctype == "Purchase Invoice":
 			filters.append(["Purchase Invoice", "update_stock", "=", 1])
 
-		return frappe.get_all(f"{doctype}", fields=fields, filters=filters)
+		return capkpi.get_all(f"{doctype}", fields=fields, filters=filters)
 
 	def __get_consumed_items(self, doctype, pr_items):
-		return frappe.get_all(
+		return capkpi.get_all(
 			"Purchase Receipt Item Supplied",
 			fields=[
 				"serial_no",
@@ -229,7 +229,7 @@ class Subcontracting:
 		if (
 			self.doctype != "Purchase Order" and self.backflush_based_on != "BOM" and self.purchase_orders
 		):
-			for row in frappe.get_all(
+			for row in capkpi.get_all(
 				"Purchase Order Item",
 				fields=["item_code", "(qty - received_qty) as qty", "parent", "name"],
 				filters={"docstatus": 1, "parent": ("in", self.purchase_orders)},
@@ -266,7 +266,7 @@ class Subcontracting:
 		]
 
 		return (
-			frappe.get_all("BOM", fields=fields, filters=filters, order_by=f"`tab{doctype}`.`idx`") or []
+			capkpi.get_all("BOM", fields=fields, filters=filters, order_by=f"`tab{doctype}`.`idx`") or []
 		)
 
 	def __remove_changed_rows(self):
@@ -332,10 +332,10 @@ class Subcontracting:
 			qty = (flt(item_row.qty) * flt(transfer_item.qty)) / flt(self.qty_to_be_received.get(key, 0))
 			transfer_item.item_details.required_qty = transfer_item.qty
 
-			if transfer_item.serial_no or frappe.get_cached_value(
+			if transfer_item.serial_no or capkpi.get_cached_value(
 				"UOM", transfer_item.item_details.stock_uom, "must_be_whole_number"
 			):
-				return frappe.utils.ceil(qty)
+				return capkpi.utils.ceil(qty)
 
 			return qty
 
@@ -427,7 +427,7 @@ class Subcontracting:
 		fields = ["main_item_code", "rm_item_code", "parent", "supplied_qty", "name"]
 		filters = {"docstatus": 1, "parent": ("in", self.purchase_orders)}
 
-		for row in frappe.get_all(
+		for row in capkpi.get_all(
 			"Purchase Order Item Supplied", fields=fields, filters=filters, order_by="idx"
 		):
 			key = (row.rm_item_code, row.main_item_code, row.parent)
@@ -437,7 +437,7 @@ class Subcontracting:
 				consumed_qty = row.supplied_qty
 
 			itemwise_consumed_qty[key] -= consumed_qty
-			frappe.db.set_value("Purchase Order Item Supplied", row.name, "consumed_qty", consumed_qty)
+			capkpi.db.set_value("Purchase Order Item Supplied", row.name, "consumed_qty", consumed_qty)
 
 	def __validate_supplied_items(self):
 		if self.doctype not in ["Purchase Invoice", "Purchase Receipt"]:
@@ -456,8 +456,8 @@ class Subcontracting:
 			"batch_no"
 		):
 			link = get_link_to_form("Purchase Order", row.purchase_order)
-			msg = f'The Batch No {frappe.bold(row.get("batch_no"))} has not supplied against the Purchase Order {link}'
-			frappe.throw(_(msg), title=_("Incorrect Batch Consumed"))
+			msg = f'The Batch No {capkpi.bold(row.get("batch_no"))} has not supplied against the Purchase Order {link}'
+			capkpi.throw(_(msg), title=_("Incorrect Batch Consumed"))
 
 	def __validate_serial_no(self, row, key):
 		if row.get("serial_no"):
@@ -468,4 +468,4 @@ class Subcontracting:
 				incorrect_sn = "\n".join(incorrect_sn)
 				link = get_link_to_form("Purchase Order", row.purchase_order)
 				msg = f"The Serial Nos {incorrect_sn} has not supplied against the Purchase Order {link}"
-				frappe.throw(_(msg), title=_("Incorrect Serial Number Consumed"))
+				capkpi.throw(_(msg), title=_("Incorrect Serial Number Consumed"))

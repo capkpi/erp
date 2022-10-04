@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 
-from frappe.model.document import Document
+from capkpi.model.document import Document
 
 
 class ShopifyTaxAccount(Document):

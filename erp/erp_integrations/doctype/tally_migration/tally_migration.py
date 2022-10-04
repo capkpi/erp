@@ -9,12 +9,12 @@ import traceback
 import zipfile
 from decimal import Decimal
 
-import frappe
+import capkpi
 from bs4 import BeautifulSoup as bs
-from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_field
-from frappe.model.document import Document
-from frappe.utils.data import format_datetime
+from capkpi import _
+from capkpi.custom.doctype.custom_field.custom_field import create_custom_field
+from capkpi.model.document import Document
+from capkpi.utils.data import format_datetime
 
 from erp import encode_company_abbr
 from erp.accounts.doctype.account.chart_of_accounts.chart_of_accounts import create_charts
@@ -26,12 +26,12 @@ PRIMARY_ACCOUNT = "Primary"
 VOUCHER_CHUNK_SIZE = 500
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def new_doc(document):
 	document = json.loads(document)
 	doctype = document.pop("doctype")
 	document.pop("name", None)
-	doc = frappe.new_doc(doctype)
+	doc = capkpi.new_doc(doctype)
 	doc.update(document)
 
 	return doc
@@ -57,7 +57,7 @@ class TallyMigration(Document):
 			string = re.sub(r"\r\n", "", string)
 			return string
 
-		master_file = frappe.get_doc("File", {"file_url": data_file})
+		master_file = capkpi.get_doc("File", {"file_url": data_file})
 		master_file_path = master_file.get_full_path()
 
 		if zipfile.is_zipfile(master_file_path):
@@ -74,7 +74,7 @@ class TallyMigration(Document):
 
 	def dump_processed_data(self, data):
 		for key, value in data.items():
-			f = frappe.get_doc(
+			f = capkpi.get_doc(
 				{
 					"doctype": "File",
 					"file_name": key + ".json",
@@ -86,15 +86,15 @@ class TallyMigration(Document):
 			)
 			try:
 				f.insert()
-			except frappe.DuplicateEntryError:
+			except capkpi.DuplicateEntryError:
 				pass
 			setattr(self, key, f.file_url)
 
 	def set_account_defaults(self):
-		self.default_cost_center, self.default_round_off_account = frappe.db.get_value(
+		self.default_cost_center, self.default_round_off_account = capkpi.db.get_value(
 			"Company", self.erp_company, ["cost_center", "round_off_account"]
 		)
-		self.default_warehouse = frappe.db.get_value(
+		self.default_warehouse = capkpi.db.get_value(
 			"Stock Settings", "Stock Settings", "default_warehouse"
 		)
 
@@ -299,18 +299,18 @@ class TallyMigration(Document):
 			self.set_status()
 
 	def publish(self, title, message, count, total):
-		frappe.publish_realtime(
+		capkpi.publish_realtime(
 			"tally_migration_progress_update",
 			{"title": title, "message": message, "count": count, "total": total},
 		)
 
 	def _import_master_data(self):
 		def create_company_and_coa(coa_file_url):
-			coa_file = frappe.get_doc("File", {"file_url": coa_file_url})
-			frappe.local.flags.ignore_chart_of_accounts = True
+			coa_file = capkpi.get_doc("File", {"file_url": coa_file_url})
+			capkpi.local.flags.ignore_chart_of_accounts = True
 
 			try:
-				company = frappe.get_doc(
+				company = capkpi.get_doc(
 					{
 						"doctype": "Company",
 						"company_name": self.erp_company,
@@ -318,44 +318,44 @@ class TallyMigration(Document):
 						"enable_perpetual_inventory": 0,
 					}
 				).insert()
-			except frappe.DuplicateEntryError:
-				company = frappe.get_doc("Company", self.erp_company)
+			except capkpi.DuplicateEntryError:
+				company = capkpi.get_doc("Company", self.erp_company)
 				unset_existing_data(self.erp_company)
 
-			frappe.local.flags.ignore_chart_of_accounts = False
+			capkpi.local.flags.ignore_chart_of_accounts = False
 			create_charts(company.name, custom_chart=json.loads(coa_file.get_content()))
 			company.create_default_warehouses()
 
 		def create_parties_and_addresses(parties_file_url, addresses_file_url):
-			parties_file = frappe.get_doc("File", {"file_url": parties_file_url})
+			parties_file = capkpi.get_doc("File", {"file_url": parties_file_url})
 			for party in json.loads(parties_file.get_content()):
 				try:
-					party_doc = frappe.get_doc(party)
+					party_doc = capkpi.get_doc(party)
 					party_doc.insert()
 				except Exception:
 					self.log(party_doc)
-			addresses_file = frappe.get_doc("File", {"file_url": addresses_file_url})
+			addresses_file = capkpi.get_doc("File", {"file_url": addresses_file_url})
 			for address in json.loads(addresses_file.get_content()):
 				try:
-					address_doc = frappe.get_doc(address)
+					address_doc = capkpi.get_doc(address)
 					address_doc.insert(ignore_mandatory=True)
 				except Exception:
 					self.log(address_doc)
 
 		def create_items_uoms(items_file_url, uoms_file_url):
-			uoms_file = frappe.get_doc("File", {"file_url": uoms_file_url})
+			uoms_file = capkpi.get_doc("File", {"file_url": uoms_file_url})
 			for uom in json.loads(uoms_file.get_content()):
-				if not frappe.db.exists(uom):
+				if not capkpi.db.exists(uom):
 					try:
-						uom_doc = frappe.get_doc(uom)
+						uom_doc = capkpi.get_doc(uom)
 						uom_doc.insert()
 					except Exception:
 						self.log(uom_doc)
 
-			items_file = frappe.get_doc("File", {"file_url": items_file_url})
+			items_file = capkpi.get_doc("File", {"file_url": items_file_url})
 			for item in json.loads(items_file.get_content()):
 				try:
-					item_doc = frappe.get_doc(item)
+					item_doc = capkpi.get_doc(item)
 					item_doc.insert()
 				except Exception:
 					self.log(item_doc)
@@ -374,11 +374,11 @@ class TallyMigration(Document):
 
 			self.set_account_defaults()
 			self.is_master_data_imported = 1
-			frappe.db.commit()
+			capkpi.db.commit()
 
 		except Exception:
 			self.publish("Import Master Data", _("Process Failed"), -1, 5)
-			frappe.db.rollback()
+			capkpi.db.rollback()
 			self.log()
 
 		finally:
@@ -407,9 +407,9 @@ class TallyMigration(Document):
 					processed_voucher = function(voucher)
 					if processed_voucher:
 						vouchers.append(processed_voucher)
-					frappe.db.commit()
+					capkpi.db.commit()
 				except Exception:
-					frappe.db.rollback()
+					capkpi.db.rollback()
 					self.log(voucher)
 			return vouchers
 
@@ -534,9 +534,9 @@ class TallyMigration(Document):
 			return taxes
 
 		def get_party(party):
-			if frappe.db.exists({"doctype": "Supplier", "supplier_name": party}):
+			if capkpi.db.exists({"doctype": "Supplier", "supplier_name": party}):
 				return "Supplier", encode_company_abbr(self.tally_creditors_account, self.erp_company)
-			elif frappe.db.exists({"doctype": "Customer", "customer_name": party}):
+			elif capkpi.db.exists({"doctype": "Customer", "customer_name": party}):
 				return "Customer", encode_company_abbr(self.tally_debtors_account, self.erp_company)
 
 		try:
@@ -560,14 +560,14 @@ class TallyMigration(Document):
 
 	def _import_day_book_data(self):
 		def create_fiscal_years(vouchers):
-			from frappe.utils.data import add_years, getdate
+			from capkpi.utils.data import add_years, getdate
 
 			earliest_date = getdate(min(voucher["posting_date"] for voucher in vouchers))
-			oldest_year = frappe.get_all(
+			oldest_year = capkpi.get_all(
 				"Fiscal Year", fields=["year_start_date", "year_end_date"], order_by="year_start_date"
 			)[0]
 			while earliest_date < oldest_year.year_start_date:
-				new_year = frappe.get_doc({"doctype": "Fiscal Year"})
+				new_year = capkpi.get_doc({"doctype": "Fiscal Year"})
 				new_year.year_start_date = add_years(oldest_year.year_start_date, -1)
 				new_year.year_end_date = add_years(oldest_year.year_end_date, -1)
 				if new_year.year_start_date.year == new_year.year_end_date.year:
@@ -595,7 +595,7 @@ class TallyMigration(Document):
 					create_custom_field(doctype, df)
 
 		def create_price_list():
-			frappe.get_doc(
+			capkpi.get_doc(
 				{
 					"doctype": "Price List",
 					"price_list_name": "Tally Price List",
@@ -607,23 +607,23 @@ class TallyMigration(Document):
 			).insert()
 
 		try:
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Account",
 				encode_company_abbr(self.tally_creditors_account, self.erp_company),
 				"account_type",
 				"Payable",
 			)
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Account",
 				encode_company_abbr(self.tally_debtors_account, self.erp_company),
 				"account_type",
 				"Receivable",
 			)
-			frappe.db.set_value(
+			capkpi.db.set_value(
 				"Company", self.erp_company, "round_off_account", self.default_round_off_account
 			)
 
-			vouchers_file = frappe.get_doc("File", {"file_url": self.vouchers})
+			vouchers_file = capkpi.get_doc("File", {"file_url": self.vouchers})
 			vouchers = json.loads(vouchers_file.get_content())
 
 			create_fiscal_years(vouchers)
@@ -636,7 +636,7 @@ class TallyMigration(Document):
 			for index in range(0, total, VOUCHER_CHUNK_SIZE):
 				if index + VOUCHER_CHUNK_SIZE >= total:
 					is_last = True
-				frappe.enqueue_doc(
+				capkpi.enqueue_doc(
 					self.doctype,
 					self.name,
 					"_import_vouchers",
@@ -654,58 +654,58 @@ class TallyMigration(Document):
 			self.set_status()
 
 	def _import_vouchers(self, start, total, is_last=False):
-		frappe.flags.in_migrate = True
-		vouchers_file = frappe.get_doc("File", {"file_url": self.vouchers})
+		capkpi.flags.in_migrate = True
+		vouchers_file = capkpi.get_doc("File", {"file_url": self.vouchers})
 		vouchers = json.loads(vouchers_file.get_content())
 		chunk = vouchers[start : start + VOUCHER_CHUNK_SIZE]
 
 		for index, voucher in enumerate(chunk, start=start):
 			try:
-				voucher_doc = frappe.get_doc(voucher)
+				voucher_doc = capkpi.get_doc(voucher)
 				voucher_doc.insert()
 				voucher_doc.submit()
 				self.publish("Importing Vouchers", _("{} of {}").format(index, total), index, total)
-				frappe.db.commit()
+				capkpi.db.commit()
 			except Exception:
-				frappe.db.rollback()
+				capkpi.db.rollback()
 				self.log(voucher_doc)
 
 		if is_last:
 			self.status = ""
 			self.is_day_book_data_imported = 1
 			self.save()
-			frappe.db.set_value("Price List", "Tally Price List", "enabled", 0)
-		frappe.flags.in_migrate = False
+			capkpi.db.set_value("Price List", "Tally Price List", "enabled", 0)
+		capkpi.flags.in_migrate = False
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def process_master_data(self):
 		self.set_status("Processing Master Data")
-		frappe.enqueue_doc(self.doctype, self.name, "_process_master_data", queue="long", timeout=3600)
+		capkpi.enqueue_doc(self.doctype, self.name, "_process_master_data", queue="long", timeout=3600)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def import_master_data(self):
 		self.set_status("Importing Master Data")
-		frappe.enqueue_doc(self.doctype, self.name, "_import_master_data", queue="long", timeout=3600)
+		capkpi.enqueue_doc(self.doctype, self.name, "_import_master_data", queue="long", timeout=3600)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def process_day_book_data(self):
 		self.set_status("Processing Day Book Data")
-		frappe.enqueue_doc(self.doctype, self.name, "_process_day_book_data", queue="long", timeout=3600)
+		capkpi.enqueue_doc(self.doctype, self.name, "_process_day_book_data", queue="long", timeout=3600)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def import_day_book_data(self):
 		self.set_status("Importing Day Book Data")
-		frappe.enqueue_doc(self.doctype, self.name, "_import_day_book_data", queue="long", timeout=3600)
+		capkpi.enqueue_doc(self.doctype, self.name, "_import_day_book_data", queue="long", timeout=3600)
 
 	def log(self, data=None):
-		if isinstance(data, frappe.model.document.Document):
-			if sys.exc_info()[1].__class__ != frappe.DuplicateEntryError:
+		if isinstance(data, capkpi.model.document.Document):
+			if sys.exc_info()[1].__class__ != capkpi.DuplicateEntryError:
 				failed_import_log = json.loads(self.failed_import_log)
 				doc = data.as_dict()
 				failed_import_log.append({"doc": doc, "exc": traceback.format_exc()})
 				self.failed_import_log = json.dumps(failed_import_log, separators=(",", ":"))
 				self.save()
-				frappe.db.commit()
+				capkpi.db.commit()
 
 		else:
 			data = data or self.status
@@ -718,7 +718,7 @@ class TallyMigration(Document):
 					traceback.format_exc(),
 				]
 			)
-			return frappe.log_error(title="Tally Migration Error", message=message)
+			return capkpi.log_error(title="Tally Migration Error", message=message)
 
 	def set_status(self, status=""):
 		self.status = status

@@ -2,12 +2,12 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
-class OverlapError(frappe.ValidationError):
+class OverlapError(capkpi.ValidationError):
 	pass
 
 
@@ -19,11 +19,11 @@ class AccountingPeriod(Document):
 		self.bootstrap_doctypes_for_closing()
 
 	def autoname(self):
-		company_abbr = frappe.get_cached_value("Company", self.company, "abbr")
+		company_abbr = capkpi.get_cached_value("Company", self.company, "abbr")
 		self.name = " - ".join([self.period_name, company_abbr])
 
 	def validate_overlap(self):
-		existing_accounting_period = frappe.db.sql(
+		existing_accounting_period = capkpi.db.sql(
 			"""select name from `tabAccounting Period`
 			where (
 				(%(start_date)s between start_date and end_date)
@@ -41,12 +41,12 @@ class AccountingPeriod(Document):
 		)
 
 		if len(existing_accounting_period) > 0:
-			frappe.throw(
+			capkpi.throw(
 				_("Accounting Period overlaps with {0}").format(existing_accounting_period[0].get("name")),
 				OverlapError,
 			)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_doctypes_for_closing(self):
 		docs_for_closing = []
 		doctypes = [

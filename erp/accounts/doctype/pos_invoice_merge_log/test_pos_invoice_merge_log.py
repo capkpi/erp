@@ -4,8 +4,8 @@
 import json
 import unittest
 
-import frappe
-from frappe.tests.utils import change_settings
+import capkpi
+from capkpi.tests.utils import change_settings
 
 from erp.accounts.doctype.pos_closing_entry.test_pos_closing_entry import init_user_and_profile
 from erp.accounts.doctype.pos_invoice.pos_invoice import make_sales_return
@@ -18,7 +18,7 @@ from erp.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
 
 class TestPOSInvoiceMergeLog(unittest.TestCase):
 	def test_consolidated_invoice_creation(self):
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			test_user, pos_profile = init_user_and_profile()
@@ -42,20 +42,20 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			pos_inv.load_from_db()
-			self.assertTrue(frappe.db.exists("Sales Invoice", pos_inv.consolidated_invoice))
+			self.assertTrue(capkpi.db.exists("Sales Invoice", pos_inv.consolidated_invoice))
 
 			pos_inv3.load_from_db()
-			self.assertTrue(frappe.db.exists("Sales Invoice", pos_inv3.consolidated_invoice))
+			self.assertTrue(capkpi.db.exists("Sales Invoice", pos_inv3.consolidated_invoice))
 
 			self.assertFalse(pos_inv.consolidated_invoice == pos_inv3.consolidated_invoice)
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_consolidated_credit_note_creation(self):
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			test_user, pos_profile = init_user_and_profile()
@@ -90,14 +90,14 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			pos_inv.load_from_db()
-			self.assertTrue(frappe.db.exists("Sales Invoice", pos_inv.consolidated_invoice))
+			self.assertTrue(capkpi.db.exists("Sales Invoice", pos_inv.consolidated_invoice))
 
 			pos_inv3.load_from_db()
-			self.assertTrue(frappe.db.exists("Sales Invoice", pos_inv3.consolidated_invoice))
+			self.assertTrue(capkpi.db.exists("Sales Invoice", pos_inv3.consolidated_invoice))
 
 			pos_inv_cn.load_from_db()
-			self.assertTrue(frappe.db.exists("Sales Invoice", pos_inv_cn.consolidated_invoice))
-			consolidated_credit_note = frappe.get_doc("Sales Invoice", pos_inv_cn.consolidated_invoice)
+			self.assertTrue(capkpi.db.exists("Sales Invoice", pos_inv_cn.consolidated_invoice))
+			consolidated_credit_note = capkpi.get_doc("Sales Invoice", pos_inv_cn.consolidated_invoice)
 			self.assertEqual(consolidated_credit_note.is_return, 1)
 			self.assertEqual(consolidated_credit_note.payments[0].mode_of_payment, "Cash")
 			self.assertEqual(consolidated_credit_note.payments[0].amount, -100)
@@ -105,12 +105,12 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			self.assertEqual(consolidated_credit_note.payments[1].amount, -200)
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_consolidated_invoice_item_taxes(self):
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			inv = create_pos_invoice(qty=1, rate=100, do_not_save=True)
@@ -148,7 +148,7 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 			inv.load_from_db()
 
-			consolidated_invoice = frappe.get_doc("Sales Invoice", inv.consolidated_invoice)
+			consolidated_invoice = capkpi.get_doc("Sales Invoice", inv.consolidated_invoice)
 			item_wise_tax_detail = json.loads(consolidated_invoice.get("taxes")[0].item_wise_tax_detail)
 
 			tax_rate, amount = item_wise_tax_detail.get("_Test Item")
@@ -159,16 +159,16 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			self.assertEqual(tax_rate2, 5)
 			self.assertEqual(amount2, 5)
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_consolidation_round_off_error_1(self):
 		"""
 		Test round off error in consolidated invoice creation if POS Invoice has inclusive tax
 		"""
 
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			make_stock_entry(
@@ -217,20 +217,20 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			inv.load_from_db()
-			consolidated_invoice = frappe.get_doc("Sales Invoice", inv.consolidated_invoice)
+			consolidated_invoice = capkpi.get_doc("Sales Invoice", inv.consolidated_invoice)
 			self.assertEqual(consolidated_invoice.outstanding_amount, 0)
 			self.assertEqual(consolidated_invoice.status, "Paid")
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_consolidation_round_off_error_2(self):
 		"""
 		Test the same case as above but with an Unpaid POS Invoice
 		"""
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			make_stock_entry(
@@ -284,20 +284,20 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			inv.load_from_db()
-			consolidated_invoice = frappe.get_doc("Sales Invoice", inv.consolidated_invoice)
+			consolidated_invoice = capkpi.get_doc("Sales Invoice", inv.consolidated_invoice)
 			self.assertEqual(consolidated_invoice.outstanding_amount, 800)
 			self.assertNotEqual(consolidated_invoice.status, "Paid")
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	@change_settings(
 		"System Settings", {"number_format": "#,###.###", "currency_precision": 3, "float_precision": 3}
 	)
 	def test_consolidation_round_off_error_3(self):
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			make_stock_entry(
@@ -346,20 +346,20 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			inv.load_from_db()
-			consolidated_invoice = frappe.get_doc("Sales Invoice", inv.consolidated_invoice)
+			consolidated_invoice = capkpi.get_doc("Sales Invoice", inv.consolidated_invoice)
 			self.assertEqual(consolidated_invoice.status, "Return")
 			self.assertEqual(consolidated_invoice.rounding_adjustment, -0.001)
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_consolidation_rounding_adjustment(self):
 		"""
 		Test if the rounding adjustment is calculated correctly
 		"""
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			make_stock_entry(
@@ -384,13 +384,13 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			consolidate_pos_invoices()
 
 			inv.load_from_db()
-			consolidated_invoice = frappe.get_doc("Sales Invoice", inv.consolidated_invoice)
+			consolidated_invoice = capkpi.get_doc("Sales Invoice", inv.consolidated_invoice)
 			self.assertEqual(consolidated_invoice.rounding_adjustment, 1)
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")
 
 	def test_serial_no_case_1(self):
 		"""
@@ -406,7 +406,7 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 		from erp.stock.doctype.serial_no.test_serial_no import get_serial_nos
 		from erp.stock.doctype.stock_entry.test_stock_entry import make_serialized_item
 
-		frappe.db.sql("delete from `tabPOS Invoice`")
+		capkpi.db.sql("delete from `tabPOS Invoice`")
 
 		try:
 			se = make_serialized_item()
@@ -446,6 +446,6 @@ class TestPOSInvoiceMergeLog(unittest.TestCase):
 			self.assertNotEqual(pos_inv.consolidated_invoice, pos_inv2.consolidated_invoice)
 
 		finally:
-			frappe.set_user("Administrator")
-			frappe.db.sql("delete from `tabPOS Profile`")
-			frappe.db.sql("delete from `tabPOS Invoice`")
+			capkpi.set_user("Administrator")
+			capkpi.db.sql("delete from `tabPOS Profile`")
+			capkpi.db.sql("delete from `tabPOS Invoice`")

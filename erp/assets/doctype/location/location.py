@@ -5,9 +5,9 @@
 import json
 import math
 
-import frappe
-from frappe.utils import flt
-from frappe.utils.nestedset import NestedSet, update_nsm
+import capkpi
+from capkpi.utils import flt
+from capkpi.utils.nestedset import NestedSet, update_nsm
 
 EARTH_RADIUS = 6378137
 
@@ -62,7 +62,7 @@ class Location(NestedSet):
 		self_features = set(self.add_child_property())
 
 		for ancestor in self.get_ancestors():
-			ancestor_doc = frappe.get_doc("Location", ancestor)
+			ancestor_doc = capkpi.get_doc("Location", ancestor)
 			child_features, ancestor_features = ancestor_doc.feature_seperator(child_feature=self.name)
 
 			ancestor_features = list(set(ancestor_features))
@@ -88,7 +88,7 @@ class Location(NestedSet):
 
 	def remove_ancestor_location_features(self):
 		for ancestor in self.get_ancestors():
-			ancestor_doc = frappe.get_doc("Location", ancestor)
+			ancestor_doc = capkpi.get_doc("Location", ancestor)
 			child_features, ancestor_features = ancestor_doc.feature_seperator(child_feature=self.name)
 
 			for index, feature in enumerate(ancestor_features):
@@ -189,12 +189,12 @@ def _ring_area(coords):
 	return area
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_children(doctype, parent=None, location=None, is_root=False):
 	if parent is None or parent == "All Locations":
 		parent = ""
 
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		"""
 		select
 			name as value,
@@ -204,24 +204,24 @@ def get_children(doctype, parent=None, location=None, is_root=False):
 		where
 			ifnull(parent_location, "")={parent}
 		""".format(
-			doctype=doctype, parent=frappe.db.escape(parent)
+			doctype=doctype, parent=capkpi.db.escape(parent)
 		),
 		as_dict=1,
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def add_node():
-	from frappe.desk.treeview import make_tree_args
+	from capkpi.desk.treeview import make_tree_args
 
-	args = frappe.form_dict
+	args = capkpi.form_dict
 	args = make_tree_args(**args)
 
 	if args.parent_location == "All Locations":
 		args.parent_location = None
 
-	frappe.get_doc(args).insert()
+	capkpi.get_doc(args).insert()
 
 
 def on_doctype_update():
-	frappe.db.add_index("Location", ["lft", "rgt"])
+	capkpi.db.add_index("Location", ["lft", "rgt"])

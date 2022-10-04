@@ -8,9 +8,9 @@ QUnit.test("test: Water Analysis", function (assert) {
 	// number of asserts
 	assert.expect(1);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Water Analysis
-		() => frappe.tests.make('Water Analysis', [
+		() => capkpi.tests.make('Water Analysis', [
 			// values to be set
 			{location: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[72.882185,19.076395]}}]}'},
 			{collection_datetime: '2017-11-08 18:43:57'},

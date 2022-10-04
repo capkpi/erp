@@ -3,12 +3,12 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 test_dependencies = ["Fertilizer"]
 
 
 class TestCrop(unittest.TestCase):
 	def test_crop_period(self):
-		basil = frappe.get_doc("Crop", "Basil from seed")
+		basil = capkpi.get_doc("Crop", "Basil from seed")
 		self.assertEqual(basil.period, 15)

@@ -4,7 +4,7 @@
 import json
 import unittest
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool import (
 	get_linked_payments,
@@ -27,22 +27,22 @@ class TestBankTransaction(unittest.TestCase):
 
 	@classmethod
 	def tearDownClass(cls):
-		for bt in frappe.get_all("Bank Transaction"):
-			doc = frappe.get_doc("Bank Transaction", bt.name)
+		for bt in capkpi.get_all("Bank Transaction"):
+			doc = capkpi.get_doc("Bank Transaction", bt.name)
 			if doc.docstatus == 1:
 				doc.cancel()
 			doc.delete()
 
 		# Delete directly in DB to avoid validation errors for countries not allowing deletion
-		frappe.db.sql("""delete from `tabPayment Entry Reference`""")
-		frappe.db.sql("""delete from `tabPayment Entry`""")
+		capkpi.db.sql("""delete from `tabPayment Entry Reference`""")
+		capkpi.db.sql("""delete from `tabPayment Entry`""")
 
 		# Delete POS Profile
-		frappe.db.sql("delete from `tabPOS Profile`")
+		capkpi.db.sql("delete from `tabPOS Profile`")
 
 	# This test checks if ERP is able to provide a linked payment for a bank transaction based on the amount of the bank transaction.
 	def test_linked_payments(self):
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="Re 95282925234 FE/000002917 AT171513000281183046 Conrad Electronic"),
 		)
@@ -51,11 +51,11 @@ class TestBankTransaction(unittest.TestCase):
 
 	# This test validates a simple reconciliation leading to the clearance of the bank transaction and the payment
 	def test_reconcile(self):
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="1512567 BG/000003025 OPSKATTUZWXXX AT776000000098709849 Herr G"),
 		)
-		payment = frappe.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1700))
+		payment = capkpi.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1700))
 		vouchers = json.dumps(
 			[
 				{
@@ -67,23 +67,23 @@ class TestBankTransaction(unittest.TestCase):
 		)
 		reconcile_vouchers(bank_transaction.name, vouchers)
 
-		unallocated_amount = frappe.db.get_value(
+		unallocated_amount = capkpi.db.get_value(
 			"Bank Transaction", bank_transaction.name, "unallocated_amount"
 		)
 		self.assertTrue(unallocated_amount == 0)
 
-		clearance_date = frappe.db.get_value("Payment Entry", payment.name, "clearance_date")
+		clearance_date = capkpi.db.get_value("Payment Entry", payment.name, "clearance_date")
 		self.assertTrue(clearance_date is not None)
 
 		bank_transaction.reload()
 		bank_transaction.cancel()
 
-		clearance_date = frappe.db.get_value("Payment Entry", payment.name, "clearance_date")
+		clearance_date = capkpi.db.get_value("Payment Entry", payment.name, "clearance_date")
 		self.assertFalse(clearance_date)
 
 	# Check if ERP can correctly filter a linked payments based on the debit/credit amount
 	def test_debit_credit_output(self):
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="Auszahlung Karte MC/000002916 AUTOMAT 698769 K002 27.10. 14:07"),
 		)
@@ -92,11 +92,11 @@ class TestBankTransaction(unittest.TestCase):
 
 	# Check error if already reconciled
 	def test_already_reconciled(self):
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G"),
 		)
-		payment = frappe.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1200))
+		payment = capkpi.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1200))
 		vouchers = json.dumps(
 			[
 				{
@@ -108,11 +108,11 @@ class TestBankTransaction(unittest.TestCase):
 		)
 		reconcile_vouchers(bank_transaction.name, vouchers)
 
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G"),
 		)
-		payment = frappe.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1200))
+		payment = capkpi.get_doc("Payment Entry", dict(party="Mr G", paid_amount=1200))
 		vouchers = json.dumps(
 			[
 				{
@@ -123,7 +123,7 @@ class TestBankTransaction(unittest.TestCase):
 			]
 		)
 		self.assertRaises(
-			frappe.ValidationError,
+			capkpi.ValidationError,
 			reconcile_vouchers,
 			bank_transaction_name=bank_transaction.name,
 			vouchers=vouchers,
@@ -131,11 +131,11 @@ class TestBankTransaction(unittest.TestCase):
 
 	# Raise an error if debitor transaction vs debitor payment
 	def test_clear_sales_invoice(self):
-		bank_transaction = frappe.get_doc(
+		bank_transaction = capkpi.get_doc(
 			"Bank Transaction",
 			dict(description="I2015000011 VD/000002514 ATWWXXX AT4701345000003510057 Bio"),
 		)
-		payment = frappe.get_doc("Sales Invoice", dict(customer="Fayva", status=["=", "Paid"]))
+		payment = capkpi.get_doc("Sales Invoice", dict(customer="Fayva", status=["=", "Paid"]))
 		vouchers = json.dumps(
 			[
 				{
@@ -148,27 +148,27 @@ class TestBankTransaction(unittest.TestCase):
 		reconcile_vouchers(bank_transaction.name, vouchers=vouchers)
 
 		self.assertEqual(
-			frappe.db.get_value("Bank Transaction", bank_transaction.name, "unallocated_amount"), 0
+			capkpi.db.get_value("Bank Transaction", bank_transaction.name, "unallocated_amount"), 0
 		)
 		self.assertTrue(
-			frappe.db.get_value("Sales Invoice Payment", dict(parent=payment.name), "clearance_date")
+			capkpi.db.get_value("Sales Invoice Payment", dict(parent=payment.name), "clearance_date")
 			is not None
 		)
 
 
 def create_bank_account(bank_name="Citi Bank", account_name="_Test Bank - _TC"):
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Bank",
 				"bank_name": bank_name,
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Bank Account",
 				"account_name": "Checking Account",
@@ -176,14 +176,14 @@ def create_bank_account(bank_name="Citi Bank", account_name="_Test Bank - _TC"):
 				"account": account_name,
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 
 def add_transactions():
 	create_bank_account()
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"description": "1512567 BG/000002918 OPSKATTUZWXXX AT776000000098709837 Herr G",
@@ -195,7 +195,7 @@ def add_transactions():
 	).insert()
 	doc.submit()
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"description": "1512567 BG/000003025 OPSKATTUZWXXX AT776000000098709849 Herr G",
@@ -207,7 +207,7 @@ def add_transactions():
 	).insert()
 	doc.submit()
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"description": "Re 95282925234 FE/000002917 AT171513000281183046 Conrad Electronic",
@@ -219,7 +219,7 @@ def add_transactions():
 	).insert()
 	doc.submit()
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"description": "Auszahlung Karte MC/000002916 AUTOMAT 698769 K002 27.10. 14:07",
@@ -231,7 +231,7 @@ def add_transactions():
 	).insert()
 	doc.submit()
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		{
 			"doctype": "Bank Transaction",
 			"description": "I2015000011 VD/000002514 ATWWXXX AT4701345000003510057 Bio",
@@ -246,7 +246,7 @@ def add_transactions():
 
 def add_vouchers():
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_group": "All Supplier Groups",
@@ -255,7 +255,7 @@ def add_vouchers():
 			}
 		).insert()
 
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 	pi = make_purchase_invoice(supplier="Conrad Electronic", qty=1, rate=690)
@@ -267,7 +267,7 @@ def add_vouchers():
 	pe.submit()
 
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_group": "All Supplier Groups",
@@ -275,7 +275,7 @@ def add_vouchers():
 				"supplier_name": "Mr G",
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 	pi = make_purchase_invoice(supplier="Mr G", qty=1, rate=1200)
@@ -293,7 +293,7 @@ def add_vouchers():
 	pe.submit()
 
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Supplier",
 				"supplier_group": "All Supplier Groups",
@@ -301,11 +301,11 @@ def add_vouchers():
 				"supplier_name": "Poore Simon's",
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"customer_group": "All Customer Groups",
@@ -313,7 +313,7 @@ def add_vouchers():
 				"customer_name": "Poore Simon's",
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
 	pi = make_purchase_invoice(supplier="Poore Simon's", qty=1, rate=3900, is_paid=1, do_not_save=1)
@@ -336,7 +336,7 @@ def add_vouchers():
 	pe.submit()
 
 	try:
-		frappe.get_doc(
+		capkpi.get_doc(
 			{
 				"doctype": "Customer",
 				"customer_group": "All Customer Groups",
@@ -344,12 +344,12 @@ def add_vouchers():
 				"customer_name": "Fayva",
 			}
 		).insert()
-	except frappe.DuplicateEntryError:
+	except capkpi.DuplicateEntryError:
 		pass
 
-	mode_of_payment = frappe.get_doc({"doctype": "Mode of Payment", "name": "Cash"})
+	mode_of_payment = capkpi.get_doc({"doctype": "Mode of Payment", "name": "Cash"})
 
-	if not frappe.db.get_value(
+	if not capkpi.db.get_value(
 		"Mode of Payment Account", {"company": "_Test Company", "parent": "Cash"}
 	):
 		mode_of_payment.append(

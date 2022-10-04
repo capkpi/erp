@@ -2,17 +2,17 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint, scrub
-from frappe.contacts.doctype.address.address import (
+import capkpi
+from capkpi import _, msgprint, scrub
+from capkpi.contacts.doctype.address.address import (
 	get_address_display,
 	get_company_address,
 	get_default_address,
 )
-from frappe.contacts.doctype.contact.contact import get_contact_details
-from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
-from frappe.model.utils import get_fetch_values
-from frappe.utils import (
+from capkpi.contacts.doctype.contact.contact import get_contact_details
+from capkpi.core.doctype.user_permission.user_permission import get_permitted_documents
+from capkpi.model.utils import get_fetch_values
+from capkpi.utils import (
 	add_days,
 	add_months,
 	add_years,
@@ -34,11 +34,11 @@ from erp.accounts.utils import get_fiscal_year
 from erp.exceptions import InvalidAccountCurrency, PartyDisabled, PartyFrozen
 
 
-class DuplicatePartyAccountError(frappe.ValidationError):
+class DuplicatePartyAccountError(capkpi.ValidationError):
 	pass
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_details(
 	party=None,
 	account=None,
@@ -59,8 +59,8 @@ def get_party_details(
 
 	if not party:
 		return {}
-	if not frappe.db.exists(party_type, party):
-		frappe.throw(_("{0}: {1} does not exists").format(party_type, party))
+	if not capkpi.db.exists(party_type, party):
+		capkpi.throw(_("{0}: {1} does not exists").format(party_type, party))
 	return _get_party_details(
 		party,
 		account,
@@ -97,18 +97,18 @@ def _get_party_details(
 	shipping_address=None,
 	pos_profile=None,
 ):
-	party_details = frappe._dict(
+	party_details = capkpi._dict(
 		set_account_and_due_date(party, account, party_type, company, posting_date, bill_date, doctype)
 	)
 	party = party_details[party_type.lower()]
 
 	if not ignore_permissions and not (
-		frappe.has_permission(party_type, "read", party)
-		or frappe.has_permission(party_type, "select", party)
+		capkpi.has_permission(party_type, "read", party)
+		or capkpi.has_permission(party_type, "select", party)
 	):
-		frappe.throw(_("Not permitted for {0}").format(party), frappe.PermissionError)
+		capkpi.throw(_("Not permitted for {0}").format(party), capkpi.PermissionError)
 
-	party = frappe.get_doc(party_type, party)
+	party = capkpi.get_doc(party_type, party)
 	currency = party.get("default_currency") or currency or get_company_currency(company)
 
 	party_address, shipping_address = set_address_details(
@@ -167,7 +167,7 @@ def _get_party_details(
 
 	# supplier tax withholding category
 	if party_type == "Supplier" and party:
-		party_details["supplier_tds"] = frappe.get_value(
+		party_details["supplier_tds"] = capkpi.get_value(
 			party_type, party.name, "tax_withholding_category"
 		)
 
@@ -303,7 +303,7 @@ def get_default_price_list(party):
 		return party.default_price_list
 
 	if party.doctype == "Customer":
-		return frappe.db.get_value("Customer Group", party.customer_group, "default_price_list")
+		return capkpi.db.get_value("Customer Group", party.customer_group, "default_price_list")
 
 
 def set_price_list(party_details, party, party_type, given_price_list, pos=None):
@@ -314,18 +314,18 @@ def set_price_list(party_details, party, party_type, given_price_list, pos=None)
 	if price_list and len(price_list) == 1:
 		price_list = price_list[0]
 	elif pos and party_type == "Customer":
-		customer_price_list = frappe.get_value("Customer", party.name, "default_price_list")
+		customer_price_list = capkpi.get_value("Customer", party.name, "default_price_list")
 
 		if customer_price_list:
 			price_list = customer_price_list
 		else:
-			pos_price_list = frappe.get_value("POS Profile", pos, "selling_price_list")
+			pos_price_list = capkpi.get_value("POS Profile", pos, "selling_price_list")
 			price_list = pos_price_list or given_price_list
 	else:
 		price_list = get_default_price_list(party) or given_price_list
 
 	if price_list:
-		party_details.price_list_currency = frappe.db.get_value(
+		party_details.price_list_currency = capkpi.db.get_value(
 			"Price List", price_list, "currency", cache=True
 		)
 
@@ -354,30 +354,30 @@ def set_account_and_due_date(
 	return out
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_account(party_type, party=None, company=None):
 	"""Returns the account for the given `party`.
 	Will first search in party (Customer / Supplier) record, if not found,
 	will search in group (Customer Group / Supplier Group),
 	finally will return default."""
 	if not company:
-		frappe.throw(_("Please select a Company"))
+		capkpi.throw(_("Please select a Company"))
 
 	if not party and party_type in ["Customer", "Supplier"]:
 		default_account_name = (
 			"default_receivable_account" if party_type == "Customer" else "default_payable_account"
 		)
 
-		return frappe.get_cached_value("Company", company, default_account_name)
+		return capkpi.get_cached_value("Company", company, default_account_name)
 
-	account = frappe.db.get_value(
+	account = capkpi.db.get_value(
 		"Party Account", {"parenttype": party_type, "parent": party, "company": company}, "account"
 	)
 
 	if not account and party_type in ["Customer", "Supplier"]:
 		party_group_doctype = "Customer Group" if party_type == "Customer" else "Supplier Group"
-		group = frappe.get_cached_value(party_type, party, scrub(party_group_doctype))
-		account = frappe.db.get_value(
+		group = capkpi.get_cached_value(party_type, party, scrub(party_group_doctype))
+		account = capkpi.db.get_value(
 			"Party Account",
 			{"parenttype": party_group_doctype, "parent": group, "company": company},
 			"account",
@@ -387,21 +387,21 @@ def get_party_account(party_type, party=None, company=None):
 		default_account_name = (
 			"default_receivable_account" if party_type == "Customer" else "default_payable_account"
 		)
-		account = frappe.get_cached_value("Company", company, default_account_name)
+		account = capkpi.get_cached_value("Company", company, default_account_name)
 
 	existing_gle_currency = get_party_gle_currency(party_type, party, company)
 	if existing_gle_currency:
 		if account:
-			account_currency = frappe.db.get_value("Account", account, "account_currency", cache=True)
+			account_currency = capkpi.db.get_value("Account", account, "account_currency", cache=True)
 		if (account and account_currency != existing_gle_currency) or not account:
 			account = get_party_gle_account(party_type, party, company)
 
 	return account
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_party_bank_account(party_type, party):
-	return frappe.db.get_value(
+	return capkpi.db.get_value(
 		"Bank Account", {"party_type": party_type, "party": party, "is_default": 1}
 	)
 
@@ -409,14 +409,14 @@ def get_party_bank_account(party_type, party):
 def get_party_account_currency(party_type, party, company):
 	def generator():
 		party_account = get_party_account(party_type, party, company)
-		return frappe.db.get_value("Account", party_account, "account_currency", cache=True)
+		return capkpi.db.get_value("Account", party_account, "account_currency", cache=True)
 
-	return frappe.local_cache("party_account_currency", (party_type, party, company), generator)
+	return capkpi.local_cache("party_account_currency", (party_type, party, company), generator)
 
 
 def get_party_gle_currency(party_type, party, company):
 	def generator():
-		existing_gle_currency = frappe.db.sql(
+		existing_gle_currency = capkpi.db.sql(
 			"""select account_currency from `tabGL Entry`
 			where docstatus=1 and company=%(company)s and party_type=%(party_type)s and party=%(party)s
 			limit 1""",
@@ -425,14 +425,14 @@ def get_party_gle_currency(party_type, party, company):
 
 		return existing_gle_currency[0][0] if existing_gle_currency else None
 
-	return frappe.local_cache(
+	return capkpi.local_cache(
 		"party_gle_currency", (party_type, party, company), generator, regenerate_if_none=True
 	)
 
 
 def get_party_gle_account(party_type, party, company):
 	def generator():
-		existing_gle_account = frappe.db.sql(
+		existing_gle_account = capkpi.db.sql(
 			"""select account from `tabGL Entry`
 			where docstatus=1 and company=%(company)s and party_type=%(party_type)s and party=%(party)s
 			limit 1""",
@@ -441,7 +441,7 @@ def get_party_gle_account(party_type, party, company):
 
 		return existing_gle_account[0][0] if existing_gle_account else None
 
-	return frappe.local_cache(
+	return capkpi.local_cache(
 		"party_gle_account", (party_type, party, company), generator, regenerate_if_none=True
 	)
 
@@ -454,14 +454,14 @@ def validate_party_gle_currency(party_type, party, company, party_account_curren
 	existing_gle_currency = get_party_gle_currency(party_type, party, company)
 
 	if existing_gle_currency and party_account_currency != existing_gle_currency:
-		frappe.throw(
+		capkpi.throw(
 			_(
 				"{0} {1} has accounting entries in currency {2} for company {3}. Please select a receivable or payable account with currency {2}."
 			).format(
-				frappe.bold(party_type),
-				frappe.bold(party),
-				frappe.bold(existing_gle_currency),
-				frappe.bold(company),
+				capkpi.bold(party_type),
+				capkpi.bold(party),
+				capkpi.bold(existing_gle_currency),
+				capkpi.bold(company),
 			),
 			InvalidAccountCurrency,
 		)
@@ -474,22 +474,22 @@ def validate_party_accounts(doc):
 
 	for account in doc.get("accounts"):
 		if account.company in companies:
-			frappe.throw(
+			capkpi.throw(
 				_("There can only be 1 Account per Company in {0} {1}").format(doc.doctype, doc.name),
 				DuplicatePartyAccountError,
 			)
 		else:
 			companies.append(account.company)
 
-		party_account_currency = frappe.db.get_value(
+		party_account_currency = capkpi.db.get_value(
 			"Account", account.account, "account_currency", cache=True
 		)
-		if frappe.db.get_default("Company"):
-			company_default_currency = frappe.get_cached_value(
-				"Company", frappe.db.get_default("Company"), "default_currency"
+		if capkpi.db.get_default("Company"):
+			company_default_currency = capkpi.get_cached_value(
+				"Company", capkpi.db.get_default("Company"), "default_currency"
 			)
 		else:
-			company_default_currency = frappe.db.get_value("Company", account.company, "default_currency")
+			company_default_currency = capkpi.db.get_value("Company", account.company, "default_currency")
 
 		validate_party_gle_currency(doc.doctype, doc.name, account.company, party_account_currency)
 
@@ -498,7 +498,7 @@ def validate_party_accounts(doc):
 				doc.default_currency != party_account_currency
 				and doc.default_currency != company_default_currency
 			):
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Billing currency must be equal to either default company's currency or party account currency"
 					)
@@ -508,7 +508,7 @@ def validate_party_accounts(doc):
 		validate_account_head(account.idx, account.account, account.company)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_due_date(posting_date, party_type, party, company=None, bill_date=None):
 	"""Get due date from `Payment Terms Template`"""
 	due_date = None
@@ -522,8 +522,8 @@ def get_due_date(posting_date, party_type, party, company=None, bill_date=None):
 			)
 		else:
 			if party_type == "Supplier":
-				supplier_group = frappe.get_cached_value(party_type, party, "supplier_group")
-				template_name = frappe.get_cached_value("Supplier Group", supplier_group, "payment_terms")
+				supplier_group = capkpi.get_cached_value(party_type, party, "supplier_group")
+				template_name = capkpi.get_cached_value("Supplier Group", supplier_group, "payment_terms")
 				if template_name:
 					due_date = get_due_date_from_template(template_name, posting_date, bill_date).strftime(
 						"%Y-%m-%d"
@@ -543,7 +543,7 @@ def get_due_date_from_template(template_name, posting_date, bill_date):
 	"""
 	due_date = getdate(bill_date or posting_date)
 
-	template = frappe.get_doc("Payment Terms Template", template_name)
+	template = capkpi.get_doc("Payment Terms Template", template_name)
 
 	for term in template.terms:
 		if term.due_date_based_on == "Day(s) after invoice date":
@@ -559,7 +559,7 @@ def validate_due_date(
 	posting_date, due_date, party_type, party, company=None, bill_date=None, template_name=None
 ):
 	if getdate(due_date) < getdate(posting_date):
-		frappe.throw(_("Due Date cannot be before Posting / Supplier Invoice Date"))
+		capkpi.throw(_("Due Date cannot be before Posting / Supplier Invoice Date"))
 	else:
 		if not template_name:
 			return
@@ -573,7 +573,7 @@ def validate_due_date(
 
 		if default_due_date != posting_date and getdate(due_date) > getdate(default_due_date):
 			is_credit_controller = (
-				frappe.db.get_single_value("Accounts Settings", "credit_controller") in frappe.get_roles()
+				capkpi.db.get_single_value("Accounts Settings", "credit_controller") in capkpi.get_roles()
 			)
 			if is_credit_controller:
 				msgprint(
@@ -582,27 +582,27 @@ def validate_due_date(
 					)
 				)
 			else:
-				frappe.throw(
+				capkpi.throw(
 					_("Due / Reference Date cannot be after {0}").format(formatdate(default_due_date))
 				)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_address_tax_category(tax_category=None, billing_address=None, shipping_address=None):
-	addr_tax_category_from = frappe.db.get_single_value(
+	addr_tax_category_from = capkpi.db.get_single_value(
 		"Accounts Settings", "determine_address_tax_category_from"
 	)
 	if addr_tax_category_from == "Shipping Address":
 		if shipping_address:
-			tax_category = frappe.db.get_value("Address", shipping_address, "tax_category") or tax_category
+			tax_category = capkpi.db.get_value("Address", shipping_address, "tax_category") or tax_category
 	else:
 		if billing_address:
-			tax_category = frappe.db.get_value("Address", billing_address, "tax_category") or tax_category
+			tax_category = capkpi.db.get_value("Address", billing_address, "tax_category") or tax_category
 
 	return cstr(tax_category)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def set_taxes(
 	party,
 	party_type,
@@ -652,57 +652,57 @@ def set_taxes(
 	return get_tax_template(posting_date, args)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_payment_terms_template(party_name, party_type, company=None):
 	if party_type not in ("Customer", "Supplier"):
 		return
 	template = None
 	if party_type == "Customer":
-		customer = frappe.get_cached_value(
+		customer = capkpi.get_cached_value(
 			"Customer", party_name, fieldname=["payment_terms", "customer_group"], as_dict=1
 		)
 		template = customer.payment_terms
 
 		if not template and customer.customer_group:
-			template = frappe.get_cached_value("Customer Group", customer.customer_group, "payment_terms")
+			template = capkpi.get_cached_value("Customer Group", customer.customer_group, "payment_terms")
 	else:
-		supplier = frappe.get_cached_value(
+		supplier = capkpi.get_cached_value(
 			"Supplier", party_name, fieldname=["payment_terms", "supplier_group"], as_dict=1
 		)
 		template = supplier.payment_terms
 		if not template and supplier.supplier_group:
-			template = frappe.get_cached_value("Supplier Group", supplier.supplier_group, "payment_terms")
+			template = capkpi.get_cached_value("Supplier Group", supplier.supplier_group, "payment_terms")
 
 	if not template and company:
-		template = frappe.get_cached_value("Company", company, fieldname="payment_terms")
+		template = capkpi.get_cached_value("Company", company, fieldname="payment_terms")
 	return template
 
 
 def validate_party_frozen_disabled(party_type, party_name):
 
-	if frappe.flags.ignore_party_validation:
+	if capkpi.flags.ignore_party_validation:
 		return
 
 	if party_type and party_name:
 		if party_type in ("Customer", "Supplier"):
-			party = frappe.get_cached_value(party_type, party_name, ["is_frozen", "disabled"], as_dict=True)
+			party = capkpi.get_cached_value(party_type, party_name, ["is_frozen", "disabled"], as_dict=True)
 			if party.disabled:
-				frappe.throw(_("{0} {1} is disabled").format(party_type, party_name), PartyDisabled)
+				capkpi.throw(_("{0} {1} is disabled").format(party_type, party_name), PartyDisabled)
 			elif party.get("is_frozen"):
-				frozen_accounts_modifier = frappe.db.get_single_value(
+				frozen_accounts_modifier = capkpi.db.get_single_value(
 					"Accounts Settings", "frozen_accounts_modifier"
 				)
-				if not frozen_accounts_modifier in frappe.get_roles():
-					frappe.throw(_("{0} {1} is frozen").format(party_type, party_name), PartyFrozen)
+				if not frozen_accounts_modifier in capkpi.get_roles():
+					capkpi.throw(_("{0} {1} is frozen").format(party_type, party_name), PartyFrozen)
 
 		elif party_type == "Employee":
-			if frappe.db.get_value("Employee", party_name, "status") != "Active":
-				frappe.msgprint(_("{0} {1} is not active").format(party_type, party_name), alert=True)
+			if capkpi.db.get_value("Employee", party_name, "status") != "Active":
+				capkpi.msgprint(_("{0} {1} is not active").format(party_type, party_name), alert=True)
 
 
 def get_timeline_data(doctype, name):
 	"""returns timeline data for the past one year"""
-	from frappe.desk.form.load import get_communication_data
+	from capkpi.desk.form.load import get_communication_data
 
 	out = {}
 	fields = "creation, count(*)"
@@ -719,7 +719,7 @@ def get_timeline_data(doctype, name):
 	)
 
 	# fetch and append data from Activity Log
-	data += frappe.db.sql(
+	data += capkpi.db.sql(
 		"""select {fields}
 		from `tabActivity Log`
 		where (reference_doctype=%(doctype)s and reference_name=%(name)s)
@@ -748,13 +748,13 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 
 	doctype = "Sales Invoice" if party_type == "Customer" else "Purchase Invoice"
 
-	companies = frappe.get_all(
+	companies = capkpi.get_all(
 		doctype, filters={"docstatus": 1, party_type.lower(): party}, distinct=1, fields=["company"]
 	)
 
 	company_wise_info = []
 
-	company_wise_grand_total = frappe.get_all(
+	company_wise_grand_total = capkpi.get_all(
 		doctype,
 		filters={
 			"docstatus": 1,
@@ -775,8 +775,8 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 	loyalty_point_details = []
 
 	if party_type == "Customer":
-		loyalty_point_details = frappe._dict(
-			frappe.get_all(
+		loyalty_point_details = capkpi._dict(
+			capkpi.get_all(
 				"Loyalty Point Entry",
 				filters={
 					"customer": party,
@@ -788,15 +788,15 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 			)
 		)
 
-	company_wise_billing_this_year = frappe._dict()
+	company_wise_billing_this_year = capkpi._dict()
 
 	for d in company_wise_grand_total:
 		company_wise_billing_this_year.setdefault(
 			d.company, {"grand_total": d.grand_total, "base_grand_total": d.base_grand_total}
 		)
 
-	company_wise_total_unpaid = frappe._dict(
-		frappe.db.sql(
+	company_wise_total_unpaid = capkpi._dict(
+		capkpi.db.sql(
 			"""
 		select company, sum(debit_in_account_currency) - sum(credit_in_account_currency)
 		from `tabGL Entry`
@@ -808,7 +808,7 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 	)
 
 	for d in companies:
-		company_default_currency = frappe.db.get_value("Company", d.company, "default_currency")
+		company_default_currency = capkpi.db.get_value("Company", d.company, "default_currency")
 		party_account_currency = get_party_account_currency(party_type, party, d.company)
 
 		if party_account_currency == company_default_currency:
@@ -851,7 +851,7 @@ def get_party_shipping_address(doctype, name):
 	:param name: Party name
 	:return: String
 	"""
-	out = frappe.db.sql(
+	out = capkpi.db.sql(
 		"SELECT dl.parent "
 		"from `tabDynamic Link` dl join `tabAddress` ta on dl.parent=ta.name "
 		"where "
@@ -880,9 +880,9 @@ def get_partywise_advanced_payment_amount(
 			cond = "posting_date <= '{0}'".format(posting_date)
 
 	if company:
-		cond += "and company = {0}".format(frappe.db.escape(company))
+		cond += "and company = {0}".format(capkpi.db.escape(company))
 
-	data = frappe.db.sql(
+	data = capkpi.db.sql(
 		""" SELECT party, sum({0}) as amount
 		FROM `tabGL Entry`
 		WHERE
@@ -895,7 +895,7 @@ def get_partywise_advanced_payment_amount(
 	)
 
 	if data:
-		return frappe._dict(data)
+		return capkpi._dict(data)
 
 
 def get_default_contact(doctype, name):
@@ -903,7 +903,7 @@ def get_default_contact(doctype, name):
 	Returns default contact for the given doctype and name.
 	Can be ordered by `contact_type` to either is_primary_contact or is_billing_contact.
 	"""
-	out = frappe.db.sql(
+	out = capkpi.db.sql(
 		"""
 			SELECT dl.parent, c.is_primary_contact, c.is_billing_contact
 			FROM `tabDynamic Link` dl
@@ -926,7 +926,7 @@ def get_default_contact(doctype, name):
 
 
 def add_party_account(party_type, party, company, account):
-	doc = frappe.get_doc(party_type, party)
+	doc = capkpi.get_doc(party_type, party)
 	account_exists = False
 	for d in doc.get("accounts"):
 		if d.account == account:

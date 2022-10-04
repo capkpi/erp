@@ -4,11 +4,11 @@
 
 from json import dumps, loads
 
-import frappe
-from frappe import _
-from frappe.integrations.utils import create_payment_gateway, create_request_log
-from frappe.model.document import Document
-from frappe.utils import call_hook_method, fmt_money, get_request_site_address
+import capkpi
+from capkpi import _
+from capkpi.integrations.utils import create_payment_gateway, create_request_log
+from capkpi.model.document import Document
+from capkpi.utils import call_hook_method, fmt_money, get_request_site_address
 
 from erp.erp_integrations.doctype.mpesa_settings.mpesa_connector import MpesaConnector
 from erp.erp_integrations.doctype.mpesa_settings.mpesa_custom_fields import (
@@ -22,7 +22,7 @@ class MpesaSettings(Document):
 
 	def validate_transaction_currency(self, currency):
 		if currency not in self.supported_currencies:
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Please select another payment method. Mpesa does not support transactions in currency '{0}'"
 				).format(currency)
@@ -40,23 +40,23 @@ class MpesaSettings(Document):
 		)
 
 		# required to fetch the bank account details from the payment gateway account
-		frappe.db.commit()
+		capkpi.db.commit()
 		create_mode_of_payment("Mpesa-" + self.payment_gateway_name, payment_type="Phone")
 
 	def request_for_payment(self, **kwargs):
-		args = frappe._dict(kwargs)
+		args = capkpi._dict(kwargs)
 		request_amounts = self.split_request_amount_according_to_transaction_limit(args)
 
 		for i, amount in enumerate(request_amounts):
 			args.request_amount = amount
-			if frappe.flags.in_test:
+			if capkpi.flags.in_test:
 				from erp.erp_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 					get_payment_request_response_payload,
 				)
 
-				response = frappe._dict(get_payment_request_response_payload(amount))
+				response = capkpi._dict(get_payment_request_response_payload(amount))
 			else:
-				response = frappe._dict(generate_stk_push(**args))
+				response = capkpi._dict(generate_stk_push(**args))
 
 			self.handle_api_response("CheckoutRequestID", args, response)
 
@@ -65,7 +65,7 @@ class MpesaSettings(Document):
 		if request_amount > self.transaction_limit:
 			# make multiple requests
 			request_amounts = []
-			requests_to_be_made = frappe.utils.ceil(
+			requests_to_be_made = capkpi.utils.ceil(
 				request_amount / self.transaction_limit
 			)  # 480/150 = ceil(3.2) = 4
 			for i in range(requests_to_be_made):
@@ -80,20 +80,20 @@ class MpesaSettings(Document):
 
 		return request_amounts
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_account_balance_info(self):
 		payload = dict(
 			reference_doctype="Mpesa Settings", reference_docname=self.name, doc_details=vars(self)
 		)
 
-		if frappe.flags.in_test:
+		if capkpi.flags.in_test:
 			from erp.erp_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 				get_test_account_balance_response,
 			)
 
-			response = frappe._dict(get_test_account_balance_response())
+			response = capkpi._dict(get_test_account_balance_response())
 		else:
-			response = frappe._dict(get_account_balance(payload))
+			response = capkpi._dict(get_account_balance(payload))
 
 		self.handle_api_response("ConversationID", payload, response)
 
@@ -108,23 +108,23 @@ class MpesaSettings(Document):
 			req_name = getattr(response, global_id)
 			error = None
 
-		if not frappe.db.exists("Integration Request", req_name):
+		if not capkpi.db.exists("Integration Request", req_name):
 			create_request_log(request_dict, "Host", "Mpesa", req_name, error)
 
 		if error:
-			frappe.throw(_(getattr(response, "errorMessage")), title=_("Transaction Error"))
+			capkpi.throw(_(getattr(response, "errorMessage")), title=_("Transaction Error"))
 
 
 def generate_stk_push(**kwargs):
 	"""Generate stk push by making a API call to the stk push API."""
-	args = frappe._dict(kwargs)
+	args = capkpi._dict(kwargs)
 	try:
 		callback_url = (
 			get_request_site_address(True)
 			+ "/api/method/erp.erp_integrations.doctype.mpesa_settings.mpesa_settings.verify_transaction"
 		)
 
-		mpesa_settings = frappe.get_doc("Mpesa Settings", args.payment_gateway[6:])
+		mpesa_settings = capkpi.get_doc("Mpesa Settings", args.payment_gateway[6:])
 		env = "production" if not mpesa_settings.sandbox else "sandbox"
 		# for sandbox, business shortcode is same as till number
 		business_shortcode = (
@@ -152,8 +152,8 @@ def generate_stk_push(**kwargs):
 		return response
 
 	except Exception:
-		frappe.log_error(title=_("Mpesa Express Transaction Error"))
-		frappe.throw(
+		capkpi.log_error(title=_("Mpesa Express Transaction Error"))
+		capkpi.throw(
 			_("Issue detected with Mpesa configuration, check the error logs for more details"),
 			title=_("Mpesa Express Error"),
 		)
@@ -164,17 +164,17 @@ def sanitize_mobile_number(number):
 	return "254" + str(number).lstrip("0")
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def verify_transaction(**kwargs):
 	"""Verify the transaction result received via callback from stk."""
-	transaction_response = frappe._dict(kwargs["Body"]["stkCallback"])
+	transaction_response = capkpi._dict(kwargs["Body"]["stkCallback"])
 
 	checkout_id = getattr(transaction_response, "CheckoutRequestID", "")
 	if not isinstance(checkout_id, str):
-		frappe.throw(_("Invalid Checkout Request ID"))
+		capkpi.throw(_("Invalid Checkout Request ID"))
 
-	integration_request = frappe.get_doc("Integration Request", checkout_id)
-	transaction_data = frappe._dict(loads(integration_request.data))
+	integration_request = capkpi.get_doc("Integration Request", checkout_id)
+	transaction_data = capkpi._dict(loads(integration_request.data))
 	total_paid = 0  # for multiple integration request made against a pos invoice
 	success = False  # for reporting successfull callback to point of sale ui
 
@@ -184,7 +184,7 @@ def verify_transaction(**kwargs):
 				item_response = transaction_response["CallbackMetadata"]["Item"]
 				amount = fetch_param_value(item_response, "Amount", "Name")
 				mpesa_receipt = fetch_param_value(item_response, "MpesaReceiptNumber", "Name")
-				pr = frappe.get_doc(
+				pr = capkpi.get_doc(
 					integration_request.reference_doctype, integration_request.reference_docname
 				)
 
@@ -199,16 +199,16 @@ def verify_transaction(**kwargs):
 					pr.run_method("on_payment_authorized", "Completed")
 					success = True
 
-				frappe.db.set_value("POS Invoice", pr.reference_name, "mpesa_receipt_number", mpesa_receipts)
+				capkpi.db.set_value("POS Invoice", pr.reference_name, "mpesa_receipt_number", mpesa_receipts)
 				integration_request.handle_success(transaction_response)
 			except Exception:
 				integration_request.handle_failure(transaction_response)
-				frappe.log_error(frappe.get_traceback())
+				capkpi.log_error(capkpi.get_traceback())
 
 	else:
 		integration_request.handle_failure(transaction_response)
 
-	frappe.publish_realtime(
+	capkpi.publish_realtime(
 		event="process_phone_payment",
 		doctype="POS Invoice",
 		docname=transaction_data.payment_reference,
@@ -224,7 +224,7 @@ def verify_transaction(**kwargs):
 
 
 def get_completed_integration_requests_info(reference_doctype, reference_docname, checkout_id):
-	output_of_other_completed_requests = frappe.get_all(
+	output_of_other_completed_requests = capkpi.get_all(
 		"Integration Request",
 		filters={
 			"name": ["!=", checkout_id],
@@ -238,7 +238,7 @@ def get_completed_integration_requests_info(reference_doctype, reference_docname
 	mpesa_receipts, completed_payments = [], []
 
 	for out in output_of_other_completed_requests:
-		out = frappe._dict(loads(out))
+		out = capkpi._dict(loads(out))
 		item_response = out["CallbackMetadata"]["Item"]
 		completed_amount = fetch_param_value(item_response, "Amount", "Name")
 		completed_mpesa_receipt = fetch_param_value(item_response, "MpesaReceiptNumber", "Name")
@@ -251,7 +251,7 @@ def get_completed_integration_requests_info(reference_doctype, reference_docname
 def get_account_balance(request_payload):
 	"""Call account balance API to send the request to the Mpesa Servers."""
 	try:
-		mpesa_settings = frappe.get_doc("Mpesa Settings", request_payload.get("reference_docname"))
+		mpesa_settings = capkpi.get_doc("Mpesa Settings", request_payload.get("reference_docname"))
 		env = "production" if not mpesa_settings.sandbox else "sandbox"
 		connector = MpesaConnector(
 			env=env,
@@ -275,25 +275,25 @@ def get_account_balance(request_payload):
 		)
 		return response
 	except Exception:
-		frappe.log_error(title=_("Account Balance Processing Error"))
-		frappe.throw(_("Please check your configuration and try again"), title=_("Error"))
+		capkpi.log_error(title=_("Account Balance Processing Error"))
+		capkpi.throw(_("Please check your configuration and try again"), title=_("Error"))
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def process_balance_info(**kwargs):
 	"""Process and store account balance information received via callback from the account balance API call."""
-	account_balance_response = frappe._dict(kwargs["Result"])
+	account_balance_response = capkpi._dict(kwargs["Result"])
 
 	conversation_id = getattr(account_balance_response, "ConversationID", "")
 	if not isinstance(conversation_id, str):
-		frappe.throw(_("Invalid Conversation ID"))
+		capkpi.throw(_("Invalid Conversation ID"))
 
-	request = frappe.get_doc("Integration Request", conversation_id)
+	request = capkpi.get_doc("Integration Request", conversation_id)
 
 	if request.status == "Completed":
 		return
 
-	transaction_data = frappe._dict(loads(request.data))
+	transaction_data = capkpi._dict(loads(request.data))
 
 	if account_balance_response["ResultCode"] == 0:
 		try:
@@ -302,11 +302,11 @@ def process_balance_info(**kwargs):
 			balance_info = fetch_param_value(result_params, "AccountBalance", "Key")
 			balance_info = format_string_to_json(balance_info)
 
-			ref_doc = frappe.get_doc(transaction_data.reference_doctype, transaction_data.reference_docname)
+			ref_doc = capkpi.get_doc(transaction_data.reference_doctype, transaction_data.reference_docname)
 			ref_doc.db_set("account_balance", balance_info)
 
 			request.handle_success(account_balance_response)
-			frappe.publish_realtime(
+			capkpi.publish_realtime(
 				"refresh_mpesa_dashboard",
 				doctype="Mpesa Settings",
 				docname=transaction_data.reference_docname,
@@ -314,7 +314,7 @@ def process_balance_info(**kwargs):
 			)
 		except Exception:
 			request.handle_failure(account_balance_response)
-			frappe.log_error(
+			capkpi.log_error(
 				title=_("Mpesa Account Balance Processing Error"), message=account_balance_response
 			)
 	else:
@@ -331,7 +331,7 @@ def format_string_to_json(balance_info):
 	        'reserved_balance': '0.00',
 	        'uncleared_balance': '0.00'}}
 	"""
-	balance_dict = frappe._dict()
+	balance_dict = capkpi._dict()
 	for account_info in balance_info.split("&"):
 		account_info = account_info.split("|")
 		balance_dict[account_info[0]] = dict(

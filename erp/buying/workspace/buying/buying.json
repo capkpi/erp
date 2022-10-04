@@ -489,7 +489,7 @@
    "format": "{} Pending",
    "label": "Material Request",
    "link_to": "Material Request",
-   "stats_filter": "{\n    \"company\": [\"like\", '%' + frappe.defaults.get_global_default(\"company\") + '%'],\n    \"status\": \"Pending\"\n}",
+   "stats_filter": "{\n    \"company\": [\"like\", '%' + capkpi.defaults.get_global_default(\"company\") + '%'],\n    \"status\": \"Pending\"\n}",
    "type": "DocType"
   },
   {
@@ -497,7 +497,7 @@
    "format": "{}  To Receive",
    "label": "Purchase Order",
    "link_to": "Purchase Order",
-   "stats_filter": "{\n    \"company\": [\"like\", '%' + frappe.defaults.get_global_default(\"company\") + '%'],\n    \"status\":[\"in\", [\"To Receive\", \"To Receive and Bill\"]]\n}",
+   "stats_filter": "{\n    \"company\": [\"like\", '%' + capkpi.defaults.get_global_default(\"company\") + '%'],\n    \"status\":[\"in\", [\"To Receive\", \"To Receive and Bill\"]]\n}",
    "type": "DocType"
   },
   {

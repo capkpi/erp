@@ -1,7 +1,7 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Item Tax Template', {
+capkpi.ui.form.on('Item Tax Template', {
 	setup: function(frm) {
 		frm.set_query("tax_type", "taxes", function(doc) {
 			return {

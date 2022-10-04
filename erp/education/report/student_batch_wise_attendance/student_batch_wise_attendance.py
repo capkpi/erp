@@ -2,9 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.utils import formatdate
+import capkpi
+from capkpi import _, msgprint
+from capkpi.utils import formatdate
 
 from erp.education.doctype.student_attendance.student_attendance import get_holiday_list
 from erp.hr.doctype.holiday_list.holiday_list import is_holiday
@@ -21,7 +21,7 @@ def execute(filters=None):
 	if is_holiday(holiday_list, filters.get("date")):
 		msgprint(
 			_("No attendance has been marked for {0} as it is a Holiday").format(
-				frappe.bold(formatdate(filters.get("date")))
+				capkpi.bold(formatdate(filters.get("date")))
 			)
 		)
 
@@ -62,17 +62,17 @@ def get_columns(filters):
 
 
 def get_active_student_group():
-	active_student_groups = frappe.db.sql(
+	active_student_groups = capkpi.db.sql(
 		"""select name from `tabStudent Group` where group_based_on = "Batch"
 		and academic_year=%s order by name""",
-		(frappe.defaults.get_defaults().academic_year),
+		(capkpi.defaults.get_defaults().academic_year),
 		as_dict=1,
 	)
 	return active_student_groups
 
 
 def get_student_group_strength(student_group):
-	student_group_strength = frappe.db.sql(
+	student_group_strength = capkpi.db.sql(
 		"""select count(*) from `tabStudent Group Student`
 		where parent = %s and active=1""",
 		student_group,
@@ -81,7 +81,7 @@ def get_student_group_strength(student_group):
 
 
 def get_student_attendance(student_group, date):
-	student_attendance = frappe.db.sql(
+	student_attendance = capkpi.db.sql(
 		"""select count(*) as count, status from `tabStudent Attendance` where
 				student_group= %s and date= %s and docstatus = 1 and
 				(course_schedule is Null or course_schedule='') group by status""",

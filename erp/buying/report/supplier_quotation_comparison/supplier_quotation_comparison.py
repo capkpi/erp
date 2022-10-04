@@ -4,9 +4,9 @@
 
 from collections import defaultdict
 
-import frappe
-from frappe import _
-from frappe.utils import cint, flt
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, flt
 
 from erp.setup.utils import get_exchange_rate
 
@@ -46,7 +46,7 @@ def get_conditions(filters):
 
 
 def get_data(filters, conditions):
-	supplier_quotation_data = frappe.db.sql(
+	supplier_quotation_data = capkpi.db.sql(
 		"""
 		SELECT
 			sqi.parent, sqi.item_code,
@@ -81,13 +81,13 @@ def prepare_data(supplier_quotation_data, filters):
 	group_by_field = (
 		"supplier_name" if filters.get("group_by") == "Group by Supplier" else "item_code"
 	)
-	company_currency = frappe.db.get_default("currency")
-	float_precision = cint(frappe.db.get_default("float_precision")) or 2
+	company_currency = capkpi.db.get_default("currency")
+	float_precision = cint(capkpi.db.get_default("float_precision")) or 2
 
 	for data in supplier_quotation_data:
 		group = data.get(group_by_field)  # get item or supplier value for this row
 
-		supplier_currency = frappe.db.get_value(
+		supplier_currency = capkpi.db.get_value(
 			"Supplier", data.get("supplier_name"), "default_currency"
 		)
 
@@ -169,7 +169,7 @@ def prepare_chart_data(suppliers, qty_list, supplier_qty_price_map):
 				data_points_map[qty].append(None)
 
 	dataset = []
-	currency_symbol = frappe.db.get_value("Currency", frappe.db.get_default("currency"), "symbol")
+	currency_symbol = capkpi.db.get_value("Currency", capkpi.db.get_default("currency"), "symbol")
 	for qty in qty_list:
 		datapoints = {
 			"name": currency_symbol + " (Qty " + str(qty) + " )",

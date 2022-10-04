@@ -2,10 +2,10 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import formatdate, get_link_to_form, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import formatdate, get_link_to_form, getdate
 
 from erp import get_default_company
 from erp.education.api import get_student_group_students
@@ -24,52 +24,52 @@ class StudentAttendance(Document):
 
 	def set_date(self):
 		if self.course_schedule:
-			self.date = frappe.db.get_value("Course Schedule", self.course_schedule, "schedule_date")
+			self.date = capkpi.db.get_value("Course Schedule", self.course_schedule, "schedule_date")
 
 	def validate_mandatory(self):
 		if not (self.student_group or self.course_schedule):
-			frappe.throw(
+			capkpi.throw(
 				_("{0} or {1} is mandatory").format(
-					frappe.bold("Student Group"), frappe.bold("Course Schedule")
+					capkpi.bold("Student Group"), capkpi.bold("Course Schedule")
 				),
 				title=_("Mandatory Fields"),
 			)
 
 	def validate_date(self):
 		if not self.leave_application and getdate(self.date) > getdate():
-			frappe.throw(_("Attendance cannot be marked for future dates."))
+			capkpi.throw(_("Attendance cannot be marked for future dates."))
 
 		if self.student_group:
-			academic_year = frappe.db.get_value("Student Group", self.student_group, "academic_year")
+			academic_year = capkpi.db.get_value("Student Group", self.student_group, "academic_year")
 			if academic_year:
-				year_start_date, year_end_date = frappe.db.get_value(
+				year_start_date, year_end_date = capkpi.db.get_value(
 					"Academic Year", academic_year, ["year_start_date", "year_end_date"]
 				)
 				if year_start_date and year_end_date:
 					if getdate(self.date) < getdate(year_start_date) or getdate(self.date) > getdate(
 						year_end_date
 					):
-						frappe.throw(
+						capkpi.throw(
 							_("Attendance cannot be marked outside of Academic Year {0}").format(academic_year)
 						)
 
 	def set_student_group(self):
 		if self.course_schedule:
-			self.student_group = frappe.db.get_value(
+			self.student_group = capkpi.db.get_value(
 				"Course Schedule", self.course_schedule, "student_group"
 			)
 
 	def validate_student(self):
 		if self.course_schedule:
-			student_group = frappe.db.get_value("Course Schedule", self.course_schedule, "student_group")
+			student_group = capkpi.db.get_value("Course Schedule", self.course_schedule, "student_group")
 		else:
 			student_group = self.student_group
 		student_group_students = [d.student for d in get_student_group_students(student_group)]
 		if student_group and self.student not in student_group_students:
 			student_group_doc = get_link_to_form("Student Group", student_group)
-			frappe.throw(
+			capkpi.throw(
 				_("Student {0}: {1} does not belong to Student Group {2}").format(
-					frappe.bold(self.student), self.student_name, frappe.bold(student_group_doc)
+					capkpi.bold(self.student), self.student_name, capkpi.bold(student_group_doc)
 				)
 			)
 
@@ -77,7 +77,7 @@ class StudentAttendance(Document):
 		"""Check if the Attendance Record is Unique"""
 		attendance_record = None
 		if self.course_schedule:
-			attendance_record = frappe.db.exists(
+			attendance_record = capkpi.db.exists(
 				"Student Attendance",
 				{
 					"student": self.student,
@@ -87,7 +87,7 @@ class StudentAttendance(Document):
 				},
 			)
 		else:
-			attendance_record = frappe.db.exists(
+			attendance_record = capkpi.db.exists(
 				"Student Attendance",
 				{
 					"student": self.student,
@@ -101,9 +101,9 @@ class StudentAttendance(Document):
 
 		if attendance_record:
 			record = get_link_to_form("Student Attendance", attendance_record)
-			frappe.throw(
+			capkpi.throw(
 				_("Student Attendance record {0} already exists against the Student {1}").format(
-					record, frappe.bold(self.student)
+					record, capkpi.bold(self.student)
 				),
 				title=_("Duplicate Entry"),
 			)
@@ -111,22 +111,22 @@ class StudentAttendance(Document):
 	def validate_is_holiday(self):
 		holiday_list = get_holiday_list()
 		if is_holiday(holiday_list, self.date):
-			frappe.throw(
+			capkpi.throw(
 				_("Attendance cannot be marked for {0} as it is a holiday.").format(
-					frappe.bold(formatdate(self.date))
+					capkpi.bold(formatdate(self.date))
 				)
 			)
 
 
 def get_holiday_list(company=None):
 	if not company:
-		company = get_default_company() or frappe.get_all("Company")[0].name
+		company = get_default_company() or capkpi.get_all("Company")[0].name
 
-	holiday_list = frappe.get_cached_value("Company", company, "default_holiday_list")
+	holiday_list = capkpi.get_cached_value("Company", company, "default_holiday_list")
 	if not holiday_list:
-		frappe.throw(
+		capkpi.throw(
 			_("Please set a default Holiday List for Company {0}").format(
-				frappe.bold(get_default_company())
+				capkpi.bold(get_default_company())
 			)
 		)
 	return holiday_list

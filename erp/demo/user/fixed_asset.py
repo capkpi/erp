@@ -2,24 +2,24 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils.make_random import get_random
 
 from erp.assets.doctype.asset.asset import make_sales_invoice
 from erp.assets.doctype.asset.depreciation import post_depreciation_entries, scrap_asset
 
 
 def work():
-	frappe.set_user(frappe.db.get_global("demo_accounts_user"))
+	capkpi.set_user(capkpi.db.get_global("demo_accounts_user"))
 
 	# Enable booking asset depreciation entry automatically
-	frappe.db.set_value("Accounts Settings", None, "book_asset_depreciation_entry_automatically", 1)
+	capkpi.db.set_value("Accounts Settings", None, "book_asset_depreciation_entry_automatically", 1)
 
 	# post depreciation entries as on today
 	post_depreciation_entries()
 
 	# scrap a random asset
-	frappe.db.set_value(
+	capkpi.db.set_value(
 		"Company", "Wind Power LLC", "disposal_account", "Gain/Loss on Asset Disposal - WPL"
 	)
 
@@ -44,7 +44,7 @@ def sell_an_asset():
 
 
 def get_random_asset():
-	return frappe.db.sql(
+	return capkpi.db.sql(
 		""" select name, item_code, value_after_depreciation, gross_purchase_amount
 		from `tabAsset`
 		where docstatus=1 and status not in ("Scrapped", "Sold") order by rand() limit 1""",

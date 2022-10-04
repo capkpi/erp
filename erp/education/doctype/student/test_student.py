@@ -3,11 +3,11 @@
 
 import unittest
 
-import frappe
+import capkpi
 
 from erp.education.doctype.program.test_program import make_program_and_linked_courses
 
-test_records = frappe.get_test_records("Student")
+test_records = capkpi.get_test_records("Student")
 
 
 class TestStudent(unittest.TestCase):
@@ -22,25 +22,25 @@ class TestStudent(unittest.TestCase):
 		make_program_and_linked_courses("_Test Program 1", ["_Test Course 1", "_Test Course 2"])
 
 	def test_create_student_user(self):
-		self.assertTrue(bool(frappe.db.exists("User", "_test_student@example.com")))
-		frappe.db.rollback()
+		self.assertTrue(bool(capkpi.db.exists("User", "_test_student@example.com")))
+		capkpi.db.rollback()
 
 	def test_enroll_in_program(self):
 		student = get_student("_test_student@example.com")
 		enrollment = student.enroll_in_program("_Test Program 1")
-		test_enrollment = frappe.get_all(
+		test_enrollment = capkpi.get_all(
 			"Program Enrollment", filters={"student": student.name, "Program": "_Test Program 1"}
 		)
 		self.assertTrue(len(test_enrollment))
 		self.assertEqual(test_enrollment[0]["name"], enrollment.name)
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def test_get_program_enrollments(self):
 		student = get_student("_test_student@example.com")
 		enrollment = student.enroll_in_program("_Test Program 1")
 		program_enrollments = student.get_program_enrollments()
 		self.assertTrue("_Test Program 1" in program_enrollments)
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def test_get_all_course_enrollments(self):
 		student = get_student("_test_student@example.com")
@@ -48,14 +48,14 @@ class TestStudent(unittest.TestCase):
 		course_enrollments = student.get_all_course_enrollments()
 		self.assertTrue("_Test Course 1" in course_enrollments.keys())
 		self.assertTrue("_Test Course 2" in course_enrollments.keys())
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	def tearDown(self):
-		for entry in frappe.db.get_all("Course Enrollment"):
-			frappe.delete_doc("Course Enrollment", entry.name)
+		for entry in capkpi.db.get_all("Course Enrollment"):
+			capkpi.delete_doc("Course Enrollment", entry.name)
 
-		for entry in frappe.db.get_all("Program Enrollment"):
-			doc = frappe.get_doc("Program Enrollment", entry.name)
+		for entry in capkpi.db.get_all("Program Enrollment"):
+			doc = capkpi.get_doc("Program Enrollment", entry.name)
 			doc.cancel()
 			doc.delete()
 
@@ -63,7 +63,7 @@ class TestStudent(unittest.TestCase):
 def create_student(student_dict):
 	student = get_student(student_dict["email"])
 	if not student:
-		student = frappe.get_doc(
+		student = capkpi.get_doc(
 			{
 				"doctype": "Student",
 				"first_name": student_dict["first_name"],
@@ -76,7 +76,7 @@ def create_student(student_dict):
 
 def get_student(email):
 	try:
-		student_id = frappe.get_all("Student", {"student_email_id": email}, ["name"])[0].name
-		return frappe.get_doc("Student", student_id)
+		student_id = capkpi.get_all("Student", {"student_email_id": email}, ["name"])[0].name
+		return capkpi.get_doc("Student", student_id)
 	except IndexError:
 		return None

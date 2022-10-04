@@ -1,7 +1,7 @@
 // Copyright (c) 2021, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Party Link', {
+capkpi.ui.form.on('Party Link', {
 	refresh: function(frm) {
 		frm.set_query('primary_role', () => {
 			return {
@@ -12,7 +12,7 @@ frappe.ui.form.on('Party Link', {
 		});
 
 		frm.set_query('secondary_role', () => {
-			let party_types = Object.keys(frappe.boot.party_account_types)
+			let party_types = Object.keys(capkpi.boot.party_account_types)
 				.filter(p => p != frm.doc.primary_role);
 			return {
 				filters: {

@@ -1,7 +1,7 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Opening Invoice Creation Tool', {
+capkpi.ui.form.on('Opening Invoice Creation Tool', {
 	setup: function(frm) {
 		frm.set_query('party_type', 'invoices', function(doc, cdt, cdn) {
 			return {
@@ -15,12 +15,12 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 			frm.trigger('setup_company_filters');
 		}
 
-		frappe.realtime.on('opening_invoice_creation_progress', data => {
+		capkpi.realtime.on('opening_invoice_creation_progress', data => {
 			if (!frm.doc.import_in_progress) {
 				frm.dashboard.reset();
 				frm.doc.import_in_progress = true;
 			}
-			if (data.user != frappe.session.user) return;
+			if (data.user != capkpi.session.user) return;
 			if (data.count == data.total) {
 				setTimeout((title) => {
 					frm.doc.import_in_progress = false;
@@ -28,7 +28,7 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 					frm.refresh_fields();
 					frm.page.clear_indicator();
 					frm.dashboard.hide_progress(title);
-					frappe.msgprint(__("Opening {0} Invoice created", [frm.doc.invoice_type]));
+					capkpi.msgprint(__("Opening {0} Invoice created", [frm.doc.invoice_type]));
 				}, 1500, data.title);
 				return;
 			}
@@ -53,9 +53,9 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 				freeze_message: __("Creating {0} Invoice", [frm.doc.invoice_type]),
 				callback: function(r) {
 					if (r.message.length == 1) {
-						frappe.msgprint(__("{0} Invoice created successfully.", [frm.doc.invoice_type]));
+						capkpi.msgprint(__("{0} Invoice created successfully.", [frm.doc.invoice_type]));
 					} else if (r.message.length < 50) {
-						frappe.msgprint(__("{0} Invoices created successfully.", [frm.doc.invoice_type]));
+						capkpi.msgprint(__("{0} Invoices created successfully.", [frm.doc.invoice_type]));
 					}
 				}
 			});
@@ -97,7 +97,7 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 
 			frm.trigger('setup_company_filters');
 
-			frappe.call({
+			capkpi.call({
 				method: 'erp.accounts.doctype.opening_invoice_creation_tool.opening_invoice_creation_tool.get_temporary_opening_account',
 				args: {
 					company: frm.doc.company
@@ -126,7 +126,7 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 		let opening_invoices_summary = frm.doc.__onload.opening_invoices_summary;
 		if(!$.isEmptyObject(opening_invoices_summary)) {
 			let section = frm.dashboard.add_section(
-				frappe.render_template('opening_invoice_creation_tool_dashboard', {
+				capkpi.render_template('opening_invoice_creation_tool_dashboard', {
 					data: opening_invoices_summary,
 					max_count: max_count
 				}),
@@ -136,7 +136,7 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 			section.on('click', '.invoice-link', function() {
 				let doctype = $(this).attr('data-type');
 				let company = $(this).attr('data-company');
-				frappe.set_route('List', doctype,
+				capkpi.set_route('List', doctype,
 					{'is_opening': 'Yes', 'company': company, 'docstatus': 1});
 			});
 			frm.dashboard.show();
@@ -158,7 +158,7 @@ frappe.ui.form.on('Opening Invoice Creation Tool', {
 	}
 });
 
-frappe.ui.form.on('Opening Invoice Creation Tool Item', {
+capkpi.ui.form.on('Opening Invoice Creation Tool Item', {
 	invoices_add: (frm) => {
 		frm.trigger('update_invoice_table');
 	}

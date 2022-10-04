@@ -8,30 +8,30 @@ QUnit.test("test: Crop", function (assert) {
 	// number of asserts
 	assert.expect(2);
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// insert a new Item
-		() => frappe.tests.make('Item', [
+		() => capkpi.tests.make('Item', [
 			// values to be set
 			{item_code: 'Basil Seeds'},
 			{item_name: 'Basil Seeds'},
 			{item_group: 'Seed'}
 		]),
 		// insert a new Item
-		() => frappe.tests.make('Item', [
+		() => capkpi.tests.make('Item', [
 			// values to be set
 			{item_code: 'Twigs'},
 			{item_name: 'Twigs'},
 			{item_group: 'By-product'}
 		]),
 		// insert a new Item
-		() => frappe.tests.make('Item', [
+		() => capkpi.tests.make('Item', [
 			// values to be set
 			{item_code: 'Basil Leaves'},
 			{item_name: 'Basil Leaves'},
 			{item_group: 'Produce'}
 		]),
 		// insert a new Crop
-		() => frappe.tests.make('Crop', [
+		() => capkpi.tests.make('Crop', [
 			// values to be set
 			{title: 'Basil from seed'},
 			{crop_name: 'Basil'},

@@ -2,14 +2,14 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import add_months, flt
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import add_months, flt
 
 
 class MonthlyDistribution(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_months(self):
 		month_list = [
 			"January",
@@ -37,13 +37,13 @@ class MonthlyDistribution(Document):
 		total = sum(flt(d.percentage_allocation) for d in self.get("percentages"))
 
 		if flt(total, 2) != 100.0:
-			frappe.throw(
+			capkpi.throw(
 				_("Percentage Allocation should be equal to 100%") + " ({0}%)".format(str(flt(total, 2)))
 			)
 
 
 def get_periodwise_distribution_data(distribution_id, period_list, periodicity):
-	doc = frappe.get_doc("Monthly Distribution", distribution_id)
+	doc = capkpi.get_doc("Monthly Distribution", distribution_id)
 
 	months_to_add = {"Yearly": 12, "Half-Yearly": 6, "Quarterly": 3, "Monthly": 1}[periodicity]
 

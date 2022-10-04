@@ -2,13 +2,13 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
 	if filters.from_date >= filters.to_date:
-		frappe.msgprint(_("To Date must be greater than From Date"))
+		capkpi.msgprint(_("To Date must be greater than From Date"))
 
 	data = []
 	columns = get_columns()
@@ -84,13 +84,13 @@ def get_po(filters):
 		["transaction_date", ">=", filters.from_date],
 		["docstatus", "=", 1],
 	]
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Purchase Order", filters=record_filters, fields=["name", "transaction_date", "supplier"]
 	)
 
 
 def get_purchase_order_item_supplied(po):
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Purchase Order Item",
 		filters=[("parent", "IN", po)],
 		fields=["parent", "item_code", "item_name", "qty", "received_qty"],

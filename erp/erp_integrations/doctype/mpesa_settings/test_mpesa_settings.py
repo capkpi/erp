@@ -4,7 +4,7 @@
 import unittest
 from json import dumps
 
-import frappe
+import capkpi
 
 from erp.accounts.doctype.pos_invoice.test_pos_invoice import create_pos_invoice
 from erp.erp_integrations.doctype.mpesa_settings.mpesa_settings import (
@@ -22,12 +22,12 @@ class TestMpesaSettings(unittest.TestCase):
 		create_mpesa_settings(payment_gateway_name="Payment")
 
 	def tearDown(self):
-		frappe.db.sql("delete from `tabMpesa Settings`")
-		frappe.db.sql('delete from `tabIntegration Request` where integration_request_service = "Mpesa"')
+		capkpi.db.sql("delete from `tabMpesa Settings`")
+		capkpi.db.sql('delete from `tabIntegration Request` where integration_request_service = "Mpesa"')
 
 	def test_creation_of_payment_gateway(self):
 		mode_of_payment = create_mode_of_payment("Mpesa-_Test", payment_type="Phone")
-		self.assertTrue(frappe.db.exists("Payment Gateway Account", {"payment_gateway": "Mpesa-_Test"}))
+		self.assertTrue(capkpi.db.exists("Payment Gateway Account", {"payment_gateway": "Mpesa-_Test"}))
 		self.assertTrue(mode_of_payment.name)
 		self.assertEqual(mode_of_payment.type, "Phone")
 
@@ -37,7 +37,7 @@ class TestMpesaSettings(unittest.TestCase):
 
 		callback_response = get_account_balance_callback_payload()
 		process_balance_info(**callback_response)
-		integration_request = frappe.get_doc("Integration Request", "AG_20200927_00007cdb1f9fb6494315")
+		integration_request = capkpi.get_doc("Integration Request", "AG_20200927_00007cdb1f9fb6494315")
 
 		# test integration request creation and successful update of the status on receiving callback response
 		self.assertTrue(integration_request)
@@ -62,11 +62,11 @@ class TestMpesaSettings(unittest.TestCase):
 		integration_request.delete()
 
 	def test_processing_of_callback_payload(self):
-		mpesa_account = frappe.db.get_value(
+		mpesa_account = capkpi.db.get_value(
 			"Payment Gateway Account", {"payment_gateway": "Mpesa-Payment"}, "payment_account"
 		)
-		frappe.db.set_value("Account", mpesa_account, "account_currency", "KES")
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
+		capkpi.db.set_value("Account", mpesa_account, "account_currency", "KES")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
 
 		pos_invoice = create_pos_invoice(do_not_submit=1)
 		pos_invoice.append(
@@ -81,7 +81,7 @@ class TestMpesaSettings(unittest.TestCase):
 		self.assertEqual(pr.payment_gateway, "Mpesa-Payment")
 
 		# submitting payment request creates integration requests with random id
-		integration_req_ids = frappe.get_all(
+		integration_req_ids = capkpi.get_all(
 			"Integration Request",
 			filters={
 				"reference_doctype": pr.doctype,
@@ -95,7 +95,7 @@ class TestMpesaSettings(unittest.TestCase):
 		)
 		verify_transaction(**callback_response)
 		# test creation of integration request
-		integration_request = frappe.get_doc("Integration Request", integration_req_ids[0])
+		integration_request = capkpi.get_doc("Integration Request", integration_req_ids[0])
 
 		# test integration request creation and successful update of the status on receiving callback response
 		self.assertTrue(integration_request)
@@ -106,7 +106,7 @@ class TestMpesaSettings(unittest.TestCase):
 		self.assertEqual(pos_invoice.mpesa_receipt_number, "LGR7OWQX0R")
 		self.assertEqual(integration_request.status, "Completed")
 
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "")
 		integration_request.delete()
 		pr.reload()
 		pr.cancel()
@@ -114,12 +114,12 @@ class TestMpesaSettings(unittest.TestCase):
 		pos_invoice.delete()
 
 	def test_processing_of_multiple_callback_payload(self):
-		mpesa_account = frappe.db.get_value(
+		mpesa_account = capkpi.db.get_value(
 			"Payment Gateway Account", {"payment_gateway": "Mpesa-Payment"}, "payment_account"
 		)
-		frappe.db.set_value("Account", mpesa_account, "account_currency", "KES")
-		frappe.db.set_value("Mpesa Settings", "Payment", "transaction_limit", "500")
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
+		capkpi.db.set_value("Account", mpesa_account, "account_currency", "KES")
+		capkpi.db.set_value("Mpesa Settings", "Payment", "transaction_limit", "500")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
 
 		pos_invoice = create_pos_invoice(do_not_submit=1)
 		pos_invoice.append(
@@ -134,7 +134,7 @@ class TestMpesaSettings(unittest.TestCase):
 		self.assertEqual(pr.payment_gateway, "Mpesa-Payment")
 
 		# submitting payment request creates integration requests with random id
-		integration_req_ids = frappe.get_all(
+		integration_req_ids = capkpi.get_all(
 			"Integration Request",
 			filters={
 				"reference_doctype": pr.doctype,
@@ -144,7 +144,7 @@ class TestMpesaSettings(unittest.TestCase):
 		)
 
 		# create random receipt nos and send it as response to callback handler
-		mpesa_receipt_numbers = [frappe.utils.random_string(5) for d in integration_req_ids]
+		mpesa_receipt_numbers = [capkpi.utils.random_string(5) for d in integration_req_ids]
 
 		integration_requests = []
 		for i in range(len(integration_req_ids)):
@@ -156,7 +156,7 @@ class TestMpesaSettings(unittest.TestCase):
 			# handle response manually
 			verify_transaction(**callback_response)
 			# test completion of integration request
-			integration_request = frappe.get_doc("Integration Request", integration_req_ids[i])
+			integration_request = capkpi.get_doc("Integration Request", integration_req_ids[i])
 			self.assertEqual(integration_request.status, "Completed")
 			integration_requests.append(integration_request)
 
@@ -164,7 +164,7 @@ class TestMpesaSettings(unittest.TestCase):
 		pos_invoice.reload()
 		self.assertEqual(pos_invoice.mpesa_receipt_number, ", ".join(mpesa_receipt_numbers))
 
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "")
 		[d.delete() for d in integration_requests]
 		pr.reload()
 		pr.cancel()
@@ -172,12 +172,12 @@ class TestMpesaSettings(unittest.TestCase):
 		pos_invoice.delete()
 
 	def test_processing_of_only_one_succes_callback_payload(self):
-		mpesa_account = frappe.db.get_value(
+		mpesa_account = capkpi.db.get_value(
 			"Payment Gateway Account", {"payment_gateway": "Mpesa-Payment"}, "payment_account"
 		)
-		frappe.db.set_value("Account", mpesa_account, "account_currency", "KES")
-		frappe.db.set_value("Mpesa Settings", "Payment", "transaction_limit", "500")
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
+		capkpi.db.set_value("Account", mpesa_account, "account_currency", "KES")
+		capkpi.db.set_value("Mpesa Settings", "Payment", "transaction_limit", "500")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "KES")
 
 		pos_invoice = create_pos_invoice(do_not_submit=1)
 		pos_invoice.append(
@@ -192,7 +192,7 @@ class TestMpesaSettings(unittest.TestCase):
 		self.assertEqual(pr.payment_gateway, "Mpesa-Payment")
 
 		# submitting payment request creates integration requests with random id
-		integration_req_ids = frappe.get_all(
+		integration_req_ids = capkpi.get_all(
 			"Integration Request",
 			filters={
 				"reference_doctype": pr.doctype,
@@ -202,7 +202,7 @@ class TestMpesaSettings(unittest.TestCase):
 		)
 
 		# create random receipt nos and send it as response to callback handler
-		mpesa_receipt_numbers = [frappe.utils.random_string(5) for d in integration_req_ids]
+		mpesa_receipt_numbers = [capkpi.utils.random_string(5) for d in integration_req_ids]
 
 		callback_response = get_payment_callback_payload(
 			Amount=500,
@@ -212,14 +212,14 @@ class TestMpesaSettings(unittest.TestCase):
 		# handle response manually
 		verify_transaction(**callback_response)
 		# test completion of integration request
-		integration_request = frappe.get_doc("Integration Request", integration_req_ids[0])
+		integration_request = capkpi.get_doc("Integration Request", integration_req_ids[0])
 		self.assertEqual(integration_request.status, "Completed")
 
 		# now one request is completed
 		# second integration request fails
 		# now retrying payment request should make only one integration request again
 		pr = pos_invoice.create_payment_request()
-		new_integration_req_ids = frappe.get_all(
+		new_integration_req_ids = capkpi.get_all(
 			"Integration Request",
 			filters={
 				"reference_doctype": pr.doctype,
@@ -231,8 +231,8 @@ class TestMpesaSettings(unittest.TestCase):
 
 		self.assertEqual(len(new_integration_req_ids), 1)
 
-		frappe.db.set_value("Customer", "_Test Customer", "default_currency", "")
-		frappe.db.sql("delete from `tabIntegration Request` where integration_request_service = 'Mpesa'")
+		capkpi.db.set_value("Customer", "_Test Customer", "default_currency", "")
+		capkpi.db.sql("delete from `tabIntegration Request` where integration_request_service = 'Mpesa'")
 		pr.reload()
 		pr.cancel()
 		pr.delete()
@@ -240,10 +240,10 @@ class TestMpesaSettings(unittest.TestCase):
 
 
 def create_mpesa_settings(payment_gateway_name="Express"):
-	if frappe.db.exists("Mpesa Settings", payment_gateway_name):
-		return frappe.get_doc("Mpesa Settings", payment_gateway_name)
+	if capkpi.db.exists("Mpesa Settings", payment_gateway_name):
+		return capkpi.get_doc("Mpesa Settings", payment_gateway_name)
 
-	doc = frappe.get_doc(
+	doc = capkpi.get_doc(
 		dict(  # nosec
 			doctype="Mpesa Settings",
 			sandbox=1,
@@ -292,7 +292,7 @@ def get_test_account_balance_response():
 def get_payment_request_response_payload(Amount=500):
 	"""Response received after successfully calling the stk push process request API."""
 
-	CheckoutRequestID = frappe.utils.random_string(10)
+	CheckoutRequestID = capkpi.utils.random_string(10)
 
 	return {
 		"MerchantRequestID": "8071-27184008-1",

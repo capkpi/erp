@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Grading Scale', function(assert){
 	assert.expect(3);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Grading Scale', [
+			return capkpi.tests.make('Grading Scale', [
 				{grading_scale_name: 'GTU'},
 				{description: 'The score will be set according to 100 based system.'},
 				{intervals: [
@@ -54,7 +54,7 @@ QUnit.test('Test: Grading Scale', function(assert){
 			]);
 		},
 		() => {
-			return frappe.tests.make('Grading Scale', [
+			return capkpi.tests.make('Grading Scale', [
 				{grading_scale_name: 'GTU-2'},
 				{description: 'The score will be set according to 100 based system.'},
 				{intervals: [
@@ -77,24 +77,24 @@ QUnit.test('Test: Grading Scale', function(assert){
 			let tasks = [];
 			grading_scale.forEach(index => {
 				tasks.push(
-					() => frappe.set_route('Form', 'Grading Scale', index),
-					() => frappe.timeout(0.5),
-					() => frappe.tests.click_button('Submit'),
-					() => frappe.timeout(0.5),
-					() => frappe.tests.click_button('Yes'),
+					() => capkpi.set_route('Form', 'Grading Scale', index),
+					() => capkpi.timeout(0.5),
+					() => capkpi.tests.click_button('Submit'),
+					() => capkpi.timeout(0.5),
+					() => capkpi.tests.click_button('Yes'),
 					() => {assert.equal(cur_frm.doc.docstatus, 1, 'Submitted successfully');}
 				);
 			});
-			return frappe.run_serially(tasks);
+			return capkpi.run_serially(tasks);
 		},
 
-		() => frappe.timeout(1),
-		() => frappe.set_route('Form', 'Grading Scale','GTU-2'),
-		() => frappe.timeout(0.5),
-		() => frappe.tests.click_button('Cancel'),
-		() => frappe.timeout(0.5),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(0.5),
+		() => capkpi.timeout(1),
+		() => capkpi.set_route('Form', 'Grading Scale','GTU-2'),
+		() => capkpi.timeout(0.5),
+		() => capkpi.tests.click_button('Cancel'),
+		() => capkpi.timeout(0.5),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(0.5),
 		() => {assert.equal(cur_frm.doc.docstatus, 2, 'Cancelled successfully');},
 
 		() => done()

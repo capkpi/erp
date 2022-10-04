@@ -1,10 +1,10 @@
 {%
-	var letterhead = filters.letter_head || (frappe.get_doc(":Company", filters.company) && frappe.get_doc(":Company", filters.company).default_letter_head) || frappe.defaults.get_default("letter_head");
+	var letterhead = filters.letter_head || (capkpi.get_doc(":Company", filters.company) && capkpi.get_doc(":Company", filters.company).default_letter_head) || capkpi.defaults.get_default("letter_head");
 	var report_columns = report.get_columns_for_print();
 %}
 {% if(letterhead) { %}
 <div style="margin-bottom: 7px;" class="text-center">
-	{%= frappe.boot.letter_heads[letterhead].header %}
+	{%= capkpi.boot.letter_heads[letterhead].header %}
 </div>
 {% } %}
 <h4 class="text-center">{%= __("Assessment Report") %}</h4>
@@ -47,4 +47,4 @@
 	</tbody>
 </table>
 
-<p class="text-right text-muted">Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>
+<p class="text-right text-muted">Printed On {%= capkpi.datetime.str_to_user(capkpi.datetime.get_datetime_as_string()) %}</p>

@@ -1,4 +1,4 @@
-frappe.treeview_settings["Location"] = {
+capkpi.treeview_settings["Location"] = {
 	ignore_fields: ["parent_location"],
 	get_tree_nodes: 'erp.assets.doctype.location.location.get_children',
 	add_tree_node: 'erp.assets.doctype.location.location.add_node',
@@ -22,9 +22,9 @@ frappe.treeview_settings["Location"] = {
 		{
 			label: __("New Location"),
 			action: function () {
-				frappe.new_doc("Location", true);
+				capkpi.new_doc("Location", true);
 			},
-			condition: 'frappe.boot.user.can_create.indexOf("Location") !== -1'
+			condition: 'capkpi.boot.user.can_create.indexOf("Location") !== -1'
 		}
 	],
 	onload: function (treeview) {

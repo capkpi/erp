@@ -4,7 +4,7 @@
  "creation": "2020-07-17 11:25:34.564015",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
- "dynamic_filters_json": "{\"company\":\"frappe.defaults.get_user_default(\\\"Company\\\")\",\"report_date\":\"frappe.datetime.now_date()\"}",
+ "dynamic_filters_json": "{\"company\":\"capkpi.defaults.get_user_default(\\\"Company\\\")\",\"report_date\":\"capkpi.datetime.now_date()\"}",
  "filters_json": "{\"ageing_based_on\":\"Due Date\",\"range1\":30,\"range2\":60,\"range3\":90,\"range4\":120,\"group_by_party\":0,\"based_on_payment_terms\":0}",
  "idx": 0,
  "is_public": 1,

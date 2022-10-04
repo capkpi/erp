@@ -3,7 +3,7 @@
 
 import unittest
 
-# test_records = frappe.get_test_records('Shopify Log')
+# test_records = capkpi.get_test_records('Shopify Log')
 
 
 class TestShopifyLog(unittest.TestCase):

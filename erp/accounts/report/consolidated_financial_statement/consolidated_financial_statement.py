@@ -4,9 +4,9 @@
 
 from collections import defaultdict
 
-import frappe
-from frappe import _
-from frappe.utils import cint, flt, getdate
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, flt, getdate
 
 import erp
 from erp.accounts.report.balance_sheet.balance_sheet import (
@@ -58,7 +58,7 @@ def execute(filters=None):
 			fiscal_year, companies, columns, filters
 		)
 	else:
-		if cint(frappe.db.get_single_value("Accounts Settings", "use_custom_cash_flow")):
+		if cint(capkpi.db.get_single_value("Accounts Settings", "use_custom_cash_flow")):
 			from erp.accounts.report.cash_flow.custom_cash_flow import execute as execute_custom
 
 			return execute_custom(filters=filters)
@@ -155,7 +155,7 @@ def get_opening_balance(account_name, data, company):
 
 
 def get_root_account_name(root_type, company):
-	return frappe.get_all(
+	return capkpi.get_all(
 		"Account",
 		fields=["account_name"],
 		filters={
@@ -342,7 +342,7 @@ def get_data(
 	filters.end_date = end_date
 
 	gl_entries_by_account = {}
-	for root in frappe.db.sql(
+	for root in capkpi.db.sql(
 		"""select lft, rgt from tabAccount
 			where root_type=%s and ifnull(parent_account, '') = ''""",
 		root_type,
@@ -379,7 +379,7 @@ def get_data(
 
 
 def get_company_currency(filters=None):
-	return filters.get("presentation_currency") or frappe.get_cached_value(
+	return filters.get("presentation_currency") or capkpi.get_cached_value(
 		"Company", filters.company, "default_currency"
 	)
 
@@ -502,9 +502,9 @@ def get_companies(filters):
 
 
 def get_subsidiary_companies(company):
-	lft, rgt = frappe.get_cached_value("Company", company, ["lft", "rgt"])
+	lft, rgt = capkpi.get_cached_value("Company", company, ["lft", "rgt"])
 
-	return frappe.db.sql_list(
+	return capkpi.db.sql_list(
 		"""select name from `tabCompany`
 		where lft >= {0} and rgt <= {1} order by lft, rgt""".format(
 			lft, rgt
@@ -517,7 +517,7 @@ def get_accounts(root_type, companies):
 	added_accounts = []
 
 	for company in companies:
-		for account in frappe.get_all(
+		for account in capkpi.get_all(
 			"Account",
 			fields=[
 				"name",
@@ -553,7 +553,7 @@ def prepare_data(
 		# add to output
 		has_value = False
 		total = 0
-		row = frappe._dict(
+		row = capkpi._dict(
 			{
 				"account_name": (
 					"%s - %s" % (_(d.account_number), _(d.account_name))
@@ -605,12 +605,12 @@ def set_gl_entries_by_account(
 ):
 	"""Returns a dict like { "account": [gl entries], ... }"""
 
-	company_lft, company_rgt = frappe.get_cached_value(
+	company_lft, company_rgt = capkpi.get_cached_value(
 		"Company", filters.get("company"), ["lft", "rgt"]
 	)
 
 	additional_conditions = get_additional_conditions(from_date, ignore_closing_entries, filters)
-	companies = frappe.db.sql(
+	companies = capkpi.db.sql(
 		""" select name, default_currency from `tabCompany`
 		where lft >= %(company_lft)s and rgt <= %(company_rgt)s""",
 		{
@@ -620,12 +620,12 @@ def set_gl_entries_by_account(
 		as_dict=1,
 	)
 
-	currency_info = frappe._dict(
+	currency_info = capkpi._dict(
 		{"report_date": to_date, "presentation_currency": filters.get("presentation_currency")}
 	)
 
 	for d in companies:
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""select gl.posting_date, gl.account, gl.debit, gl.credit, gl.is_opening, gl.company,
 			gl.fiscal_year, gl.debit_in_account_currency, gl.credit_in_account_currency, gl.account_currency,
 			acc.account_name, acc.account_number
@@ -641,7 +641,7 @@ def set_gl_entries_by_account(
 				"rgt": root_rgt,
 				"company": d.name,
 				"finance_book": filters.get("finance_book"),
-				"company_fb": frappe.db.get_value("Company", d.name, "default_finance_book"),
+				"company_fb": capkpi.db.get_value("Company", d.name, "default_finance_book"),
 			},
 			as_dict=True,
 		)
@@ -664,7 +664,7 @@ def set_gl_entries_by_account(
 
 
 def get_account_details(account):
-	return frappe.get_cached_value(
+	return capkpi.get_cached_value(
 		"Account",
 		account,
 		[

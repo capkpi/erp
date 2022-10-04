@@ -4,23 +4,23 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, msgprint, throw
-from frappe.model.document import Document
-from frappe.utils import flt, fmt_money
+import capkpi
+from capkpi import _, msgprint, throw
+from capkpi.model.document import Document
+from capkpi.utils import flt, fmt_money
 
 import erp
 
 
-class OverlappingConditionError(frappe.ValidationError):
+class OverlappingConditionError(capkpi.ValidationError):
 	pass
 
 
-class FromGreaterThanToError(frappe.ValidationError):
+class FromGreaterThanToError(capkpi.ValidationError):
 	pass
 
 
-class ManyBlankToValuesError(frappe.ValidationError):
+class ManyBlankToValuesError(capkpi.ValidationError):
 	pass
 
 
@@ -99,11 +99,11 @@ class ShippingRule(Document):
 		if self.countries:
 			shipping_country = doc.get_shipping_address().get("country")
 			if not shipping_country:
-				frappe.throw(
+				capkpi.throw(
 					_("Shipping Address does not have country, which is required for this Shipping Rule")
 				)
 			if shipping_country not in [d.country for d in self.countries]:
-				frappe.throw(
+				capkpi.throw(
 					_("Shipping rule not applicable for country {0} in Shipping Address").format(shipping_country)
 				)
 
@@ -116,12 +116,12 @@ class ShippingRule(Document):
 		if self.shipping_rule_type == "Selling":
 			# check if not applied on purchase
 			if not doc.meta.get_field("taxes").options == "Sales Taxes and Charges":
-				frappe.throw(_("Shipping rule only applicable for Selling"))
+				capkpi.throw(_("Shipping rule only applicable for Selling"))
 			shipping_charge["doctype"] = "Sales Taxes and Charges"
 		else:
 			# check if not applied on sales
 			if not doc.meta.get_field("taxes").options == "Purchase Taxes and Charges":
-				frappe.throw(_("Shipping rule only applicable for Buying"))
+				capkpi.throw(_("Shipping rule only applicable for Buying"))
 
 			shipping_charge["doctype"] = "Purchase Taxes and Charges"
 			shipping_charge["category"] = "Valuation and Total"

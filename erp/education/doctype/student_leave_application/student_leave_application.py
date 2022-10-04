@@ -4,10 +4,10 @@
 
 from datetime import timedelta
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import date_diff, flt, get_link_to_form, getdate
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import date_diff, flt, get_link_to_form, getdate
 
 from erp.education.doctype.student_attendance.student_attendance import get_holiday_list
 from erp.hr.doctype.holiday_list.holiday_list import is_holiday
@@ -26,7 +26,7 @@ class StudentLeaveApplication(Document):
 		self.cancel_attendance()
 
 	def validate_duplicate(self):
-		data = frappe.db.sql(
+		data = capkpi.db.sql(
 			"""select name from `tabStudent Leave Application`
 			where
 				((%(from_date)s > from_date and %(from_date)s < to_date) or
@@ -45,9 +45,9 @@ class StudentLeaveApplication(Document):
 
 		if data:
 			link = get_link_to_form("Student Leave Application", data[0].name)
-			frappe.throw(
+			capkpi.throw(
 				_("Leave application {0} already exists against the student {1}").format(
-					link, frappe.bold(self.student)
+					link, capkpi.bold(self.student)
 				),
 				title=_("Duplicate Entry"),
 			)
@@ -65,7 +65,7 @@ class StudentLeaveApplication(Document):
 			if is_holiday(holiday_list, date):
 				continue
 
-			attendance = frappe.db.exists(
+			attendance = capkpi.db.exists(
 				"Student Attendance", {"student": self.student, "date": date, "docstatus": ("!=", 2)}
 			)
 
@@ -75,10 +75,10 @@ class StudentLeaveApplication(Document):
 				values = dict()
 				values["status"] = status
 				values["leave_application"] = self.name
-				frappe.db.set_value("Student Attendance", attendance, values)
+				capkpi.db.set_value("Student Attendance", attendance, values)
 			else:
 				# make a new attendance record
-				doc = frappe.new_doc("Student Attendance")
+				doc = capkpi.new_doc("Student Attendance")
 				doc.student = self.student
 				doc.student_name = self.student_name
 				doc.date = date
@@ -93,7 +93,7 @@ class StudentLeaveApplication(Document):
 
 	def cancel_attendance(self):
 		if self.docstatus == 2:
-			attendance = frappe.db.sql(
+			attendance = capkpi.db.sql(
 				"""
 				SELECT name
 				FROM `tabStudent Attendance`
@@ -107,7 +107,7 @@ class StudentLeaveApplication(Document):
 			)
 
 			for name in attendance:
-				frappe.db.set_value("Student Attendance", name, "docstatus", 2)
+				capkpi.db.set_value("Student Attendance", name, "docstatus", 2)
 
 
 def daterange(start_date, end_date):
@@ -118,7 +118,7 @@ def daterange(start_date, end_date):
 def get_number_of_leave_days(from_date, to_date, holiday_list):
 	number_of_days = date_diff(to_date, from_date) + 1
 
-	holidays = frappe.db.sql(
+	holidays = capkpi.db.sql(
 		"""
 		SELECT
 			COUNT(DISTINCT holiday_date)

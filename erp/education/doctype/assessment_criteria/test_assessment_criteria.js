@@ -4,9 +4,9 @@ QUnit.module('education');
 QUnit.test('Test: Assessment Criteria', function(assert){
 	assert.expect(0);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Assessment Criteria', [
+			return capkpi.tests.make('Assessment Criteria', [
 				{assessment_criteria: 'Pass'},
 				{assessment_criteria_group: 'Reservation'}
 			]);

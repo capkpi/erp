@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, throw
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate
+import capkpi
+from capkpi import _, throw
+from capkpi.model.mapper import get_mapped_doc
+from capkpi.utils import cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate
 from six import iteritems
 
 import erp
@@ -64,7 +64,7 @@ class PurchaseInvoice(BuyingController):
 
 	def onload(self):
 		super(PurchaseInvoice, self).onload()
-		supplier_tds = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
+		supplier_tds = capkpi.db.get_value("Supplier", self.supplier, "tax_withholding_category")
 		self.set_onload("supplier_tds", supplier_tds)
 
 	def before_save(self):
@@ -122,17 +122,17 @@ class PurchaseInvoice(BuyingController):
 
 	def validate_release_date(self):
 		if self.release_date and getdate(nowdate()) >= getdate(self.release_date):
-			frappe.throw(_("Release date must be in the future"))
+			capkpi.throw(_("Release date must be in the future"))
 
 	def validate_cash(self):
 		if not self.cash_bank_account and flt(self.paid_amount):
-			frappe.throw(_("Cash or Bank Account is mandatory for making payment entry"))
+			capkpi.throw(_("Cash or Bank Account is mandatory for making payment entry"))
 
 		if flt(self.paid_amount) + flt(self.write_off_amount) - flt(
 			self.get("rounded_total") or self.grand_total
 		) > 1 / (10 ** (self.precision("base_grand_total") + 1)):
 
-			frappe.throw(_("""Paid amount + Write Off Amount can not be greater than Grand Total"""))
+			capkpi.throw(_("""Paid amount + Write Off Amount can not be greater than Grand Total"""))
 
 	def create_remarks(self):
 		if not self.remarks:
@@ -146,7 +146,7 @@ class PurchaseInvoice(BuyingController):
 	def set_missing_values(self, for_validate=False):
 		if not self.credit_to:
 			self.credit_to = get_party_account("Supplier", self.supplier, self.company)
-			self.party_account_currency = frappe.db.get_value(
+			self.party_account_currency = capkpi.db.get_value(
 				"Account", self.credit_to, "account_currency", cache=True
 			)
 		if not self.due_date:
@@ -154,7 +154,7 @@ class PurchaseInvoice(BuyingController):
 				self.posting_date, "Supplier", self.supplier, self.company, self.bill_date
 			)
 
-		tds_category = frappe.db.get_value("Supplier", self.supplier, "tax_withholding_category")
+		tds_category = capkpi.db.get_value("Supplier", self.supplier, "tax_withholding_category")
 		if tds_category and not for_validate:
 			self.apply_tds = 1
 			self.tax_withholding_category = tds_category
@@ -168,23 +168,23 @@ class PurchaseInvoice(BuyingController):
 			if not self.credit_to:
 				self.raise_missing_debit_credit_account_error("Supplier", self.supplier)
 
-		account = frappe.db.get_value(
+		account = capkpi.db.get_value(
 			"Account", self.credit_to, ["account_type", "report_type", "account_currency"], as_dict=True
 		)
 
 		if account.report_type != "Balance Sheet":
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Please ensure {} account is a Balance Sheet account. You can change the parent account to a Balance Sheet account or select a different account."
-				).format(frappe.bold("Credit To")),
+				).format(capkpi.bold("Credit To")),
 				title=_("Invalid Account"),
 			)
 
 		if self.supplier and account.account_type != "Payable":
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Please ensure {} account {} is a Payable account. Change the account type to Payable or select a different account."
-				).format(frappe.bold("Credit To"), frappe.bold(self.credit_to)),
+				).format(capkpi.bold("Credit To"), capkpi.bold(self.credit_to)),
 				title=_("Invalid Account"),
 			)
 
@@ -224,7 +224,7 @@ class PurchaseInvoice(BuyingController):
 		)
 
 		if (
-			cint(frappe.db.get_single_value("Buying Settings", "maintain_same_rate")) and not self.is_return
+			cint(capkpi.db.get_single_value("Buying Settings", "maintain_same_rate")) and not self.is_return
 		):
 			self.validate_rate_with_reference_doc(
 				[
@@ -238,7 +238,7 @@ class PurchaseInvoice(BuyingController):
 			stock_items = self.get_stock_items()
 			for d in self.get("items"):
 				if not d.warehouse and d.item_code in stock_items:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Warehouse required at Row No {0}, please set default warehouse for the item {1} for the company {2}"
 						).format(d.idx, d.item_code, self.company)
@@ -249,7 +249,7 @@ class PurchaseInvoice(BuyingController):
 	def validate_item_code(self):
 		for d in self.get("items"):
 			if not d.item_code:
-				frappe.msgprint(_("Item Code required at Row No {0}").format(d.idx), raise_exception=True)
+				capkpi.msgprint(_("Item Code required at Row No {0}").format(d.idx), raise_exception=True)
 
 	def set_expense_account(self, for_validate=False):
 		auto_accounting_for_stock = erp.is_perpetual_inventory_enabled(self.company)
@@ -273,7 +273,7 @@ class PurchaseInvoice(BuyingController):
 			# expense account is always "Stock Received But Not Billed" for a stock item
 			# except opening entry, drop-ship entry and fixed asset items
 			if item.item_code:
-				asset_category = frappe.get_cached_value("Item", item.item_code, "asset_category")
+				asset_category = capkpi.get_cached_value("Item", item.item_code, "asset_category")
 
 			if (
 				auto_accounting_for_stock
@@ -282,7 +282,7 @@ class PurchaseInvoice(BuyingController):
 				and not item.is_fixed_asset
 				and (
 					not item.po_detail
-					or not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")
+					or not capkpi.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")
 				)
 			):
 
@@ -296,16 +296,16 @@ class PurchaseInvoice(BuyingController):
 							"Row {0}: Expense Head changed to {1} because account {2} is not linked to warehouse {3} or it is not the default inventory account"
 						).format(
 							item.idx,
-							frappe.bold(warehouse_account[item.warehouse]["account"]),
-							frappe.bold(item.expense_account),
-							frappe.bold(item.warehouse),
+							capkpi.bold(warehouse_account[item.warehouse]["account"]),
+							capkpi.bold(item.expense_account),
+							capkpi.bold(item.warehouse),
 						)
-						frappe.msgprint(msg, title=_("Expense Head Changed"))
+						capkpi.msgprint(msg, title=_("Expense Head Changed"))
 					item.expense_account = warehouse_account[item.warehouse]["account"]
 				else:
 					# check if 'Stock Received But Not Billed' account is credited in Purchase receipt or not
 					if item.purchase_receipt:
-						negative_expense_booked_in_pr = frappe.db.sql(
+						negative_expense_booked_in_pr = capkpi.db.sql(
 							"""select name from `tabGL Entry`
 							where voucher_type='Purchase Receipt' and voucher_no=%s and account = %s""",
 							(item.purchase_receipt, stock_not_billed_account),
@@ -318,9 +318,9 @@ class PurchaseInvoice(BuyingController):
 								msg = _(
 									"Row {0}: Expense Head changed to {1} because expense is booked against this account in Purchase Receipt {2}"
 								).format(
-									item.idx, frappe.bold(stock_not_billed_account), frappe.bold(item.purchase_receipt)
+									item.idx, capkpi.bold(stock_not_billed_account), capkpi.bold(item.purchase_receipt)
 								)
-								frappe.msgprint(msg, title=_("Expense Head Changed"))
+								capkpi.msgprint(msg, title=_("Expense Head Changed"))
 
 							item.expense_account = stock_not_billed_account
 					else:
@@ -332,13 +332,13 @@ class PurchaseInvoice(BuyingController):
 							msg = _(
 								"Row {0}: Expense Head changed to {1} as no Purchase Receipt is created against Item {2}."
 							).format(
-								item.idx, frappe.bold(stock_not_billed_account), frappe.bold(item.item_code)
+								item.idx, capkpi.bold(stock_not_billed_account), capkpi.bold(item.item_code)
 							)
 							msg += "<br>"
 							msg += _(
 								"This is done to handle accounting for cases when Purchase Receipt is created after Purchase Invoice"
 							)
-							frappe.msgprint(msg, title=_("Expense Head Changed"))
+							capkpi.msgprint(msg, title=_("Expense Head Changed"))
 
 						item.expense_account = stock_not_billed_account
 
@@ -371,42 +371,42 @@ class PurchaseInvoice(BuyingController):
 		self.against_expense_account = ",".join(against_accounts)
 
 	def po_required(self):
-		if frappe.db.get_value("Buying Settings", None, "po_required") == "Yes":
+		if capkpi.db.get_value("Buying Settings", None, "po_required") == "Yes":
 
-			if frappe.get_value(
+			if capkpi.get_value(
 				"Supplier", self.supplier, "allow_purchase_invoice_creation_without_purchase_order"
 			):
 				return
 
 			for d in self.get("items"):
 				if not d.purchase_order:
-					msg = _("Purchase Order Required for item {}").format(frappe.bold(d.item_code))
+					msg = _("Purchase Order Required for item {}").format(capkpi.bold(d.item_code))
 					msg += "<br><br>"
 					msg += _("To submit the invoice without purchase order please set {0} as {1} in {2}").format(
-						frappe.bold(_("Purchase Order Required")),
-						frappe.bold("No"),
+						capkpi.bold(_("Purchase Order Required")),
+						capkpi.bold("No"),
 						get_link_to_form("Buying Settings", "Buying Settings", "Buying Settings"),
 					)
 					throw(msg, title=_("Mandatory Purchase Order"))
 
 	def pr_required(self):
 		stock_items = self.get_stock_items()
-		if frappe.db.get_value("Buying Settings", None, "pr_required") == "Yes":
+		if capkpi.db.get_value("Buying Settings", None, "pr_required") == "Yes":
 
-			if frappe.get_value(
+			if capkpi.get_value(
 				"Supplier", self.supplier, "allow_purchase_invoice_creation_without_purchase_receipt"
 			):
 				return
 
 			for d in self.get("items"):
 				if not d.purchase_receipt and d.item_code in stock_items:
-					msg = _("Purchase Receipt Required for item {}").format(frappe.bold(d.item_code))
+					msg = _("Purchase Receipt Required for item {}").format(capkpi.bold(d.item_code))
 					msg += "<br><br>"
 					msg += _(
 						"To submit the invoice without purchase receipt please set {0} as {1} in {2}"
 					).format(
-						frappe.bold(_("Purchase Receipt Required")),
-						frappe.bold("No"),
+						capkpi.bold(_("Purchase Receipt Required")),
+						capkpi.bold("No"),
 						get_link_to_form("Buying Settings", "Buying Settings", "Buying Settings"),
 					)
 					throw(msg, title=_("Mandatory Purchase Receipt"))
@@ -418,17 +418,17 @@ class PurchaseInvoice(BuyingController):
 	def check_prev_docstatus(self):
 		for d in self.get("items"):
 			if d.purchase_order:
-				submitted = frappe.db.sql(
+				submitted = capkpi.db.sql(
 					"select name from `tabPurchase Order` where docstatus = 1 and name = %s", d.purchase_order
 				)
 				if not submitted:
-					frappe.throw(_("Purchase Order {0} is not submitted").format(d.purchase_order))
+					capkpi.throw(_("Purchase Order {0} is not submitted").format(d.purchase_order))
 			if d.purchase_receipt:
-				submitted = frappe.db.sql(
+				submitted = capkpi.db.sql(
 					"select name from `tabPurchase Receipt` where docstatus = 1 and name = %s", d.purchase_receipt
 				)
 				if not submitted:
-					frappe.throw(_("Purchase Receipt {0} is not submitted").format(d.purchase_receipt))
+					capkpi.throw(_("Purchase Receipt {0} is not submitted").format(d.purchase_receipt))
 
 	def update_status_updater_args(self):
 		if cint(self.update_stock):
@@ -472,7 +472,7 @@ class PurchaseInvoice(BuyingController):
 		if self.update_stock:
 			for item in self.get("items"):
 				if item.purchase_receipt:
-					frappe.throw(
+					capkpi.throw(
 						_("Stock cannot be updated against Purchase Receipt {0}").format(item.purchase_receipt)
 					)
 
@@ -483,7 +483,7 @@ class PurchaseInvoice(BuyingController):
 		self.update_status_updater_args()
 		self.update_prevdoc_status()
 
-		frappe.get_doc("Authorization Control").validate_approving_authority(
+		capkpi.get_doc("Authorization Control").validate_approving_authority(
 			self.doctype, self.company, self.base_grand_total
 		)
 
@@ -534,7 +534,7 @@ class PurchaseInvoice(BuyingController):
 				make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 				if provisional_entries:
 					for entry in provisional_entries:
-						frappe.db.set_value(
+						capkpi.db.set_value(
 							"GL Entry",
 							{"voucher_type": "Purchase Receipt", "voucher_detail_no": entry.voucher_detail_no},
 							"is_cancelled",
@@ -588,7 +588,7 @@ class PurchaseInvoice(BuyingController):
 		# Check if there exists any item with cwip accounting enabled in it's asset category
 		for item in self.get("items"):
 			if item.item_code and item.is_fixed_asset:
-				asset_category = frappe.get_cached_value("Item", item.item_code, "asset_category")
+				asset_category = capkpi.get_cached_value("Item", item.item_code, "asset_category")
 				if is_cwip_accounting_enabled(asset_category):
 					return 1
 		return 0
@@ -642,7 +642,7 @@ class PurchaseInvoice(BuyingController):
 
 		voucher_wise_stock_value = {}
 		if self.update_stock:
-			stock_ledger_entries = frappe.get_all(
+			stock_ledger_entries = capkpi.get_all(
 				"Stock Ledger Entry",
 				fields=["voucher_detail_no", "stock_value_difference", "warehouse"],
 				filters={"voucher_no": self.name, "voucher_type": self.doctype, "is_cancelled": 0},
@@ -660,7 +660,7 @@ class PurchaseInvoice(BuyingController):
 		]
 
 		provisional_accounting_for_non_stock_items = cint(
-			frappe.db.get_value(
+			capkpi.db.get_value(
 				"Company", self.company, "enable_provisional_accounting_for_non_stock_items"
 			)
 		)
@@ -671,7 +671,7 @@ class PurchaseInvoice(BuyingController):
 			if flt(item.base_net_amount):
 				account_currency = get_account_currency(item.expense_account)
 				if item.item_code:
-					asset_category = frappe.get_cached_value("Item", item.item_code, "asset_category")
+					asset_category = capkpi.get_cached_value("Item", item.item_code, "asset_category")
 
 				if self.update_stock and self.auto_accounting_for_stock and item.item_code in stock_items:
 					# warehouse account
@@ -767,7 +767,7 @@ class PurchaseInvoice(BuyingController):
 					if flt(item.rm_supp_cost):
 						supplier_warehouse_account = warehouse_account[self.supplier_warehouse]["account"]
 						if not supplier_warehouse_account:
-							frappe.throw(_("Please set account in Warehouse {0}").format(self.supplier_warehouse))
+							capkpi.throw(_("Please set account in Warehouse {0}").format(self.supplier_warehouse))
 						gl_entries.append(
 							self.get_gl_dict(
 								{
@@ -799,17 +799,17 @@ class PurchaseInvoice(BuyingController):
 
 					if provisional_accounting_for_non_stock_items:
 						if item.purchase_receipt:
-							provisional_account = frappe.db.get_value(
+							provisional_account = capkpi.db.get_value(
 								"Purchase Receipt Item", item.pr_detail, "provisional_expense_account"
 							) or self.get_company_default("default_provisional_account")
 							purchase_receipt_doc = purchase_receipt_doc_map.get(item.purchase_receipt)
 
 							if not purchase_receipt_doc:
-								purchase_receipt_doc = frappe.get_doc("Purchase Receipt", item.purchase_receipt)
+								purchase_receipt_doc = capkpi.get_doc("Purchase Receipt", item.purchase_receipt)
 								purchase_receipt_doc_map[item.purchase_receipt] = purchase_receipt_doc
 
 							# Post reverse entry for Stock-Received-But-Not-Billed if it is booked in Purchase Receipt
-							expense_booked_in_pr = frappe.db.get_value(
+							expense_booked_in_pr = capkpi.db.get_value(
 								"GL Entry",
 								{
 									"is_cancelled": 0,
@@ -877,12 +877,12 @@ class PurchaseInvoice(BuyingController):
 						)
 
 						# update gross amount of asset bought through this document
-						assets = frappe.db.get_all(
+						assets = capkpi.db.get_all(
 							"Asset", filters={"purchase_invoice": self.name, "item_code": item.item_code}
 						)
 						for asset in assets:
-							frappe.db.set_value("Asset", asset.name, "gross_purchase_amount", flt(item.valuation_rate))
-							frappe.db.set_value(
+							capkpi.db.set_value("Asset", asset.name, "gross_purchase_amount", flt(item.valuation_rate))
+							capkpi.db.set_value(
 								"Asset", asset.name, "purchase_receipt_amount", flt(item.valuation_rate)
 							)
 
@@ -894,7 +894,7 @@ class PurchaseInvoice(BuyingController):
 			):
 				# Post reverse entry for Stock-Received-But-Not-Billed if it is booked in Purchase Receipt
 				if item.purchase_receipt and valuation_tax_accounts:
-					negative_expense_booked_in_pr = frappe.db.sql(
+					negative_expense_booked_in_pr = capkpi.db.sql(
 						"""select name from `tabGL Entry`
 							where voucher_type='Purchase Receipt' and voucher_no=%s and account in %s""",
 						(item.purchase_receipt, valuation_tax_accounts),
@@ -928,7 +928,7 @@ class PurchaseInvoice(BuyingController):
 				asset_amount = flt(item.net_amount) + flt(item.item_tax_amount / self.conversion_rate)
 				base_asset_amount = flt(item.base_net_amount + item.item_tax_amount)
 
-				item_exp_acc_type = frappe.db.get_value("Account", item.expense_account, "account_type")
+				item_exp_acc_type = capkpi.db.get_value("Account", item.expense_account, "account_type")
 				if not item.expense_account or item_exp_acc_type not in [
 					"Asset Received But Not Billed",
 					"Fixed Asset",
@@ -1051,12 +1051,12 @@ class PurchaseInvoice(BuyingController):
 							)
 
 						# update gross amount of assets bought through this document
-						assets = frappe.db.get_all(
+						assets = capkpi.db.get_all(
 							"Asset", filters={"purchase_invoice": self.name, "item_code": item.item_code}
 						)
 						for asset in assets:
-							frappe.db.set_value("Asset", asset.name, "gross_purchase_amount", flt(item.valuation_rate))
-							frappe.db.set_value(
+							capkpi.db.set_value("Asset", asset.name, "gross_purchase_amount", flt(item.valuation_rate))
+							capkpi.db.set_value(
 								"Asset", asset.name, "purchase_receipt_amount", flt(item.valuation_rate)
 							)
 
@@ -1138,7 +1138,7 @@ class PurchaseInvoice(BuyingController):
 				and not self.is_internal_transfer()
 			):
 				if self.auto_accounting_for_stock and not tax.cost_center:
-					frappe.throw(
+					capkpi.throw(
 						_("Cost Center is required in row {0} in Taxes table for type {1}").format(
 							tax.idx, _(tax.category)
 						)
@@ -1198,7 +1198,7 @@ class PurchaseInvoice(BuyingController):
 	def enable_discount_accounting(self):
 		if not hasattr(self, "_enable_discount_accounting"):
 			self._enable_discount_accounting = cint(
-				frappe.db.get_single_value("Accounts Settings", "enable_discount_accounting")
+				capkpi.db.get_single_value("Accounts Settings", "enable_discount_accounting")
 			)
 
 		return self._enable_discount_accounting
@@ -1361,7 +1361,7 @@ class PurchaseInvoice(BuyingController):
 			self.repost_future_sle_and_gle()
 
 		self.update_project()
-		frappe.db.set(self, "status", "Cancelled")
+		capkpi.db.set(self, "status", "Cancelled")
 
 		unlink_inter_company_doc(self.doctype, self.name, self.inter_company_invoice_reference)
 		self.ignore_linked_doctypes = ("GL Entry", "Stock Ledger Entry", "Repost Item Valuation")
@@ -1371,7 +1371,7 @@ class PurchaseInvoice(BuyingController):
 		project_list = []
 		for d in self.items:
 			if d.project and d.project not in project_list:
-				project = frappe.get_doc("Project", d.project)
+				project = capkpi.get_doc("Project", d.project)
 				project.update_purchase_costing()
 				project.db_update()
 				project_list.append(d.project)
@@ -1379,13 +1379,13 @@ class PurchaseInvoice(BuyingController):
 	def validate_supplier_invoice(self):
 		if self.bill_date:
 			if getdate(self.bill_date) > getdate(self.posting_date):
-				frappe.throw(_("Supplier Invoice Date cannot be greater than Posting Date"))
+				capkpi.throw(_("Supplier Invoice Date cannot be greater than Posting Date"))
 
 		if self.bill_no:
-			if cint(frappe.db.get_single_value("Accounts Settings", "check_supplier_invoice_uniqueness")):
+			if cint(capkpi.db.get_single_value("Accounts Settings", "check_supplier_invoice_uniqueness")):
 				fiscal_year = get_fiscal_year(self.posting_date, company=self.company, as_dict=True)
 
-				pi = frappe.db.sql(
+				pi = capkpi.db.sql(
 					"""select name from `tabPurchase Invoice`
 					where
 						bill_no = %(bill_no)s
@@ -1404,19 +1404,19 @@ class PurchaseInvoice(BuyingController):
 
 				if pi:
 					pi = pi[0][0]
-					frappe.throw(_("Supplier Invoice No exists in Purchase Invoice {0}").format(pi))
+					capkpi.throw(_("Supplier Invoice No exists in Purchase Invoice {0}").format(pi))
 
 	def update_billing_status_in_pr(self, update_modified=True):
 		updated_pr = []
 		for d in self.get("items"):
 			if d.pr_detail:
-				billed_amt = frappe.db.sql(
+				billed_amt = capkpi.db.sql(
 					"""select sum(amount) from `tabPurchase Invoice Item`
 					where pr_detail=%s and docstatus=1""",
 					d.pr_detail,
 				)
 				billed_amt = billed_amt and billed_amt[0][0] or 0
-				frappe.db.set_value(
+				capkpi.db.set_value(
 					"Purchase Receipt Item",
 					d.pr_detail,
 					"billed_amt",
@@ -1430,7 +1430,7 @@ class PurchaseInvoice(BuyingController):
 		for pr in set(updated_pr):
 			from erp.stock.doctype.purchase_receipt.purchase_receipt import update_billing_percentage
 
-			pr_doc = frappe.get_doc("Purchase Receipt", pr)
+			pr_doc = capkpi.get_doc("Purchase Receipt", pr)
 			update_billing_percentage(pr_doc, update_modified=update_modified)
 
 	def on_recurring(self, reference_doc, auto_repeat_doc):
@@ -1450,7 +1450,7 @@ class PurchaseInvoice(BuyingController):
 			return
 
 		if self.apply_tds and not self.get("tax_withholding_category"):
-			self.tax_withholding_category = frappe.db.get_value(
+			self.tax_withholding_category = capkpi.db.get_value(
 				"Supplier", self.supplier, "tax_withholding_category"
 			)
 
@@ -1530,14 +1530,14 @@ class PurchaseInvoice(BuyingController):
 
 	def update_advance_tax_references(self, cancel=0):
 		for tax in self.get("advance_tax"):
-			at = frappe.qb.DocType("Advance Taxes and Charges").as_("at")
+			at = capkpi.qb.DocType("Advance Taxes and Charges").as_("at")
 
 			if cancel:
-				frappe.qb.update(at).set(
+				capkpi.qb.update(at).set(
 					at.allocated_amount, at.allocated_amount - tax.allocated_amount
 				).where(at.name == tax.reference_detail).run()
 			else:
-				frappe.qb.update(at).set(
+				capkpi.qb.update(at).set(
 					at.allocated_amount, at.allocated_amount + tax.allocated_amount
 				).where(at.name == tax.reference_detail).run()
 
@@ -1566,7 +1566,7 @@ class PurchaseInvoice(BuyingController):
 				elif (
 					outstanding_amount <= 0
 					and self.is_return == 0
-					and frappe.db.get_value(
+					and capkpi.db.get_value(
 						"Purchase Invoice", {"is_return": 1, "return_against": self.name, "docstatus": 1}
 					)
 				):
@@ -1604,14 +1604,14 @@ def make_regional_gl_entries(gl_entries, doc):
 	return gl_entries
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_debit_note(source_name, target_doc=None):
 	from erp.controllers.sales_and_purchase_return import make_return_doc
 
 	return make_return_doc("Purchase Invoice", source_name, target_doc)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_stock_entry(source_name, target_doc=None):
 	doc = get_mapped_doc(
 		"Purchase Invoice",
@@ -1629,28 +1629,28 @@ def make_stock_entry(source_name, target_doc=None):
 	return doc
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def change_release_date(name, release_date=None):
-	if frappe.db.exists("Purchase Invoice", name):
-		pi = frappe.get_doc("Purchase Invoice", name)
+	if capkpi.db.exists("Purchase Invoice", name):
+		pi = capkpi.get_doc("Purchase Invoice", name)
 		pi.db_set("release_date", release_date)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def unblock_invoice(name):
-	if frappe.db.exists("Purchase Invoice", name):
-		pi = frappe.get_doc("Purchase Invoice", name)
+	if capkpi.db.exists("Purchase Invoice", name):
+		pi = capkpi.get_doc("Purchase Invoice", name)
 		pi.unblock_invoice()
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def block_invoice(name, release_date, hold_comment=None):
-	if frappe.db.exists("Purchase Invoice", name):
-		pi = frappe.get_doc("Purchase Invoice", name)
+	if capkpi.db.exists("Purchase Invoice", name):
+		pi = capkpi.get_doc("Purchase Invoice", name)
 		pi.block_invoice(hold_comment, release_date)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_inter_company_sales_invoice(source_name, target_doc=None):
 	from erp.accounts.doctype.sales_invoice.sales_invoice import make_inter_company_transaction
 
@@ -1658,10 +1658,10 @@ def make_inter_company_sales_invoice(source_name, target_doc=None):
 
 
 def on_doctype_update():
-	frappe.db.add_index("Purchase Invoice", ["supplier", "is_return", "return_against"])
+	capkpi.db.add_index("Purchase Invoice", ["supplier", "is_return", "return_against"])
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_purchase_receipt(source_name, target_doc=None):
 	def update_item(obj, target, source_parent):
 		target.qty = flt(obj.qty) - flt(obj.received_qty)

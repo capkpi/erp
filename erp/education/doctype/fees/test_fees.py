@@ -3,9 +3,9 @@
 
 import unittest
 
-import frappe
-from frappe.utils import nowdate
-from frappe.utils.make_random import get_random
+import capkpi
+from capkpi.utils import nowdate
+from capkpi.utils.make_random import get_random
 
 from erp.education.doctype.program.test_program import make_program_and_linked_courses
 
@@ -18,7 +18,7 @@ class TestFees(unittest.TestCase):
 		program = make_program_and_linked_courses(
 			"_Test Program 1", ["_Test Course 1", "_Test Course 2"]
 		)
-		fee = frappe.new_doc("Fees")
+		fee = capkpi.new_doc("Fees")
 		fee.posting_date = nowdate()
 		fee.due_date = nowdate()
 		fee.student = student
@@ -38,7 +38,7 @@ class TestFees(unittest.TestCase):
 		fee.save()
 		fee.submit()
 
-		gl_entries = frappe.db.sql(
+		gl_entries = capkpi.db.sql(
 			"""
 			select account, posting_date, party_type, party, cost_center, fiscal_year, voucher_type,
 			voucher_no, against_voucher_type, against_voucher, cost_center, company, credit, debit

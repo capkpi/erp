@@ -1,11 +1,11 @@
 // Copyright (c) 2015, CapKPI Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide("erp.accounts");
+capkpi.provide("erp.accounts");
 
 
 
-frappe.ui.form.on('Cost Center', {
+capkpi.ui.form.on('Cost Center', {
 	onload: function(frm) {
 		frm.set_query("parent_cost_center", function() {
 			return {
@@ -50,14 +50,14 @@ frappe.ui.form.on('Cost Center', {
 
 		if(!frm.doc.__islocal) {
 			frm.add_custom_button(__('Chart of Cost Centers'),
-				function() { frappe.set_route("Tree", "Cost Center"); });
+				function() { capkpi.set_route("Tree", "Cost Center"); });
 
 			frm.add_custom_button(__('Budget'),
-				function() { frappe.set_route("List", "Budget", {'cost_center': frm.doc.name}); });
+				function() { capkpi.set_route("List", "Budget", {'cost_center': frm.doc.name}); });
 		}
 	},
 	update_cost_center_number: function(frm) {
-		var d = new frappe.ui.Dialog({
+		var d = new capkpi.ui.Dialog({
 			title: __('Update Cost Center Name / Number'),
 			fields: [
 				{
@@ -86,8 +86,8 @@ frappe.ui.form.on('Cost Center', {
 					d.hide();
 					return;
 				}
-				frappe.dom.freeze();
-				frappe.call({
+				capkpi.dom.freeze();
+				capkpi.call({
 					method: "erp.accounts.utils.update_cost_center",
 					args: {
 						docname: frm.doc.name,
@@ -97,10 +97,10 @@ frappe.ui.form.on('Cost Center', {
 						merge: data.merge
 					},
 					callback: function(r) {
-						frappe.dom.unfreeze();
+						capkpi.dom.unfreeze();
 						if(!r.exc) {
 							if(r.message) {
-								frappe.set_route("Form", "Cost Center", r.message);
+								capkpi.set_route("Form", "Cost Center", r.message);
 							} else {
 								me.frm.set_value("cost_center_name", data.cost_center_name);
 								me.frm.set_value("cost_center_number", data.cost_center_number);
@@ -117,7 +117,7 @@ frappe.ui.form.on('Cost Center', {
 
 	parent_cost_center(frm) {
 		if(!frm.doc.company) {
-			frappe.msgprint(__('Please enter company name first'));
+			capkpi.msgprint(__('Please enter company name first'));
 		}
 	},
 

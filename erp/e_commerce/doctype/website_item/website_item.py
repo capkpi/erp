@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, List, Union
 if TYPE_CHECKING:
 	from erp.stock.doctype.item.item import Item
 
-import frappe
-from frappe import _
-from frappe.utils import cint, cstr, flt, random_string
-from frappe.website.doctype.website_slideshow.website_slideshow import get_slideshow
-from frappe.website.website_generator import WebsiteGenerator
+import capkpi
+from capkpi import _
+from capkpi.utils import cint, cstr, flt, random_string
+from capkpi.website.doctype.website_slideshow.website_slideshow import get_slideshow
+from capkpi.website.website_generator import WebsiteGenerator
 
 from erp.e_commerce.doctype.item_review.item_review import get_item_reviews
 from erp.e_commerce.redisearch_utils import (
@@ -28,7 +28,7 @@ from erp.utilities.product import get_price
 
 
 class WebsiteItem(WebsiteGenerator):
-	website = frappe._dict(
+	website = capkpi._dict(
 		page_title_field="web_item_name",
 		condition_field="published",
 		template="templates/generators/item/item.html",
@@ -37,7 +37,7 @@ class WebsiteItem(WebsiteGenerator):
 
 	def autoname(self):
 		# use naming series to accomodate items with same name (different item code)
-		from frappe.model.naming import make_autoname
+		from capkpi.model.naming import make_autoname
 
 		from erp.setup.doctype.naming_series.naming_series import get_default_naming_series
 
@@ -52,7 +52,7 @@ class WebsiteItem(WebsiteGenerator):
 		super(WebsiteItem, self).validate()
 
 		if not self.item_code:
-			frappe.throw(_("Item Code is required"), title=_("Mandatory"))
+			capkpi.throw(_("Item Code is required"), title=_("Mandatory"))
 
 		self.validate_duplicate_website_item()
 		self.validate_website_image()
@@ -60,7 +60,7 @@ class WebsiteItem(WebsiteGenerator):
 		self.publish_unpublish_desk_item(publish=True)
 
 		if not self.get("__islocal"):
-			self.old_website_item_groups = frappe.db.sql_list(
+			self.old_website_item_groups = capkpi.db.sql_list(
 				"""
 				select
 					item_group
@@ -84,21 +84,21 @@ class WebsiteItem(WebsiteGenerator):
 		self.publish_unpublish_desk_item(publish=False)
 
 	def validate_duplicate_website_item(self):
-		existing_web_item = frappe.db.exists("Website Item", {"item_code": self.item_code})
+		existing_web_item = capkpi.db.exists("Website Item", {"item_code": self.item_code})
 		if existing_web_item and existing_web_item != self.name:
-			message = _("Website Item already exists against Item {0}").format(frappe.bold(self.item_code))
-			frappe.throw(message, title=_("Already Published"))
+			message = _("Website Item already exists against Item {0}").format(capkpi.bold(self.item_code))
+			capkpi.throw(message, title=_("Already Published"))
 
 	def publish_unpublish_desk_item(self, publish=True):
-		if frappe.db.get_value("Item", self.item_code, "published_in_website") and publish:
+		if capkpi.db.get_value("Item", self.item_code, "published_in_website") and publish:
 			return  # if already published don't publish again
-		frappe.db.set_value("Item", self.item_code, "published_in_website", publish)
+		capkpi.db.set_value("Item", self.item_code, "published_in_website", publish)
 
 	def make_route(self):
 		"""Called from set_route in WebsiteGenerator."""
 		if not self.route:
 			return (
-				cstr(frappe.db.get_value("Item Group", self.item_group, "route"))
+				cstr(capkpi.db.get_value("Item Group", self.item_group, "route"))
 				+ "/"
 				+ self.scrub((self.item_name if self.item_name else self.item_code) + "-" + random_string(5))
 			)
@@ -108,7 +108,7 @@ class WebsiteItem(WebsiteGenerator):
 		if self.variant_of:
 			if self.published:
 				# show template
-				template_item = frappe.get_doc("Item", self.variant_of)
+				template_item = capkpi.get_doc("Item", self.variant_of)
 
 				if not template_item.published_in_website:
 					template_item.flags.ignore_permissions = True
@@ -117,14 +117,14 @@ class WebsiteItem(WebsiteGenerator):
 	def validate_website_image(self):
 		"""Validate if the website image is a public file"""
 
-		if frappe.flags.in_import:
+		if capkpi.flags.in_import:
 			return
 
 		if not self.website_image:
 			return
 
 		# find if website image url exists as public
-		file_doc = frappe.get_all(
+		file_doc = capkpi.get_all(
 			"File",
 			filters={"file_url": self.website_image},
 			fields=["name", "is_private"],
@@ -136,7 +136,7 @@ class WebsiteItem(WebsiteGenerator):
 			file_doc = file_doc[0]
 
 		if not file_doc:
-			frappe.msgprint(
+			capkpi.msgprint(
 				_("Website Image {0} attached to Item {1} cannot be found").format(
 					self.website_image, self.name
 				)
@@ -145,18 +145,18 @@ class WebsiteItem(WebsiteGenerator):
 			self.website_image = None
 
 		elif file_doc.is_private:
-			frappe.msgprint(_("Website Image should be a public file or website URL"))
+			capkpi.msgprint(_("Website Image should be a public file or website URL"))
 
 			self.website_image = None
 
 	def make_thumbnail(self):
 		"""Make a thumbnail of `website_image`"""
-		if frappe.flags.in_import or frappe.flags.in_migrate:
+		if capkpi.flags.in_import or capkpi.flags.in_migrate:
 			return
 
 		import requests.exceptions
 
-		db_website_image = frappe.db.get_value(self.doctype, self.name, "website_image")
+		db_website_image = capkpi.db.get_value(self.doctype, self.name, "website_image")
 		if not self.is_new() and self.website_image != db_website_image:
 			self.thumbnail = None
 
@@ -164,7 +164,7 @@ class WebsiteItem(WebsiteGenerator):
 			file_doc = None
 
 			try:
-				file_doc = frappe.get_doc(
+				file_doc = capkpi.get_doc(
 					"File",
 					{
 						"file_url": self.website_image,
@@ -172,17 +172,17 @@ class WebsiteItem(WebsiteGenerator):
 						"attached_to_name": self.name,
 					},
 				)
-			except frappe.DoesNotExistError:
+			except capkpi.DoesNotExistError:
 				pass
 				# cleanup
-				frappe.local.message_log.pop()
+				capkpi.local.message_log.pop()
 
 			except requests.exceptions.HTTPError:
-				frappe.msgprint(_("Warning: Invalid attachment {0}").format(self.website_image))
+				capkpi.msgprint(_("Warning: Invalid attachment {0}").format(self.website_image))
 				self.website_image = None
 
 			except requests.exceptions.SSLError:
-				frappe.msgprint(
+				capkpi.msgprint(
 					_("Warning: Invalid SSL certificate on attachment {0}").format(self.website_image)
 				)
 				self.website_image = None
@@ -190,7 +190,7 @@ class WebsiteItem(WebsiteGenerator):
 			# for CSV import
 			if self.website_image and not file_doc:
 				try:
-					file_doc = frappe.get_doc(
+					file_doc = capkpi.get_doc(
 						{
 							"doctype": "File",
 							"file_url": self.website_image,
@@ -214,7 +214,7 @@ class WebsiteItem(WebsiteGenerator):
 		context.body_class = "product-page"
 
 		context.parents = get_parent_item_groups(self.item_group, from_item=True)  # breadcumbs
-		self.attributes = frappe.get_all(
+		self.attributes = capkpi.get_all(
 			"Item Variant Attribute",
 			fields=["attribute", "attribute_value"],
 			filters={"parent": self.item_code},
@@ -236,8 +236,8 @@ class WebsiteItem(WebsiteGenerator):
 			context.reviews = context.reviews[:4]
 
 		context.wished = False
-		if frappe.db.exists(
-			"Wishlist Item", {"item_code": self.item_code, "parent": frappe.session.user}
+		if capkpi.db.exists(
+			"Wishlist Item", {"item_code": self.item_code, "parent": capkpi.session.user}
 		):
 			context.wished = True
 
@@ -251,14 +251,14 @@ class WebsiteItem(WebsiteGenerator):
 
 	def set_selected_attributes(self, variants, context, attribute_values_available):
 		for variant in variants:
-			variant.attributes = frappe.get_all(
+			variant.attributes = capkpi.get_all(
 				"Item Variant Attribute",
 				filters={"parent": variant.name},
 				fields=["attribute", "attribute_value as value"],
 			)
 
 			# make an attribute-value map for easier access in templates
-			variant.attribute_map = frappe._dict(
+			variant.attribute_map = capkpi._dict(
 				{attr.attribute: attr.value for attr in variant.attributes}
 			)
 
@@ -274,12 +274,12 @@ class WebsiteItem(WebsiteGenerator):
 		for attr in attributes:
 			values = context.attribute_values.setdefault(attr.attribute, [])
 
-			if cint(frappe.db.get_value("Item Attribute", attr.attribute, "numeric_values")):
+			if cint(capkpi.db.get_value("Item Attribute", attr.attribute, "numeric_values")):
 				for val in sorted(attribute_values_available.get(attr.attribute, []), key=flt):
 					values.append(val)
 			else:
 				# get list of values defined (for sequence)
-				for attr_value in frappe.db.get_all(
+				for attr_value in capkpi.db.get_all(
 					"Item Attribute Value",
 					fields=["attribute_value"],
 					filters={"parent": attr.attribute},
@@ -290,17 +290,17 @@ class WebsiteItem(WebsiteGenerator):
 						values.append(attr_value.attribute_value)
 
 	def set_metatags(self, context):
-		context.metatags = frappe._dict({})
+		context.metatags = capkpi._dict({})
 
-		safe_description = frappe.utils.to_markdown(self.description)
+		safe_description = capkpi.utils.to_markdown(self.description)
 
-		context.metatags.url = frappe.utils.get_url() + "/" + context.route
+		context.metatags.url = capkpi.utils.get_url() + "/" + context.route
 
 		if context.website_image:
 			if context.website_image.startswith("http"):
 				url = context.website_image
 			else:
-				url = frappe.utils.get_url() + context.website_image
+				url = capkpi.utils.get_url() + context.website_image
 			context.metatags.image = url
 
 		context.metatags.description = safe_description[:300]
@@ -317,11 +317,11 @@ class WebsiteItem(WebsiteGenerator):
 			self.item_code, skip_quotation_creation=True
 		)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def copy_specification_from_item_group(self):
 		self.set("website_specifications", [])
 		if self.item_group:
-			for label, desc in frappe.db.get_values(
+			for label, desc in capkpi.db.get_values(
 				"Item Website Specification", {"parent": self.item_group}, ["label", "description"]
 			):
 				row = self.append("website_specifications")
@@ -339,7 +339,7 @@ class WebsiteItem(WebsiteGenerator):
 	def get_tabs(self):
 		tab_values = {}
 		tab_values["tab_1_title"] = "Product Details"
-		tab_values["tab_1_content"] = frappe.render_template(
+		tab_values["tab_1_content"] = capkpi.render_template(
 			"templates/generators/item/item_specifications.html",
 			{"website_specifications": self.website_specifications, "show_tabs": self.show_tabbed_section},
 		)
@@ -351,7 +351,7 @@ class WebsiteItem(WebsiteGenerator):
 		return tab_values
 
 	def get_recommended_items(self, settings):
-		items = frappe.db.sql(
+		items = capkpi.db.sql(
 			f"""
 			select
 				ri.website_item_thumbnail, ri.website_item_name,
@@ -368,7 +368,7 @@ class WebsiteItem(WebsiteGenerator):
 		)
 
 		if settings.show_price:
-			is_guest = frappe.session.user == "Guest"
+			is_guest = capkpi.session.user == "Guest"
 			# Show Price if logged in.
 			# If not logged in and price is hidden for guest, skip price fetch.
 			if is_guest and settings.hide_price_for_guest:
@@ -407,23 +407,23 @@ def invalidate_cache_for_web_item(doc):
 
 def on_doctype_update():
 	# since route is a Text column, it needs a length for indexing
-	frappe.db.add_index("Website Item", ["route(500)"])
+	capkpi.db.add_index("Website Item", ["route(500)"])
 
-	frappe.db.add_index("Website Item", ["item_group"])
-	frappe.db.add_index("Website Item", ["brand"])
+	capkpi.db.add_index("Website Item", ["item_group"])
+	capkpi.db.add_index("Website Item", ["brand"])
 
 
 def check_if_user_is_customer(user=None):
-	from frappe.contacts.doctype.contact.contact import get_contact_name
+	from capkpi.contacts.doctype.contact.contact import get_contact_name
 
 	if not user:
-		user = frappe.session.user
+		user = capkpi.session.user
 
 	contact_name = get_contact_name(user)
 	customer = None
 
 	if contact_name:
-		contact = frappe.get_doc("Contact", contact_name)
+		contact = capkpi.get_doc("Contact", contact_name)
 		for link in contact.links:
 			if link.link_doctype == "Customer":
 				customer = link.link_name
@@ -432,7 +432,7 @@ def check_if_user_is_customer(user=None):
 	return True if customer else False
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_website_item(doc: "Item", save: bool = True) -> Union["WebsiteItem", List[str]]:
 	"Make Website Item from Item. Used via Form UI or patch."
 
@@ -442,11 +442,11 @@ def make_website_item(doc: "Item", save: bool = True) -> Union["WebsiteItem", Li
 	if isinstance(doc, str):
 		doc = json.loads(doc)
 
-	if frappe.db.exists("Website Item", {"item_code": doc.get("item_code")}):
-		message = _("Website Item already exists against {0}").format(frappe.bold(doc.get("item_code")))
-		frappe.throw(message, title=_("Already Published"))
+	if capkpi.db.exists("Website Item", {"item_code": doc.get("item_code")}):
+		message = _("Website Item already exists against {0}").format(capkpi.bold(doc.get("item_code")))
+		capkpi.throw(message, title=_("Already Published"))
 
-	website_item = frappe.new_doc("Website Item")
+	website_item = capkpi.new_doc("Website Item")
 	website_item.web_item_name = doc.get("item_name")
 
 	fields_to_map = [
@@ -463,7 +463,7 @@ def make_website_item(doc: "Item", save: bool = True) -> Union["WebsiteItem", Li
 		website_item.update({field: doc.get(field)})
 
 	# Needed for publishing/mapping via Form UI only
-	if not frappe.flags.in_migrate and (doc.get("image") and not website_item.website_image):
+	if not capkpi.flags.in_migrate and (doc.get("image") and not website_item.website_image):
 		website_item.website_image = doc.get("image")
 
 	if not save:

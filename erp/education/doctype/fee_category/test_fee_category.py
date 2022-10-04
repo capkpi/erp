@@ -3,7 +3,7 @@
 
 import unittest
 
-# test_records = frappe.get_test_records('Fee Category')
+# test_records = capkpi.get_test_records('Fee Category')
 
 
 class TestFeeCategory(unittest.TestCase):

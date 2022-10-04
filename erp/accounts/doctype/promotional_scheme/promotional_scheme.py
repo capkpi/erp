@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 pricing_rule_fields = [
 	"apply_on",
@@ -64,27 +64,27 @@ product_discount_fields = [
 ]
 
 
-class TransactionExists(frappe.ValidationError):
+class TransactionExists(capkpi.ValidationError):
 	pass
 
 
 class PromotionalScheme(Document):
 	def validate(self):
 		if not self.selling and not self.buying:
-			frappe.throw(_("Either 'Selling' or 'Buying' must be selected"), title=_("Mandatory"))
+			capkpi.throw(_("Either 'Selling' or 'Buying' must be selected"), title=_("Mandatory"))
 		if not (self.price_discount_slabs or self.product_discount_slabs):
-			frappe.throw(_("Price or product discount slabs are required"))
+			capkpi.throw(_("Price or product discount slabs are required"))
 
 		self.validate_applicable_for()
 		self.validate_pricing_rules()
 
 	def validate_applicable_for(self):
 		if self.applicable_for:
-			applicable_for = frappe.scrub(self.applicable_for)
+			applicable_for = capkpi.scrub(self.applicable_for)
 
 			if not self.get(applicable_for):
-				msg = f"The field {frappe.bold(self.applicable_for)} is required"
-				frappe.throw(_(msg))
+				msg = f"The field {capkpi.bold(self.applicable_for)} is required"
+				capkpi.throw(_(msg))
 
 	def validate_pricing_rules(self):
 		if self.is_new():
@@ -97,21 +97,21 @@ class PromotionalScheme(Document):
 		if self._doc_before_save.applicable_for == self.applicable_for:
 			return
 
-		docnames = frappe.get_all("Pricing Rule", filters={"promotional_scheme": self.name})
+		docnames = capkpi.get_all("Pricing Rule", filters={"promotional_scheme": self.name})
 
 		for docname in docnames:
-			if frappe.db.exists(
+			if capkpi.db.exists(
 				"Pricing Rule Detail", {"pricing_rule": docname.name, "docstatus": ("<", 2)}
 			):
 				raise_for_transaction_exists(self.name)
 
 		if docnames and not transaction_exists:
 			for docname in docnames:
-				frappe.delete_doc("Pricing Rule", docname.name)
+				capkpi.delete_doc("Pricing Rule", docname.name)
 
 	def on_update(self):
 		pricing_rules = (
-			frappe.get_all(
+			capkpi.get_all(
 				"Pricing Rule",
 				fields=["promotional_scheme_id", "name", "creation"],
 				filters={"promotional_scheme": self.name, "applicable_for": self.applicable_for},
@@ -138,22 +138,22 @@ class PromotionalScheme(Document):
 				doc.insert()
 			else:
 				doc.save()
-				frappe.msgprint(_("Pricing Rule {0} is updated").format(doc.name))
+				capkpi.msgprint(_("Pricing Rule {0} is updated").format(doc.name))
 
 		if count:
-			frappe.msgprint(_("New {0} pricing rules are created").format(count))
+			capkpi.msgprint(_("New {0} pricing rules are created").format(count))
 
 	def on_trash(self):
-		for rule in frappe.get_all("Pricing Rule", {"promotional_scheme": self.name}):
-			frappe.delete_doc("Pricing Rule", rule.name)
+		for rule in capkpi.get_all("Pricing Rule", {"promotional_scheme": self.name}):
+			capkpi.delete_doc("Pricing Rule", rule.name)
 
 
 def raise_for_transaction_exists(name):
-	msg = f"""You can't change the {frappe.bold(_('Applicable For'))}
-		because transactions are present against the Promotional Scheme {frappe.bold(name)}. """
+	msg = f"""You can't change the {capkpi.bold(_('Applicable For'))}
+		because transactions are present against the Promotional Scheme {capkpi.bold(name)}. """
 	msg += "Kindly disable this Promotional Scheme and create new for new Applicable For."
 
-	frappe.throw(_(msg), TransactionExists)
+	capkpi.throw(_(msg), TransactionExists)
 
 
 def get_pricing_rules(doc, rules=None):
@@ -175,7 +175,7 @@ def _get_pricing_rules(doc, child_doc, discount_fields, rules=None):
 		rules = {}
 	new_doc = []
 	args = get_args_for_pricing_rule(doc)
-	applicable_for = frappe.scrub(doc.get("applicable_for"))
+	applicable_for = capkpi.scrub(doc.get("applicable_for"))
 
 	for idx, d in enumerate(doc.get(child_doc)):
 		if d.name in rules:
@@ -222,7 +222,7 @@ def get_pricing_rule_docname(
 		fields.append(applicable_for)
 		filters[applicable_for] = applicable_for_value
 
-	docname = frappe.get_all("Pricing Rule", fields=fields, filters=filters)
+	docname = capkpi.get_all("Pricing Rule", fields=fields, filters=filters)
 	return docname[0].name if docname else ""
 
 
@@ -230,9 +230,9 @@ def prepare_pricing_rule(
 	args, doc, child_doc, discount_fields, d, docname=None, applicable_for=None, value=None
 ):
 	if docname:
-		pr = frappe.get_doc("Pricing Rule", docname)
+		pr = capkpi.get_doc("Pricing Rule", docname)
 	else:
-		pr = frappe.new_doc("Pricing Rule")
+		pr = capkpi.new_doc("Pricing Rule")
 
 	pr.title = doc.name
 	temp_args = args.copy()
@@ -257,7 +257,7 @@ def set_args(args, pr, doc, child_doc, discount_fields, child_doc_fields):
 		if doc.get(field):
 			pr.set(field, [])
 
-		apply_on = frappe.scrub(doc.get("apply_on"))
+		apply_on = capkpi.scrub(doc.get("apply_on"))
 		for d in doc.get(field):
 			pr.append(field, {apply_on: d.get(apply_on), "uom": d.uom})
 
@@ -266,7 +266,7 @@ def set_args(args, pr, doc, child_doc, discount_fields, child_doc_fields):
 
 def get_args_for_pricing_rule(doc):
 	args = {"promotional_scheme": doc.name}
-	applicable_for = frappe.scrub(doc.get("applicable_for"))
+	applicable_for = capkpi.scrub(doc.get("applicable_for"))
 
 	for d in pricing_rule_fields:
 		if d == applicable_for:

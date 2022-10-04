@@ -24,7 +24,7 @@
 	<h5 class="text-center">
 		{%= __(filters.ageing_based_on) %}
 		{%= __("Until") %}
-		{%= frappe.datetime.str_to_user(filters.report_date) %}
+		{%= capkpi.datetime.str_to_user(filters.report_date) %}
 	</h5>
 
 	<div class="clearfix">
@@ -171,7 +171,7 @@
 				<tr>
 				{% if(report.report_name === "Accounts Receivable" || report.report_name === "Accounts Payable") { %}
 					{% if(data[i]["party"]) { %}
-						<td>{%= frappe.datetime.str_to_user(data[i]["posting_date"]) %}</td>
+						<td>{%= capkpi.datetime.str_to_user(data[i]["posting_date"]) %}</td>
 						<td style="text-align: right">{%= data[i]["age"] %}</td>
 						<td>
 							{% if(!filters.show_future_payments) { %}
@@ -284,4 +284,4 @@
 			{% } %}
 		</tbody>
 	</table>
-	<p class="text-right text-muted">{{ __("Printed On ") }}{%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}</p>
+	<p class="text-right text-muted">{{ __("Printed On ") }}{%= capkpi.datetime.str_to_user(capkpi.datetime.get_datetime_as_string()) %}</p>

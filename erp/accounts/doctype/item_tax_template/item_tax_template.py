@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class ItemTaxTemplate(Document):
@@ -13,7 +13,7 @@ class ItemTaxTemplate(Document):
 
 	def autoname(self):
 		if self.company and self.title:
-			abbr = frappe.get_cached_value("Company", self.company, "abbr")
+			abbr = capkpi.get_cached_value("Company", self.company, "abbr")
 			self.name = "{0} - {1}".format(self.title, abbr)
 
 	def validate_tax_accounts(self):
@@ -21,7 +21,7 @@ class ItemTaxTemplate(Document):
 		check_list = []
 		for d in self.get("taxes"):
 			if d.tax_type:
-				account_type = frappe.db.get_value("Account", d.tax_type, "account_type")
+				account_type = capkpi.db.get_value("Account", d.tax_type, "account_type")
 
 				if account_type not in [
 					"Tax",
@@ -30,13 +30,13 @@ class ItemTaxTemplate(Document):
 					"Expense Account",
 					"Expenses Included In Valuation",
 				]:
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Item Tax Row {0} must have account of type Tax or Income or Expense or Chargeable"
 						).format(d.idx)
 					)
 				else:
 					if d.tax_type in check_list:
-						frappe.throw(_("{0} entered twice in Item Tax").format(d.tax_type))
+						capkpi.throw(_("{0} entered twice in Item Tax").format(d.tax_type))
 					else:
 						check_list.append(d.tax_type)

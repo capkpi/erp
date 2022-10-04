@@ -2,8 +2,8 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 
 
 def execute(filters=None):
@@ -15,7 +15,7 @@ def execute(filters=None):
 
 	columns = get_columns()
 
-	program_enrollments = frappe.get_list(
+	program_enrollments = capkpi.get_list(
 		"Program Enrollment",
 		fields=["student", "student_name"],
 		filters={
@@ -78,8 +78,8 @@ def get_columns():
 
 
 def get_student_details(student_list):
-	student_map = frappe._dict()
-	student_details = frappe.db.sql(
+	student_map = capkpi._dict()
+	student_details = capkpi.db.sql(
 		"""
 		select name, student_mobile_number, student_email_id, address_line_1, address_line_2, city, state from `tabStudent` where name in (%s)"""
 		% ", ".join(["%s"] * len(student_list)),
@@ -87,7 +87,7 @@ def get_student_details(student_list):
 		as_dict=1,
 	)
 	for s in student_details:
-		student = frappe._dict()
+		student = capkpi._dict()
 		student["student_mobile_number"] = s.student_mobile_number
 		student["student_email_id"] = s.student_email_id
 		student["address"] = ", ".join(
@@ -98,8 +98,8 @@ def get_student_details(student_list):
 
 
 def get_guardian_map(student_list):
-	guardian_map = frappe._dict()
-	guardian_details = frappe.db.sql(
+	guardian_map = capkpi._dict()
+	guardian_details = capkpi.db.sql(
 		"""
 		select  parent, guardian, guardian_name, relation  from `tabStudent Guardian` where parent in (%s)"""
 		% ", ".join(["%s"] * len(student_list)),
@@ -110,7 +110,7 @@ def get_guardian_map(student_list):
 	guardian_list = list(set([g.guardian for g in guardian_details])) or [""]
 
 	guardian_mobile_no = dict(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""select name, mobile_number from `tabGuardian`
 			where name in (%s)"""
 			% ", ".join(["%s"] * len(guardian_list)),
@@ -119,7 +119,7 @@ def get_guardian_map(student_list):
 	)
 
 	guardian_email_id = dict(
-		frappe.db.sql(
+		capkpi.db.sql(
 			"""select name, email_address from `tabGuardian`
 			where name in (%s)"""
 			% ", ".join(["%s"] * len(guardian_list)),
@@ -136,13 +136,13 @@ def get_guardian_map(student_list):
 
 
 def get_student_roll_no(academic_year, program, batch):
-	student_group = frappe.get_all(
+	student_group = capkpi.get_all(
 		"Student Group",
 		filters={"academic_year": academic_year, "program": program, "batch": batch, "disabled": 0},
 	)
 	if student_group:
 		roll_no_dict = dict(
-			frappe.db.sql(
+			capkpi.db.sql(
 				"""select student, group_roll_number from `tabStudent Group Student` where parent=%s""",
 				(student_group[0].name),
 			)

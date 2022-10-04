@@ -1,10 +1,10 @@
 # Copyright (c) 2021, CapKPI Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
-from frappe.utils import comma_and, flt, unique
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
+from capkpi.utils import comma_and, flt, unique
 
 from erp.e_commerce.redisearch_utils import (
 	create_website_items_index,
@@ -14,13 +14,13 @@ from erp.e_commerce.redisearch_utils import (
 )
 
 
-class ShoppingCartSetupError(frappe.ValidationError):
+class ShoppingCartSetupError(capkpi.ValidationError):
 	pass
 
 
 class ECommerceSettings(Document):
 	def onload(self):
-		self.get("__onload").quotation_series = frappe.get_meta("Quotation").get_options("naming_series")
+		self.get("__onload").quotation_series = capkpi.get_meta("Quotation").get_options("naming_series")
 
 		# flag >> if redisearch is installed and loaded
 		self.is_redisearch_loaded = is_search_module_loaded()
@@ -34,9 +34,9 @@ class ECommerceSettings(Document):
 		if self.enabled:
 			self.validate_price_list_exchange_rate()
 
-		frappe.clear_document_cache("E Commerce Settings", "E Commerce Settings")
+		capkpi.clear_document_cache("E Commerce Settings", "E Commerce Settings")
 
-		self.is_redisearch_enabled_pre_save = frappe.db.get_single_value(
+		self.is_redisearch_enabled_pre_save = capkpi.db.get_single_value(
 			"E Commerce Settings", "is_redisearch_enabled"
 		)
 
@@ -55,17 +55,17 @@ class ECommerceSettings(Document):
 		if not (enable_field_filters and filter_fields):
 			return
 
-		web_item_meta = frappe.get_meta("Website Item")
+		web_item_meta = capkpi.get_meta("Website Item")
 		valid_fields = [
 			df.fieldname for df in web_item_meta.fields if df.fieldtype in ["Link", "Table MultiSelect"]
 		]
 
 		for row in filter_fields:
 			if row.fieldname not in valid_fields:
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Filter Fields Row #{0}: Fieldname {1} must be of type 'Link' or 'Table MultiSelect'"
-					).format(row.idx, frappe.bold(row.fieldname))
+					).format(row.idx, capkpi.bold(row.fieldname))
 				)
 
 	def validate_attribute_filters(self):
@@ -95,12 +95,12 @@ class ECommerceSettings(Document):
 			invalid_fields = comma_and(invalid_fields)
 
 			if num_invalid_fields > 1:
-				frappe.throw(
-					_("{0} are not valid options for Search Index Field.").format(frappe.bold(invalid_fields))
+				capkpi.throw(
+					_("{0} are not valid options for Search Index Field.").format(capkpi.bold(invalid_fields))
 				)
 			else:
-				frappe.throw(
-					_("{0} is not a valid option for Search Index Field.").format(frappe.bold(invalid_fields))
+				capkpi.throw(
+					_("{0} is not a valid option for Search Index Field.").format(capkpi.bold(invalid_fields))
 				)
 
 		self.search_index_fields = ",".join(fields)
@@ -112,16 +112,16 @@ class ECommerceSettings(Document):
 		if not self.enabled or not self.company or not self.price_list:
 			return  # this function is also called from hooks, check values again
 
-		company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
-		price_list_currency = frappe.db.get_value("Price List", self.price_list, "currency")
+		company_currency = capkpi.get_cached_value("Company", self.company, "default_currency")
+		price_list_currency = capkpi.db.get_value("Price List", self.price_list, "currency")
 
 		if not company_currency:
 			msg = f"Please specify currency in Company {self.company}"
-			frappe.throw(_(msg), title=_("Missing Currency"), exc=ShoppingCartSetupError)
+			capkpi.throw(_(msg), title=_("Missing Currency"), exc=ShoppingCartSetupError)
 
 		if not price_list_currency:
-			msg = f"Please specify currency in Price List {frappe.bold(self.price_list)}"
-			frappe.throw(_(msg), title=_("Missing Currency"), exc=ShoppingCartSetupError)
+			msg = f"Please specify currency in Price List {capkpi.bold(self.price_list)}"
+			capkpi.throw(_(msg), title=_("Missing Currency"), exc=ShoppingCartSetupError)
 
 		if price_list_currency != company_currency:
 			from_currency, to_currency = price_list_currency, company_currency
@@ -131,11 +131,11 @@ class ECommerceSettings(Document):
 
 			if not flt(exchange_rate):
 				msg = f"Missing Currency Exchange Rates for {from_currency}-{to_currency}"
-				frappe.throw(_(msg), title=_("Missing"), exc=ShoppingCartSetupError)
+				capkpi.throw(_(msg), title=_("Missing"), exc=ShoppingCartSetupError)
 
 	def validate_tax_rule(self):
-		if not frappe.db.get_value("Tax Rule", {"use_for_shopping_cart": 1}, "name"):
-			frappe.throw(frappe._("Set Tax Rule for shopping cart"), ShoppingCartSetupError)
+		if not capkpi.db.get_value("Tax Rule", {"use_for_shopping_cart": 1}, "name"):
+			capkpi.throw(capkpi._("Set Tax Rule for shopping cart"), ShoppingCartSetupError)
 
 	def get_tax_master(self, billing_territory):
 		tax_master = self.get_name_from_territory(
@@ -159,19 +159,19 @@ class ECommerceSettings(Document):
 
 
 def validate_cart_settings(doc=None, method=None):
-	frappe.get_doc("E Commerce Settings", "E Commerce Settings").run_method("validate")
+	capkpi.get_doc("E Commerce Settings", "E Commerce Settings").run_method("validate")
 
 
 def get_shopping_cart_settings():
-	if not getattr(frappe.local, "shopping_cart_settings", None):
-		frappe.local.shopping_cart_settings = frappe.get_doc(
+	if not getattr(capkpi.local, "shopping_cart_settings", None):
+		capkpi.local.shopping_cart_settings = capkpi.get_doc(
 			"E Commerce Settings", "E Commerce Settings"
 		)
 
-	return frappe.local.shopping_cart_settings
+	return capkpi.local.shopping_cart_settings
 
 
-@frappe.whitelist(allow_guest=True)
+@capkpi.whitelist(allow_guest=True)
 def is_cart_enabled():
 	return get_shopping_cart_settings().enabled
 
@@ -182,7 +182,7 @@ def show_quantity_in_website():
 
 def check_shopping_cart_enabled():
 	if not get_shopping_cart_settings().enabled:
-		frappe.throw(_("You need to enable Shopping Cart"), ShoppingCartSetupError)
+		capkpi.throw(_("You need to enable Shopping Cart"), ShoppingCartSetupError)
 
 
 def show_attachments():

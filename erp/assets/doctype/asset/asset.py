@@ -5,9 +5,9 @@
 import json
 import math
 
-import frappe
-from frappe import _
-from frappe.utils import (
+import capkpi
+from capkpi import _
+from capkpi.utils import (
 	add_days,
 	add_months,
 	cint,
@@ -66,16 +66,16 @@ class Asset(AccountsController):
 		if self.purchase_invoice or self.purchase_receipt:
 			reference_doc = "Purchase Invoice" if self.purchase_invoice else "Purchase Receipt"
 			reference_name = self.purchase_invoice or self.purchase_receipt
-			reference_doc = frappe.get_doc(reference_doc, reference_name)
+			reference_doc = capkpi.get_doc(reference_doc, reference_name)
 			if reference_doc.get("company") != self.company:
-				frappe.throw(
+				capkpi.throw(
 					_("Company of asset {0} and purchase document {1} doesn't matches.").format(
 						self.name, reference_doc.get("name")
 					)
 				)
 
 		if self.is_existing_asset and self.purchase_invoice:
-			frappe.throw(
+			capkpi.throw(
 				_("Purchase Invoice cannot be made against an existing asset {0}").format(self.name)
 			)
 
@@ -92,38 +92,38 @@ class Asset(AccountsController):
 			)
 
 	def validate_item(self):
-		item = frappe.get_cached_value(
+		item = capkpi.get_cached_value(
 			"Item", self.item_code, ["is_fixed_asset", "is_stock_item", "disabled"], as_dict=1
 		)
 		if not item:
-			frappe.throw(_("Item {0} does not exist").format(self.item_code))
+			capkpi.throw(_("Item {0} does not exist").format(self.item_code))
 		elif item.disabled:
-			frappe.throw(_("Item {0} has been disabled").format(self.item_code))
+			capkpi.throw(_("Item {0} has been disabled").format(self.item_code))
 		elif not item.is_fixed_asset:
-			frappe.throw(_("Item {0} must be a Fixed Asset Item").format(self.item_code))
+			capkpi.throw(_("Item {0} must be a Fixed Asset Item").format(self.item_code))
 		elif item.is_stock_item:
-			frappe.throw(_("Item {0} must be a non-stock item").format(self.item_code))
+			capkpi.throw(_("Item {0} must be a non-stock item").format(self.item_code))
 
 	def validate_cost_center(self):
 		if not self.cost_center:
 			return
 
-		cost_center_company = frappe.db.get_value("Cost Center", self.cost_center, "company")
+		cost_center_company = capkpi.db.get_value("Cost Center", self.cost_center, "company")
 		if cost_center_company != self.company:
-			frappe.throw(
+			capkpi.throw(
 				_("Selected Cost Center {} doesn't belongs to {}").format(
-					frappe.bold(self.cost_center), frappe.bold(self.company)
+					capkpi.bold(self.cost_center), capkpi.bold(self.company)
 				),
 				title=_("Invalid Cost Center"),
 			)
 
 	def validate_in_use_date(self):
 		if not self.available_for_use_date:
-			frappe.throw(_("Available for use date is required"))
+			capkpi.throw(_("Available for use date is required"))
 
 		for d in self.finance_books:
 			if d.depreciation_start_date == self.available_for_use_date:
-				frappe.throw(
+				capkpi.throw(
 					_("Row #{}: Depreciation Posting Date should not be equal to Available for Use Date.").format(
 						d.idx
 					),
@@ -132,7 +132,7 @@ class Asset(AccountsController):
 
 	def set_missing_values(self):
 		if not self.asset_category:
-			self.asset_category = frappe.get_cached_value("Item", self.item_code, "asset_category")
+			self.asset_category = capkpi.get_cached_value("Item", self.item_code, "asset_category")
 
 		if self.item_code and not self.get("finance_books"):
 			finance_books = get_item_details(self.item_code, self.asset_category)
@@ -140,14 +140,14 @@ class Asset(AccountsController):
 
 	def validate_asset_values(self):
 		if not self.asset_category:
-			self.asset_category = frappe.get_cached_value("Item", self.item_code, "asset_category")
+			self.asset_category = capkpi.get_cached_value("Item", self.item_code, "asset_category")
 
 		if not flt(self.gross_purchase_amount):
-			frappe.throw(_("Gross Purchase Amount is mandatory"), frappe.MandatoryError)
+			capkpi.throw(_("Gross Purchase Amount is mandatory"), capkpi.MandatoryError)
 
 		if is_cwip_accounting_enabled(self.asset_category):
 			if not self.is_existing_asset and not (self.purchase_receipt or self.purchase_invoice):
-				frappe.throw(
+				capkpi.throw(
 					_("Please create purchase receipt or purchase invoice for the item {0}").format(
 						self.item_code
 					)
@@ -156,16 +156,16 @@ class Asset(AccountsController):
 			if (
 				not self.purchase_receipt
 				and self.purchase_invoice
-				and not frappe.db.get_value("Purchase Invoice", self.purchase_invoice, "update_stock")
+				and not capkpi.db.get_value("Purchase Invoice", self.purchase_invoice, "update_stock")
 			):
-				frappe.throw(
+				capkpi.throw(
 					_("Update stock must be enable for the purchase invoice {0}").format(self.purchase_invoice)
 				)
 
 		if not self.calculate_depreciation:
 			return
 		elif not self.finance_books:
-			frappe.throw(_("Enter depreciation details"))
+			capkpi.throw(_("Enter depreciation details"))
 
 		if self.is_existing_asset:
 			return
@@ -173,7 +173,7 @@ class Asset(AccountsController):
 		if self.available_for_use_date and getdate(self.available_for_use_date) < getdate(
 			self.purchase_date
 		):
-			frappe.throw(_("Available-for-use Date should be after purchase date"))
+			capkpi.throw(_("Available-for-use Date should be after purchase date"))
 
 	def validate_gross_and_purchase_amount(self):
 		if self.is_existing_asset:
@@ -185,14 +185,14 @@ class Asset(AccountsController):
 			)
 			error_message += "<br>"
 			error_message += _("Please do not book expense of multiple assets against one single Asset.")
-			frappe.throw(error_message, title=_("Invalid Gross Purchase Amount"))
+			capkpi.throw(error_message, title=_("Invalid Gross Purchase Amount"))
 
 	def make_asset_movement(self):
 		reference_doctype = "Purchase Receipt" if self.purchase_receipt else "Purchase Invoice"
 		reference_docname = self.purchase_receipt or self.purchase_invoice
 		transaction_date = getdate(self.purchase_date)
 		if reference_docname:
-			posting_date, posting_time = frappe.db.get_value(
+			posting_date, posting_time = capkpi.db.get_value(
 				reference_doctype, reference_docname, ["posting_date", "posting_time"]
 			)
 			transaction_date = get_datetime("{} {}".format(posting_date, posting_time))
@@ -204,7 +204,7 @@ class Asset(AccountsController):
 				"to_employee": self.custodian,
 			}
 		]
-		asset_movement = frappe.get_doc(
+		asset_movement = capkpi.get_doc(
 			{
 				"doctype": "Asset Movement",
 				"assets": assets,
@@ -443,7 +443,7 @@ class Asset(AccountsController):
 
 	def validate_asset_finance_books(self, row):
 		if flt(row.expected_value_after_useful_life) >= flt(self.gross_purchase_amount):
-			frappe.throw(
+			capkpi.throw(
 				_("Row {0}: Expected Value After Useful Life must be less than Gross Purchase Amount").format(
 					row.idx
 				),
@@ -452,7 +452,7 @@ class Asset(AccountsController):
 
 		if not row.depreciation_start_date:
 			if not self.available_for_use_date:
-				frappe.throw(
+				capkpi.throw(
 					_("Row {0}: Depreciation Start Date is required").format(row.idx), title=_("Invalid Schedule")
 				)
 			row.depreciation_start_date = get_last_day(self.available_for_use_date)
@@ -463,7 +463,7 @@ class Asset(AccountsController):
 		else:
 			depreciable_amount = flt(self.gross_purchase_amount) - flt(row.expected_value_after_useful_life)
 			if flt(self.opening_accumulated_depreciation) > depreciable_amount:
-				frappe.throw(
+				capkpi.throw(
 					_("Opening Accumulated Depreciation must be less than equal to {0}").format(
 						depreciable_amount
 					)
@@ -471,12 +471,12 @@ class Asset(AccountsController):
 
 			if self.opening_accumulated_depreciation:
 				if not self.number_of_depreciations_booked:
-					frappe.throw(_("Please set Number of Depreciations Booked"))
+					capkpi.throw(_("Please set Number of Depreciations Booked"))
 			else:
 				self.number_of_depreciations_booked = 0
 
 			if flt(row.total_number_of_depreciations) <= cint(self.number_of_depreciations_booked):
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"Row {0}: Total Number of Depreciations cannot be less than or equal to Number of Depreciations Booked"
 					).format(row.idx),
@@ -486,7 +486,7 @@ class Asset(AccountsController):
 		if row.depreciation_start_date and getdate(row.depreciation_start_date) < getdate(
 			self.purchase_date
 		):
-			frappe.throw(
+			capkpi.throw(
 				_("Depreciation Row {0}: Next Depreciation Date cannot be before Purchase Date").format(
 					row.idx
 				)
@@ -495,7 +495,7 @@ class Asset(AccountsController):
 		if row.depreciation_start_date and getdate(row.depreciation_start_date) < getdate(
 			self.available_for_use_date
 		):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"Depreciation Row {0}: Next Depreciation Date cannot be before Available-for-use Date"
 				).format(row.idx)
@@ -594,7 +594,7 @@ class Asset(AccountsController):
 					row.expected_value_after_useful_life
 					and row.expected_value_after_useful_life < asset_value_after_full_schedule
 				):
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Depreciation Row {0}: Expected value after useful life must be greater than or equal to {1}"
 						).format(row.idx, asset_value_after_full_schedule)
@@ -604,16 +604,16 @@ class Asset(AccountsController):
 
 	def validate_cancellation(self):
 		if self.status in ("In Maintenance", "Out of Order"):
-			frappe.throw(
+			capkpi.throw(
 				_(
 					"There are active maintenance or repairs against the asset. You must complete all of them before cancelling the asset."
 				)
 			)
 		if self.status not in ("Submitted", "Partially Depreciated", "Fully Depreciated"):
-			frappe.throw(_("Asset cannot be cancelled, as it is already {0}").format(self.status))
+			capkpi.throw(_("Asset cannot be cancelled, as it is already {0}").format(self.status))
 
 	def cancel_movement_entries(self):
-		movements = frappe.db.sql(
+		movements = capkpi.db.sql(
 			"""SELECT asm.name, asm.docstatus
 			FROM `tabAsset Movement` asm, `tabAsset Movement Item` asm_item
 			WHERE asm_item.parent=asm.name and asm_item.asset=%s and asm.docstatus=1""",
@@ -622,13 +622,13 @@ class Asset(AccountsController):
 		)
 
 		for movement in movements:
-			movement = frappe.get_doc("Asset Movement", movement.get("name"))
+			movement = capkpi.get_doc("Asset Movement", movement.get("name"))
 			movement.cancel()
 
 	def delete_depreciation_entries(self):
 		for d in self.get("schedules"):
 			if d.journal_entry:
-				frappe.get_doc("Journal Entry", d.journal_entry).cancel()
+				capkpi.get_doc("Journal Entry", d.journal_entry).cancel()
 				d.db_set("journal_entry", None)
 
 		self.db_set(
@@ -688,12 +688,12 @@ class Asset(AccountsController):
 		query = """SELECT name FROM `tabGL Entry` WHERE voucher_no = %s and account = %s"""
 		if asset_bought_with_invoice:
 			# with invoice purchase either expense or cwip has been booked
-			expense_booked = frappe.db.sql(query, (purchase_document, fixed_asset_account), as_dict=1)
+			expense_booked = capkpi.db.sql(query, (purchase_document, fixed_asset_account), as_dict=1)
 			if expense_booked:
 				# if expense is already booked from invoice then do not make gl entries regardless of cwip enabled/disabled
 				return False
 
-			cwip_booked = frappe.db.sql(query, (purchase_document, cwip_account), as_dict=1)
+			cwip_booked = capkpi.db.sql(query, (purchase_document, cwip_account), as_dict=1)
 			if cwip_booked:
 				# if cwip is booked from invoice then make gl entries regardless of cwip enabled/disabled
 				return True
@@ -703,13 +703,13 @@ class Asset(AccountsController):
 				# if cwip account isn't available do not make gl entries
 				return False
 
-			cwip_booked = frappe.db.sql(query, (purchase_document, cwip_account), as_dict=1)
+			cwip_booked = capkpi.db.sql(query, (purchase_document, cwip_account), as_dict=1)
 			# if cwip is not booked from receipt then do not make gl entries
 			# if cwip is booked from receipt then make gl entries
 			return cwip_booked
 
 	def get_purchase_document(self):
-		asset_bought_with_invoice = self.purchase_invoice and frappe.db.get_value(
+		asset_bought_with_invoice = self.purchase_invoice and capkpi.db.get_value(
 			"Purchase Invoice", self.purchase_invoice, "update_stock"
 		)
 		purchase_document = self.purchase_invoice if asset_bought_with_invoice else self.purchase_receipt
@@ -721,11 +721,11 @@ class Asset(AccountsController):
 			"fixed_asset_account", None, self.name, None, self.asset_category, self.company
 		)
 		if not fixed_asset_account:
-			frappe.throw(
+			capkpi.throw(
 				_("Set {0} in asset category {1} for company {2}").format(
-					frappe.bold("Fixed Asset Account"),
-					frappe.bold(self.asset_category),
-					frappe.bold(self.company),
+					capkpi.bold("Fixed Asset Account"),
+					capkpi.bold(self.asset_category),
+					capkpi.bold(self.company),
 				),
 				title=_("Account not Found"),
 			)
@@ -790,12 +790,12 @@ class Asset(AccountsController):
 			make_gl_entries(gl_entries)
 			self.db_set("booked_fixed_asset", 1)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_depreciation_rate(self, args, on_validate=False):
 		if isinstance(args, string_types):
 			args = json.loads(args)
 
-		float_precision = cint(frappe.db.get_default("float_precision")) or 2
+		float_precision = cint(capkpi.db.get_default("float_precision")) or 2
 
 		if args.get("depreciation_method") == "Double Declining Balance":
 			return 200.0 / args.get("total_number_of_depreciations")
@@ -819,13 +819,13 @@ class Asset(AccountsController):
 
 
 def update_maintenance_status():
-	assets = frappe.get_all("Asset", filters={"docstatus": 1, "maintenance_required": 1})
+	assets = capkpi.get_all("Asset", filters={"docstatus": 1, "maintenance_required": 1})
 
 	for asset in assets:
-		asset = frappe.get_doc("Asset", asset.name)
-		if frappe.db.exists("Asset Repair", {"asset_name": asset.name, "repair_status": "Pending"}):
+		asset = capkpi.get_doc("Asset", asset.name)
+		if capkpi.db.exists("Asset Repair", {"asset_name": asset.name, "repair_status": "Pending"}):
 			asset.set_status("Out of Order")
-		elif frappe.db.exists(
+		elif capkpi.db.exists(
 			"Asset Maintenance Task", {"parent": asset.name, "next_due_date": today()}
 		):
 			asset.set_status("In Maintenance")
@@ -835,11 +835,11 @@ def update_maintenance_status():
 
 def make_post_gl_entry():
 
-	asset_categories = frappe.db.get_all("Asset Category", fields=["name", "enable_cwip_accounting"])
+	asset_categories = capkpi.db.get_all("Asset Category", fields=["name", "enable_cwip_accounting"])
 
 	for asset_category in asset_categories:
 		if cint(asset_category.enable_cwip_accounting):
-			assets = frappe.db.sql_list(
+			assets = capkpi.db.sql_list(
 				""" select name from `tabAsset`
 				where asset_category = %s and ifnull(booked_fixed_asset, 0) = 0
 				and available_for_use_date = %s""",
@@ -847,20 +847,20 @@ def make_post_gl_entry():
 			)
 
 			for asset in assets:
-				doc = frappe.get_doc("Asset", asset)
+				doc = capkpi.get_doc("Asset", asset)
 				doc.make_gl_entries()
 
 
 def get_asset_naming_series():
-	meta = frappe.get_meta("Asset")
+	meta = capkpi.get_meta("Asset")
 	return meta.get_field("naming_series").options
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_sales_invoice(asset, item_code, company, serial_no=None):
-	si = frappe.new_doc("Sales Invoice")
+	si = capkpi.new_doc("Sales Invoice")
 	si.company = company
-	si.currency = frappe.get_cached_value("Company", company, "default_currency")
+	si.currency = capkpi.get_cached_value("Company", company, "default_currency")
 	disposal_account, depreciation_cost_center = get_disposal_account_and_cost_center(company)
 	si.append(
 		"items",
@@ -878,9 +878,9 @@ def make_sales_invoice(asset, item_code, company, serial_no=None):
 	return si
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_asset_maintenance(asset, item_code, item_name, asset_category, company):
-	asset_maintenance = frappe.new_doc("Asset Maintenance")
+	asset_maintenance = capkpi.new_doc("Asset Maintenance")
 	asset_maintenance.update(
 		{
 			"asset_name": asset,
@@ -893,46 +893,46 @@ def create_asset_maintenance(asset, item_code, item_name, asset_category, compan
 	return asset_maintenance
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_asset_repair(asset, asset_name):
-	asset_repair = frappe.new_doc("Asset Repair")
+	asset_repair = capkpi.new_doc("Asset Repair")
 	asset_repair.update({"asset": asset, "asset_name": asset_name})
 	return asset_repair
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def create_asset_value_adjustment(asset, asset_category, company):
-	asset_value_adjustment = frappe.new_doc("Asset Value Adjustment")
+	asset_value_adjustment = capkpi.new_doc("Asset Value Adjustment")
 	asset_value_adjustment.update(
 		{"asset": asset, "company": company, "asset_category": asset_category}
 	)
 	return asset_value_adjustment
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def transfer_asset(args):
 	args = json.loads(args)
 
 	if args.get("serial_no"):
 		args["quantity"] = len(args.get("serial_no").split("\n"))
 
-	movement_entry = frappe.new_doc("Asset Movement")
+	movement_entry = capkpi.new_doc("Asset Movement")
 	movement_entry.update(args)
 	movement_entry.insert()
 	movement_entry.submit()
 
-	frappe.db.commit()
+	capkpi.db.commit()
 
-	frappe.msgprint(
+	capkpi.msgprint(
 		_("Asset Movement record {0} created")
 		.format("<a href='/app/Form/Asset Movement/{0}'>{0}</a>")
 		.format(movement_entry.name)
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_item_details(item_code, asset_category):
-	asset_category_doc = frappe.get_doc("Asset Category", asset_category)
+	asset_category_doc = capkpi.get_doc("Asset Category", asset_category)
 	books = []
 	for d in asset_category_doc.finance_books:
 		books.append(
@@ -961,15 +961,15 @@ def get_asset_account(account_name, asset=None, asset_category=None, company=Non
 		)
 
 	if not account:
-		account = frappe.get_cached_value("Company", company, account_name)
+		account = capkpi.get_cached_value("Company", company, account_name)
 
 	if not account:
 		if not asset_category:
-			frappe.throw(
+			capkpi.throw(
 				_("Set {0} in company {1}").format(account_name.replace("_", " ").title(), company)
 			)
 		else:
-			frappe.throw(
+			capkpi.throw(
 				_("Set {0} in asset category {1} or company {2}").format(
 					account_name.replace("_", " ").title(), asset_category, company
 				)
@@ -978,21 +978,21 @@ def get_asset_account(account_name, asset=None, asset_category=None, company=Non
 	return account
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_journal_entry(asset_name):
-	asset = frappe.get_doc("Asset", asset_name)
+	asset = capkpi.get_doc("Asset", asset_name)
 	(
 		fixed_asset_account,
 		accumulated_depreciation_account,
 		depreciation_expense_account,
 	) = get_depreciation_accounts(asset)
 
-	depreciation_cost_center, depreciation_series = frappe.db.get_value(
+	depreciation_cost_center, depreciation_series = capkpi.db.get_value(
 		"Company", asset.company, ["depreciation_cost_center", "series_for_depreciation_entry"]
 	)
 	depreciation_cost_center = asset.cost_center or depreciation_cost_center
 
-	je = frappe.new_doc("Journal Entry")
+	je = capkpi.new_doc("Journal Entry")
 	je.voucher_type = "Depreciation Entry"
 	je.naming_series = depreciation_series
 	je.company = asset.company
@@ -1020,7 +1020,7 @@ def make_journal_entry(asset_name):
 	return je
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def make_asset_movement(assets, purpose=None):
 	import json
 
@@ -1030,12 +1030,12 @@ def make_asset_movement(assets, purpose=None):
 		assets = json.loads(assets)
 
 	if len(assets) == 0:
-		frappe.throw(_("Atleast one asset has to be selected."))
+		capkpi.throw(_("Atleast one asset has to be selected."))
 
-	asset_movement = frappe.new_doc("Asset Movement")
+	asset_movement = capkpi.new_doc("Asset Movement")
 	asset_movement.quantity = len(assets)
 	for asset in assets:
-		asset = frappe.get_doc("Asset", asset.get("name"))
+		asset = capkpi.get_doc("Asset", asset.get("name"))
 		asset_movement.company = asset.get("company")
 		asset_movement.append(
 			"assets",
@@ -1051,7 +1051,7 @@ def make_asset_movement(assets, purpose=None):
 
 
 def is_cwip_accounting_enabled(asset_category):
-	return cint(frappe.db.get_value("Asset Category", asset_category, "enable_cwip_accounting"))
+	return cint(capkpi.db.get_value("Asset Category", asset_category, "enable_cwip_accounting"))
 
 
 def get_total_days(date, frequency):

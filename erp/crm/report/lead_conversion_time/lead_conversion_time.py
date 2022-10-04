@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.utils import date_diff, flt
+import capkpi
+from capkpi import _, msgprint
+from capkpi.utils import date_diff, flt
 
 
 def execute(filters=None):
@@ -76,7 +76,7 @@ def get_columns():
 def get_communication_details(filters):
 	communication_count = None
 	communication_list = []
-	opportunities = frappe.db.get_values(
+	opportunities = capkpi.db.get_values(
 		"Opportunity",
 		{"opportunity_from": "Lead"},
 		["name", "customer_name", "contact_email"],
@@ -84,7 +84,7 @@ def get_communication_details(filters):
 	)
 
 	for d in opportunities:
-		invoice = frappe.db.sql(
+		invoice = capkpi.db.sql(
 			"""
 				SELECT
 					date(creation)
@@ -102,7 +102,7 @@ def get_communication_details(filters):
 		if not invoice:
 			continue
 
-		communication_count = frappe.db.sql(
+		communication_count = capkpi.db.sql(
 			"""
 				SELECT
 					count(*)
@@ -117,7 +117,7 @@ def get_communication_details(filters):
 		if not communication_count:
 			continue
 
-		first_contact = frappe.db.sql(
+		first_contact = capkpi.db.sql(
 			"""
 				SELECT
 					date(communication_date)
@@ -134,7 +134,7 @@ def get_communication_details(filters):
 
 		duration = flt(date_diff(invoice[0][0], first_contact))
 
-		support_tickets = len(frappe.db.get_all("Issue", {"raised_by": d.contact_email}))
+		support_tickets = len(capkpi.db.get_all("Issue", {"raised_by": d.contact_email}))
 		communication_list.append(
 			{
 				"customer": d.customer_name,

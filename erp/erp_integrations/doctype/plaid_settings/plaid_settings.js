@@ -1,9 +1,9 @@
 // Copyright (c) 2018, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.integrations");
+capkpi.provide("erp.integrations");
 
-frappe.ui.form.on('Plaid Settings', {
+capkpi.ui.form.on('Plaid Settings', {
 	enabled: function (frm) {
 		frm.toggle_reqd('plaid_client_id', frm.doc.enabled);
 		frm.toggle_reqd('plaid_secret', frm.doc.enabled);
@@ -21,13 +21,13 @@ frappe.ui.form.on('Plaid Settings', {
 			});
 
 			frm.add_custom_button(__("Sync Now"), () => {
-				frappe.call({
+				capkpi.call({
 					method: "erp.erp_integrations.doctype.plaid_settings.plaid_settings.enqueue_synchronization",
 					freeze: true,
 					callback: () => {
 						let bank_transaction_link = '<a href="#List/Bank Transaction">Bank Transaction</a>';
 
-						frappe.msgprint({
+						capkpi.msgprint({
 							title: __("Sync Started"),
 							message: __("The sync has started in the background, please check the {0} list for new records.", [bank_transaction_link]),
 							alert: 1
@@ -49,7 +49,7 @@ erp.integrations.plaidLink = class plaidLink {
 	async init_config() {
 		this.product = ["auth", "transactions"];
 		this.plaid_env = this.frm.doc.plaid_env;
-		this.client_name = frappe.boot.sitename;
+		this.client_name = capkpi.boot.sitename;
 		this.token = await this.get_link_token();
 		this.init_plaid();
 	}
@@ -57,7 +57,7 @@ erp.integrations.plaidLink = class plaidLink {
 	async get_link_token() {
 		const token = await this.frm.call("get_link_token").then(resp => resp.message);
 		if (!token) {
-			frappe.throw(__('Cannot retrieve link token. Check Error Log for more information'));
+			capkpi.throw(__('Cannot retrieve link token. Check Error Log for more information'));
 		}
 		return token;
 	}
@@ -106,14 +106,14 @@ erp.integrations.plaidLink = class plaidLink {
 	}
 
 	onScriptError(error) {
-		frappe.msgprint(__("There was an issue connecting to Plaid's authentication server. Check browser console for more information"));
+		capkpi.msgprint(__("There was an issue connecting to Plaid's authentication server. Check browser console for more information"));
 		console.log(error);
 	}
 
 	plaid_success(token, response) {
 		const me = this;
 
-		frappe.prompt({
+		capkpi.prompt({
 			fieldtype: "Link",
 			options: "Company",
 			label: __("Company"),
@@ -121,17 +121,17 @@ erp.integrations.plaidLink = class plaidLink {
 			reqd: 1
 		}, (data) => {
 			me.company = data.company;
-			frappe.xcall('erp.erp_integrations.doctype.plaid_settings.plaid_settings.add_institution', {
+			capkpi.xcall('erp.erp_integrations.doctype.plaid_settings.plaid_settings.add_institution', {
 				token: token,
 				response: response
 			}).then((result) => {
-				frappe.xcall('erp.erp_integrations.doctype.plaid_settings.plaid_settings.add_bank_accounts', {
+				capkpi.xcall('erp.erp_integrations.doctype.plaid_settings.plaid_settings.add_bank_accounts', {
 					response: response,
 					bank: result,
 					company: me.company
 				});
 			}).then(() => {
-				frappe.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
+				capkpi.show_alert({ message: __("Bank accounts added"), indicator: 'green' });
 			});
 		}, __("Select a company"), __("Continue"));
 	}

@@ -2,8 +2,8 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 
 class PurchaseOrderItem(Document):
@@ -11,4 +11,4 @@ class PurchaseOrderItem(Document):
 
 
 def on_doctype_update():
-	frappe.db.add_index("Purchase Order Item", ["item_code", "warehouse"])
+	capkpi.db.add_index("Purchase Order Item", ["item_code", "warehouse"])

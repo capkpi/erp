@@ -1,7 +1,7 @@
-frappe.ui.form.on("Payment Entry", {
+capkpi.ui.form.on("Payment Entry", {
 	company: function(frm) {
-		frappe.call({
-			'method': 'frappe.contacts.doctype.address.address.get_default_address',
+		capkpi.call({
+			'method': 'capkpi.contacts.doctype.address.address.get_default_address',
 			'args': {
 				'doctype': 'Company',
 				'name': frm.doc.company
@@ -14,8 +14,8 @@ frappe.ui.form.on("Payment Entry", {
 
 	party: function(frm) {
 		if (frm.doc.party_type == "Customer" && frm.doc.party) {
-			frappe.call({
-				'method': 'frappe.contacts.doctype.address.address.get_default_address',
+			capkpi.call({
+				'method': 'capkpi.contacts.doctype.address.address.get_default_address',
 				'args': {
 					'doctype': 'Customer',
 					'name': frm.doc.party

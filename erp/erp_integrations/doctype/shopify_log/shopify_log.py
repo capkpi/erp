@@ -4,8 +4,8 @@
 
 import json
 
-import frappe
-from frappe.model.document import Document
+import capkpi
+from capkpi.model.document import Document
 
 from erp.erp_integrations.utils import get_webhook_address
 
@@ -18,22 +18,22 @@ def make_shopify_log(status="Queued", exception=None, rollback=False):
 	# if name not provided by log calling method then fetch existing queued state log
 	make_new = False
 
-	if not frappe.flags.request_id:
+	if not capkpi.flags.request_id:
 		make_new = True
 
 	if rollback:
-		frappe.db.rollback()
+		capkpi.db.rollback()
 
 	if make_new:
-		log = frappe.get_doc({"doctype": "Shopify Log"}).insert(ignore_permissions=True)
+		log = capkpi.get_doc({"doctype": "Shopify Log"}).insert(ignore_permissions=True)
 	else:
-		log = log = frappe.get_doc("Shopify Log", frappe.flags.request_id)
+		log = log = capkpi.get_doc("Shopify Log", capkpi.flags.request_id)
 
 	log.message = get_message(exception)
-	log.traceback = frappe.get_traceback()
+	log.traceback = capkpi.get_traceback()
 	log.status = status
 	log.save(ignore_permissions=True)
-	frappe.db.commit()
+	capkpi.db.commit()
 
 
 def get_message(exception):
@@ -61,7 +61,7 @@ def dump_request_data(data, event="create/order"):
 		),
 	}
 
-	log = frappe.get_doc(
+	log = capkpi.get_doc(
 		{
 			"doctype": "Shopify Log",
 			"request_data": json.dumps(data, indent=1),
@@ -69,8 +69,8 @@ def dump_request_data(data, event="create/order"):
 		}
 	).insert(ignore_permissions=True)
 
-	frappe.db.commit()
-	frappe.enqueue(
+	capkpi.db.commit()
+	capkpi.enqueue(
 		method=event_mapper[event],
 		queue="short",
 		timeout=300,
@@ -79,13 +79,13 @@ def dump_request_data(data, event="create/order"):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def resync(method, name, request_data):
-	frappe.db.set_value("Shopify Log", name, "status", "Queued", update_modified=False)
+	capkpi.db.set_value("Shopify Log", name, "status", "Queued", update_modified=False)
 	if not method.startswith("erp.erp_integrations.connectors.shopify_connection"):
 		return
 
-	frappe.enqueue(
+	capkpi.enqueue(
 		method=method,
 		queue="short",
 		timeout=300,

@@ -7,8 +7,8 @@ import math
 import time
 
 import dateutil
-import frappe
-from frappe import _
+import capkpi
+from capkpi import _
 from six import StringIO
 
 import erp.erp_integrations.doctype.amazon_mws_settings.amazon_mws_api as mws
@@ -19,7 +19,7 @@ def get_products_details():
 	products = get_products_instance()
 	reports = get_reports_instance()
 
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	market_place_list = return_as_list(mws_settings.market_place_id)
 
 	for marketplace in market_place_list:
@@ -31,7 +31,7 @@ def get_products_details():
 			listings_response = reports.get_report(report_id=report_id)
 
 			# Get ASIN Codes
-			string_io = StringIO(frappe.safe_decode(listings_response.original))
+			string_io = StringIO(capkpi.safe_decode(listings_response.original))
 			csv_rows = list(csv.reader(string_io, delimiter=str("\t")))
 			asin_list = list(set([row[1] for row in csv_rows[1:]]))
 			# break into chunks of 10
@@ -54,7 +54,7 @@ def get_products_details():
 
 
 def get_products_instance():
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	products = mws.Products(
 		account_id=mws_settings.seller_id,
 		access_key=mws_settings.aws_access_key_id,
@@ -67,7 +67,7 @@ def get_products_instance():
 
 
 def get_reports_instance():
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	reports = mws.Reports(
 		account_id=mws_settings.seller_id,
 		access_key=mws_settings.aws_access_key_id,
@@ -126,7 +126,7 @@ def request_and_fetch_report_id(report_type, start_date=None, end_date=None, mar
 
 def call_mws_method(mws_method, *args, **kwargs):
 
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	max_retries = mws_settings.max_retry_limit
 
 	for x in range(0, max_retries):
@@ -135,26 +135,26 @@ def call_mws_method(mws_method, *args, **kwargs):
 			return response
 		except Exception as e:
 			delay = math.pow(4, x) * 125
-			frappe.log_error(message=e, title=f'Method "{mws_method.__name__}" failed')
+			capkpi.log_error(message=e, title=f'Method "{mws_method.__name__}" failed')
 			time.sleep(delay)
 			continue
 
 	mws_settings.enable_sync = 0
 	mws_settings.save()
 
-	frappe.throw(_("Sync has been temporarily disabled because maximum retries have been exceeded"))
+	capkpi.throw(_("Sync has been temporarily disabled because maximum retries have been exceeded"))
 
 
 def create_item_code(amazon_item_json, sku):
-	if frappe.db.get_value("Item", sku):
+	if capkpi.db.get_value("Item", sku):
 		return
 
-	item = frappe.new_doc("Item")
+	item = capkpi.new_doc("Item")
 
 	new_manufacturer = create_manufacturer(amazon_item_json)
 	new_brand = create_brand(amazon_item_json)
 
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 
 	item.item_code = sku
 	item.amazon_item_code = amazon_item_json.ASIN
@@ -167,10 +167,10 @@ def create_item_code(amazon_item_json, sku):
 
 	temp_item_group = amazon_item_json.Product.AttributeSets.ItemAttributes.ProductGroup
 
-	item_group = frappe.db.get_value("Item Group", filters={"item_group_name": temp_item_group})
+	item_group = capkpi.db.get_value("Item Group", filters={"item_group_name": temp_item_group})
 
 	if not item_group:
-		igroup = frappe.new_doc("Item Group")
+		igroup = capkpi.new_doc("Item Group")
 		igroup.item_group_name = temp_item_group
 		igroup.parent_item_group = mws_settings.item_group
 		igroup.insert()
@@ -187,13 +187,13 @@ def create_manufacturer(amazon_item_json):
 	if not amazon_item_json.Product.AttributeSets.ItemAttributes.Manufacturer:
 		return None
 
-	existing_manufacturer = frappe.db.get_value(
+	existing_manufacturer = capkpi.db.get_value(
 		"Manufacturer",
 		filters={"short_name": amazon_item_json.Product.AttributeSets.ItemAttributes.Manufacturer},
 	)
 
 	if not existing_manufacturer:
-		manufacturer = frappe.new_doc("Manufacturer")
+		manufacturer = capkpi.new_doc("Manufacturer")
 		manufacturer.short_name = amazon_item_json.Product.AttributeSets.ItemAttributes.Manufacturer
 		manufacturer.insert()
 		return manufacturer.short_name
@@ -205,11 +205,11 @@ def create_brand(amazon_item_json):
 	if not amazon_item_json.Product.AttributeSets.ItemAttributes.Brand:
 		return None
 
-	existing_brand = frappe.db.get_value(
+	existing_brand = capkpi.db.get_value(
 		"Brand", filters={"brand": amazon_item_json.Product.AttributeSets.ItemAttributes.Brand}
 	)
 	if not existing_brand:
-		brand = frappe.new_doc("Brand")
+		brand = capkpi.new_doc("Brand")
 		brand.brand = amazon_item_json.Product.AttributeSets.ItemAttributes.Brand
 		brand.insert()
 		return brand.brand
@@ -218,8 +218,8 @@ def create_brand(amazon_item_json):
 
 
 def create_item_price(amazon_item_json, item_code):
-	item_price = frappe.new_doc("Item Price")
-	item_price.price_list = frappe.db.get_value(
+	item_price = capkpi.new_doc("Item Price")
+	item_price.price_list = capkpi.db.get_value(
 		"Amazon MWS Settings", "Amazon MWS Settings", "price_list"
 	)
 	if not ("ListPrice" in amazon_item_json.Product.AttributeSets.ItemAttributes):
@@ -238,7 +238,7 @@ def get_orders(after_date):
 	try:
 		orders = get_orders_instance()
 		statuses = ["PartiallyShipped", "Unshipped", "Shipped", "Canceled"]
-		mws_settings = frappe.get_doc("Amazon MWS Settings")
+		mws_settings = capkpi.get_doc("Amazon MWS Settings")
 		market_place_list = return_as_list(mws_settings.market_place_id)
 
 		orders_response = call_mws_method(
@@ -269,11 +269,11 @@ def get_orders(after_date):
 			orders_response = call_mws_method(orders.list_orders_by_next_token, next_token)
 
 	except Exception as e:
-		frappe.log_error(title="get_orders", message=e)
+		capkpi.log_error(title="get_orders", message=e)
 
 
 def get_orders_instance():
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 	orders = mws.Orders(
 		account_id=mws_settings.seller_id,
 		access_key=mws_settings.aws_access_key_id,
@@ -292,11 +292,11 @@ def create_sales_order(order_json, after_date):
 
 	market_place_order_id = order_json.AmazonOrderId
 
-	so = frappe.db.get_value(
+	so = capkpi.db.get_value(
 		"Sales Order", filters={"amazon_order_id": market_place_order_id}, fieldname="name"
 	)
 
-	taxes_and_charges = frappe.db.get_value(
+	taxes_and_charges = capkpi.db.get_value(
 		"Amazon MWS Settings", "Amazon MWS Settings", "taxes_charges"
 	)
 
@@ -308,7 +308,7 @@ def create_sales_order(order_json, after_date):
 		delivery_date = dateutil.parser.parse(order_json.LatestShipDate).strftime("%Y-%m-%d")
 		transaction_date = dateutil.parser.parse(order_json.PurchaseDate).strftime("%Y-%m-%d")
 
-		so = frappe.get_doc(
+		so = capkpi.get_doc(
 			{
 				"doctype": "Sales Order",
 				"naming_series": "SO-",
@@ -318,7 +318,7 @@ def create_sales_order(order_json, after_date):
 				"delivery_date": delivery_date,
 				"transaction_date": transaction_date,
 				"items": items,
-				"company": frappe.db.get_value("Amazon MWS Settings", "Amazon MWS Settings", "company"),
+				"company": capkpi.db.get_value("Amazon MWS Settings", "Amazon MWS Settings", "company"),
 			}
 		)
 
@@ -337,7 +337,7 @@ def create_sales_order(order_json, after_date):
 		except Exception as e:
 			import traceback
 
-			frappe.log_error(message=traceback.format_exc(), title="Create Sales Order")
+			capkpi.log_error(message=traceback.format_exc(), title="Create Sales Order")
 
 
 def create_customer(order_json):
@@ -348,7 +348,7 @@ def create_customer(order_json):
 	else:
 		order_customer_name = order_json.BuyerName
 
-	existing_customer_name = frappe.db.get_value(
+	existing_customer_name = capkpi.db.get_value(
 		"Customer", filters={"name": order_customer_name}, fieldname="name"
 	)
 
@@ -359,27 +359,27 @@ def create_customer(order_json):
 			["Dynamic Link", "parenttype", "=", "Contact"],
 		]
 
-		existing_contacts = frappe.get_list("Contact", filters)
+		existing_contacts = capkpi.get_list("Contact", filters)
 
 		if existing_contacts:
 			pass
 		else:
-			new_contact = frappe.new_doc("Contact")
+			new_contact = capkpi.new_doc("Contact")
 			new_contact.first_name = order_customer_name
 			new_contact.append("links", {"link_doctype": "Customer", "link_name": existing_customer_name})
 			new_contact.insert()
 
 		return existing_customer_name
 	else:
-		mws_customer_settings = frappe.get_doc("Amazon MWS Settings")
-		new_customer = frappe.new_doc("Customer")
+		mws_customer_settings = capkpi.get_doc("Amazon MWS Settings")
+		new_customer = capkpi.new_doc("Customer")
 		new_customer.customer_name = order_customer_name
 		new_customer.customer_group = mws_customer_settings.customer_group
 		new_customer.territory = mws_customer_settings.territory
 		new_customer.customer_type = mws_customer_settings.customer_type
 		new_customer.save()
 
-		new_contact = frappe.new_doc("Contact")
+		new_contact = capkpi.new_doc("Contact")
 		new_contact.first_name = order_customer_name
 		new_contact.append("links", {"link_doctype": "Customer", "link_name": new_customer.name})
 
@@ -396,12 +396,12 @@ def create_address(amazon_order_item_json, customer_name):
 		["Dynamic Link", "parenttype", "=", "Address"],
 	]
 
-	existing_address = frappe.get_list("Address", filters)
+	existing_address = capkpi.get_list("Address", filters)
 
 	if not ("ShippingAddress" in amazon_order_item_json):
 		return None
 	else:
-		make_address = frappe.new_doc("Address")
+		make_address = capkpi.new_doc("Address")
 
 		if "AddressLine1" in amazon_order_item_json.ShippingAddress:
 			make_address.address_line1 = amazon_order_item_json.ShippingAddress.AddressLine1
@@ -420,7 +420,7 @@ def create_address(amazon_order_item_json, customer_name):
 			make_address.pincode = amazon_order_item_json.ShippingAddress.PostalCode
 
 		for address in existing_address:
-			address_doc = frappe.get_doc("Address", address["name"])
+			address_doc = capkpi.get_doc("Address", address["name"])
 			if (
 				address_doc.address_line1 == make_address.address_line1
 				and address_doc.pincode == make_address.pincode
@@ -442,7 +442,7 @@ def get_order_items(market_place_order_id):
 
 	order_items_list = return_as_list(order_items_response.parsed.OrderItems.OrderItem)
 
-	warehouse = frappe.db.get_value("Amazon MWS Settings", "Amazon MWS Settings", "warehouse")
+	warehouse = capkpi.db.get_value("Amazon MWS Settings", "Amazon MWS Settings", "warehouse")
 
 	while True:
 		for order_item in order_items_list:
@@ -478,7 +478,7 @@ def get_order_items(market_place_order_id):
 
 def get_item_code(order_item):
 	sku = order_item.SellerSKU
-	item_code = frappe.db.get_value("Item", {"item_code": sku}, "item_code")
+	item_code = capkpi.db.get_value("Item", {"item_code": sku}, "item_code")
 	if item_code:
 		return item_code
 
@@ -534,7 +534,7 @@ def get_charges_and_fees(market_place_order_id):
 
 def get_finances_instance():
 
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 
 	finances = mws.Finances(
 		account_id=mws_settings.seller_id,
@@ -549,19 +549,19 @@ def get_finances_instance():
 
 
 def get_account(name):
-	existing_account = frappe.db.get_value("Account", {"account_name": "Amazon {0}".format(name)})
+	existing_account = capkpi.db.get_value("Account", {"account_name": "Amazon {0}".format(name)})
 	account_name = existing_account
-	mws_settings = frappe.get_doc("Amazon MWS Settings")
+	mws_settings = capkpi.get_doc("Amazon MWS Settings")
 
 	if not existing_account:
 		try:
-			new_account = frappe.new_doc("Account")
+			new_account = capkpi.new_doc("Account")
 			new_account.account_name = "Amazon {0}".format(name)
 			new_account.company = mws_settings.company
 			new_account.parent_account = mws_settings.market_place_account_group
 			new_account.insert(ignore_permissions=True)
 			account_name = new_account.name
 		except Exception as e:
-			frappe.log_error(message=e, title="Create Account")
+			capkpi.log_error(message=e, title="Create Account")
 
 	return account_name

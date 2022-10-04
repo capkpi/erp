@@ -3,9 +3,9 @@ QUnit.module('Sales Invoice');
 QUnit.test("test sales Invoice with payment request", function(assert) {
 	assert.expect(4);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Sales Invoice', [
+			return capkpi.tests.make('Sales Invoice', [
 				{customer: 'Test Customer 1'},
 				{items: [
 					[
@@ -32,13 +32,13 @@ QUnit.test("test sales Invoice with payment request", function(assert) {
 			assert.ok(cur_frm.doc.grand_total==590, "Grad Total correct");
 
 		},
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(2),
-		() => frappe.tests.click_button('Close'),
-		() => frappe.tests.click_button('Make'),
-		() => frappe.tests.click_link('Payment Request'),
-		() => frappe.timeout(0.2),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(2),
+		() => capkpi.tests.click_button('Close'),
+		() => capkpi.tests.click_button('Make'),
+		() => capkpi.tests.click_link('Payment Request'),
+		() => capkpi.timeout(0.2),
 		() => { cur_frm.set_value('print_format','GST Tax Invoice');},
 		() => { cur_frm.set_value('email_to','test@gmail.com');},
 		() => cur_frm.save(),

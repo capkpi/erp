@@ -2,10 +2,10 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _
-from frappe.utils import cint
-from frappe.utils.nestedset import NestedSet
+import capkpi
+from capkpi import _
+from capkpi.utils import cint
+from capkpi.utils.nestedset import NestedSet
 
 from erp.accounts.utils import validate_field_number
 
@@ -28,29 +28,29 @@ class CostCenter(NestedSet):
 	def validate_distributed_cost_center(self):
 		if cint(self.enable_distributed_cost_center):
 			if not self.distributed_cost_center:
-				frappe.throw(_("Please enter distributed cost center"))
+				capkpi.throw(_("Please enter distributed cost center"))
 			if sum(x.percentage_allocation for x in self.distributed_cost_center) != 100:
-				frappe.throw(
+				capkpi.throw(
 					_("Total percentage allocation for distributed cost center should be equal to 100")
 				)
 			if not self.get("__islocal"):
 				if (
 					not cint(
-						frappe.get_cached_value("Cost Center", {"name": self.name}, "enable_distributed_cost_center")
+						capkpi.get_cached_value("Cost Center", {"name": self.name}, "enable_distributed_cost_center")
 					)
 					and self.check_if_part_of_distributed_cost_center()
 				):
-					frappe.throw(
+					capkpi.throw(
 						_(
 							"Cannot enable Distributed Cost Center for a Cost Center already allocated in another Distributed Cost Center"
 						)
 					)
 				if next((True for x in self.distributed_cost_center if x.cost_center == x.parent), False):
-					frappe.throw(_("Parent Cost Center cannot be added in Distributed Cost Center"))
+					capkpi.throw(_("Parent Cost Center cannot be added in Distributed Cost Center"))
 			if check_if_distributed_cost_center_enabled(
 				list(x.cost_center for x in self.distributed_cost_center)
 			):
-				frappe.throw(
+				capkpi.throw(
 					_(
 						"A Distributed Cost Center cannot be added in the Distributed Cost Center allocation table."
 					)
@@ -60,58 +60,58 @@ class CostCenter(NestedSet):
 
 	def validate_mandatory(self):
 		if self.cost_center_name != self.company and not self.parent_cost_center:
-			frappe.throw(_("Please enter parent cost center"))
+			capkpi.throw(_("Please enter parent cost center"))
 		elif self.cost_center_name == self.company and self.parent_cost_center:
-			frappe.throw(_("Root cannot have a parent cost center"))
+			capkpi.throw(_("Root cannot have a parent cost center"))
 
 	def validate_parent_cost_center(self):
 		if self.parent_cost_center:
-			if not frappe.db.get_value("Cost Center", self.parent_cost_center, "is_group"):
-				frappe.throw(
+			if not capkpi.db.get_value("Cost Center", self.parent_cost_center, "is_group"):
+				capkpi.throw(
 					_("{0} is not a group node. Please select a group node as parent cost center").format(
-						frappe.bold(self.parent_cost_center)
+						capkpi.bold(self.parent_cost_center)
 					)
 				)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def convert_group_to_ledger(self):
 		if self.check_if_child_exists():
-			frappe.throw(_("Cannot convert Cost Center to ledger as it has child nodes"))
+			capkpi.throw(_("Cannot convert Cost Center to ledger as it has child nodes"))
 		elif self.check_gle_exists():
-			frappe.throw(_("Cost Center with existing transactions can not be converted to ledger"))
+			capkpi.throw(_("Cost Center with existing transactions can not be converted to ledger"))
 		else:
 			self.is_group = 0
 			self.save()
 			return 1
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def convert_ledger_to_group(self):
 		if cint(self.enable_distributed_cost_center):
-			frappe.throw(
+			capkpi.throw(
 				_("Cost Center with enabled distributed cost center can not be converted to group")
 			)
 		if self.check_if_part_of_distributed_cost_center():
-			frappe.throw(
+			capkpi.throw(
 				_("Cost Center Already Allocated in a Distributed Cost Center cannot be converted to group")
 			)
 		if self.check_gle_exists():
-			frappe.throw(_("Cost Center with existing transactions can not be converted to group"))
+			capkpi.throw(_("Cost Center with existing transactions can not be converted to group"))
 		self.is_group = 1
 		self.save()
 		return 1
 
 	def check_gle_exists(self):
-		return frappe.db.get_value("GL Entry", {"cost_center": self.name})
+		return capkpi.db.get_value("GL Entry", {"cost_center": self.name})
 
 	def check_if_child_exists(self):
-		return frappe.db.sql(
+		return capkpi.db.sql(
 			"select name from `tabCost Center` where \
 			parent_cost_center = %s and docstatus != 2",
 			self.name,
 		)
 
 	def check_if_part_of_distributed_cost_center(self):
-		return frappe.db.get_value("Distributed Cost Center", {"cost_center": self.name})
+		return capkpi.db.get_value("Distributed Cost Center", {"cost_center": self.name})
 
 	def before_rename(self, olddn, newdn, merge=False):
 		# Add company abbr if not provided
@@ -130,7 +130,7 @@ class CostCenter(NestedSet):
 		super(CostCenter, self).after_rename(olddn, newdn, merge)
 
 		if not merge:
-			new_cost_center = frappe.db.get_value(
+			new_cost_center = capkpi.db.get_value(
 				"Cost Center", newdn, ["cost_center_name", "cost_center_number"], as_dict=1
 			)
 
@@ -156,7 +156,7 @@ class CostCenter(NestedSet):
 
 
 def on_doctype_update():
-	frappe.db.add_index("Cost Center", ["lft", "rgt"])
+	capkpi.db.add_index("Cost Center", ["lft", "rgt"])
 
 
 def get_name_with_number(new_account, account_number):
@@ -166,7 +166,7 @@ def get_name_with_number(new_account, account_number):
 
 
 def check_if_distributed_cost_center_enabled(cost_center_list):
-	value_list = frappe.get_list(
+	value_list = capkpi.get_list(
 		"Cost Center", {"name": ["in", cost_center_list]}, "enable_distributed_cost_center", as_list=1
 	)
 	return next((True for x in value_list if x[0]), False)

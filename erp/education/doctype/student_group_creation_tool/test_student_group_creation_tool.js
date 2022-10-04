@@ -5,21 +5,21 @@ QUnit.test('Test: Student Group Creation Tool', function(assert){
 	let done = assert.async();
 	let instructor_code;
 
-	frappe.run_serially([
+	capkpi.run_serially([
 		// Saving Instructor code beforehand
-		() => frappe.db.get_value('Instructor', {'instructor_name': 'Instructor 1'}, 'name'),
+		() => capkpi.db.get_value('Instructor', {'instructor_name': 'Instructor 1'}, 'name'),
 		(instructor) => {instructor_code = instructor.message.name;},
 
 		// Setting up the creation tool to generate and save Student Group
-		() => frappe.set_route('Form', 'Student Group Creation Tool'),
-		() => frappe.timeout(0.5),
+		() => capkpi.set_route('Form', 'Student Group Creation Tool'),
+		() => capkpi.timeout(0.5),
 		() => {
 			cur_frm.set_value("academic_year", "2016-17");
 			cur_frm.set_value("academic_term", "2016-17 (Semester 1)");
 			cur_frm.set_value("program", "Standard Test");
-			frappe.tests.click_button('Get Courses');
+			capkpi.tests.click_button('Get Courses');
 		},
-		() => frappe.timeout(1),
+		() => capkpi.timeout(1),
 		() => {
 			let no_of_courses = $('input.grid-row-check.pull-left').size() - 1;
 			assert.equal(cur_frm.doc.courses.length, no_of_courses, 'Successfully created groups using the tool');
@@ -48,10 +48,10 @@ QUnit.test('Test: Student Group Creation Tool', function(assert){
 		},
 
 		// Generating Student Group
-		() => frappe.timeout(0.5),
-		() => frappe.tests.click_button("Create Student Groups"),
-		() => frappe.timeout(0.5),
-		() => frappe.tests.click_button("Close"),
+		() => capkpi.timeout(0.5),
+		() => capkpi.tests.click_button("Create Student Groups"),
+		() => capkpi.timeout(0.5),
+		() => capkpi.tests.click_button("Close"),
 
 		// Goin to the generated group to set up student and instructor list
 		() => {
@@ -59,13 +59,13 @@ QUnit.test('Test: Student Group Creation Tool', function(assert){
 			let tasks = [];
 			group_name.forEach(index => {
 				tasks.push(
-					() => frappe.timeout(1),
-					() => frappe.set_route("Form", index),
-					() => frappe.timeout(0.5),
+					() => capkpi.timeout(1),
+					() => capkpi.set_route("Form", index),
+					() => capkpi.timeout(0.5),
 					() => {
 						assert.equal(cur_frm.doc.students.length, 5, 'Successfully fetched list of students');
 					},
-					() => frappe.timeout(0.5),
+					() => capkpi.timeout(0.5),
 					() => {
 						d = cur_frm.add_child('instructors');
 						d.instructor = instructor_code;
@@ -76,7 +76,7 @@ QUnit.test('Test: Student Group Creation Tool', function(assert){
 					},
 				);
 			});
-			return frappe.run_serially(tasks);
+			return capkpi.run_serially(tasks);
 		},
 
 		() => done()

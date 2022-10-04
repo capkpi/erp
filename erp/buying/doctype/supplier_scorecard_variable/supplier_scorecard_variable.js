@@ -1,9 +1,9 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-/* global frappe */
+/* global capkpi */
 
-frappe.ui.form.on("Supplier Scorecard Variable", {
+capkpi.ui.form.on("Supplier Scorecard Variable", {
 	refresh: function() {
 
 	}

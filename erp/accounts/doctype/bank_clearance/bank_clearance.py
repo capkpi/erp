@@ -2,11 +2,11 @@
 # License: GNU General Public License v3. See license.txt
 
 
-import frappe
-from frappe import _, msgprint
-from frappe.model.document import Document
-from frappe.query_builder.custom import ConstantColumn
-from frappe.utils import flt, fmt_money, getdate
+import capkpi
+from capkpi import _, msgprint
+from capkpi.model.document import Document
+from capkpi.query_builder.custom import ConstantColumn
+from capkpi.utils import flt, fmt_money, getdate
 
 import erp
 
@@ -14,19 +14,19 @@ form_grid_templates = {"journal_entries": "templates/form_grid/bank_reconciliati
 
 
 class BankClearance(Document):
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def get_payment_entries(self):
 		if not (self.from_date and self.to_date):
-			frappe.throw(_("From Date and To Date are Mandatory"))
+			capkpi.throw(_("From Date and To Date are Mandatory"))
 
 		if not self.account:
-			frappe.throw(_("Account is mandatory to get payment entries"))
+			capkpi.throw(_("Account is mandatory to get payment entries"))
 
 		condition = ""
 		if not self.include_reconciled_entries:
 			condition = "and (clearance_date IS NULL or clearance_date='0000-00-00')"
 
-		journal_entries = frappe.db.sql(
+		journal_entries = capkpi.db.sql(
 			"""
 			select
 				"Journal Entry" as payment_document, t1.name as payment_entry,
@@ -51,7 +51,7 @@ class BankClearance(Document):
 		if self.bank_account:
 			condition += "and bank_account = %(bank_account)s"
 
-		payment_entries = frappe.db.sql(
+		payment_entries = capkpi.db.sql(
 			"""
 			select
 				"Payment Entry" as payment_document, name as payment_entry,
@@ -79,10 +79,10 @@ class BankClearance(Document):
 			as_dict=1,
 		)
 
-		loan_disbursement = frappe.qb.DocType("Loan Disbursement")
+		loan_disbursement = capkpi.qb.DocType("Loan Disbursement")
 
 		loan_disbursements = (
-			frappe.qb.from_(loan_disbursement)
+			capkpi.qb.from_(loan_disbursement)
 			.select(
 				ConstantColumn("Loan Disbursement").as_("payment_document"),
 				loan_disbursement.name.as_("payment_entry"),
@@ -99,13 +99,13 @@ class BankClearance(Document):
 			.where(loan_disbursement.clearance_date.isnull())
 			.where(loan_disbursement.disbursement_account.isin([self.bank_account, self.account]))
 			.orderby(loan_disbursement.disbursement_date)
-			.orderby(loan_disbursement.name, frappe.qb.desc)
+			.orderby(loan_disbursement.name, capkpi.qb.desc)
 		).run(as_dict=1)
 
-		loan_repayment = frappe.qb.DocType("Loan Repayment")
+		loan_repayment = capkpi.qb.DocType("Loan Repayment")
 
 		loan_repayments = (
-			frappe.qb.from_(loan_repayment)
+			capkpi.qb.from_(loan_repayment)
 			.select(
 				ConstantColumn("Loan Repayment").as_("payment_document"),
 				loan_repayment.name.as_("payment_entry"),
@@ -123,12 +123,12 @@ class BankClearance(Document):
 			.where(loan_repayment.posting_date <= self.to_date)
 			.where(loan_repayment.payment_account.isin([self.bank_account, self.account]))
 			.orderby(loan_repayment.posting_date)
-			.orderby(loan_repayment.name, frappe.qb.desc)
+			.orderby(loan_repayment.name, capkpi.qb.desc)
 		).run(as_dict=1)
 
 		pos_sales_invoices, pos_purchase_invoices = [], []
 		if self.include_pos_transactions:
-			pos_sales_invoices = frappe.db.sql(
+			pos_sales_invoices = capkpi.db.sql(
 				"""
 				select
 					"Sales Invoice Payment" as payment_document, sip.name as payment_entry, sip.amount as debit,
@@ -145,7 +145,7 @@ class BankClearance(Document):
 				as_dict=1,
 			)
 
-			pos_purchase_invoices = frappe.db.sql(
+			pos_purchase_invoices = capkpi.db.sql(
 				"""
 				select
 					"Purchase Invoice" as payment_document, pi.name as payment_entry, pi.paid_amount as credit,
@@ -194,16 +194,16 @@ class BankClearance(Document):
 			row.update(d)
 			self.total_amount += flt(amount)
 
-	@frappe.whitelist()
+	@capkpi.whitelist()
 	def update_clearance_date(self):
 		clearance_date_updated = False
 		for d in self.get("payment_entries"):
 			if d.clearance_date:
 				if not d.payment_document:
-					frappe.throw(_("Row #{0}: Payment document is required to complete the transaction"))
+					capkpi.throw(_("Row #{0}: Payment document is required to complete the transaction"))
 
 				if d.cheque_date and getdate(d.clearance_date) < getdate(d.cheque_date):
-					frappe.throw(
+					capkpi.throw(
 						_("Row #{0}: Clearance date {1} cannot be before Cheque Date {2}").format(
 							d.idx, d.clearance_date, d.cheque_date
 						)
@@ -213,7 +213,7 @@ class BankClearance(Document):
 				if not d.clearance_date:
 					d.clearance_date = None
 
-				payment_entry = frappe.get_doc(d.payment_document, d.payment_entry)
+				payment_entry = capkpi.get_doc(d.payment_document, d.payment_entry)
 				payment_entry.db_set("clearance_date", d.clearance_date)
 
 				clearance_date_updated = True

@@ -4,9 +4,9 @@
 
 import json
 
-import frappe
-from frappe import _, scrub
-from frappe.utils import cint, flt, round_based_on_smallest_currency_fraction
+import capkpi
+from capkpi import _, scrub
+from capkpi.utils import cint, flt, round_based_on_smallest_currency_fraction
 
 import erp
 from erp.accounts.doctype.journal_entry.journal_entry import get_exchange_rate
@@ -22,8 +22,8 @@ from erp.stock.get_item_details import _get_item_tax_template
 class calculate_taxes_and_totals(object):
 	def __init__(self, doc):
 		self.doc = doc
-		frappe.flags.round_off_applicable_accounts = []
-		get_round_off_applicable_accounts(self.doc.company, frappe.flags.round_off_applicable_accounts)
+		capkpi.flags.round_off_applicable_accounts = []
+		get_round_off_applicable_accounts(self.doc.company, capkpi.flags.round_off_applicable_accounts)
 		self.calculate()
 
 	def calculate(self):
@@ -67,7 +67,7 @@ class calculate_taxes_and_totals(object):
 	def validate_item_tax_template(self):
 		for item in self.doc.get("items"):
 			if item.item_code and item.get("item_tax_template"):
-				item_doc = frappe.get_cached_doc("Item", item.item_code)
+				item_doc = capkpi.get_cached_doc("Item", item.item_code)
 				args = {
 					"net_rate": item.net_rate or item.rate,
 					"tax_category": self.doc.get("tax_category"),
@@ -81,7 +81,7 @@ class calculate_taxes_and_totals(object):
 				item_group_taxes = []
 
 				while item_group:
-					item_group_doc = frappe.get_cached_doc("Item Group", item_group)
+					item_group_doc = capkpi.get_cached_doc("Item Group", item_group)
 					item_group_taxes += item_group_doc.taxes or []
 					item_group = item_group_doc.parent_item_group
 
@@ -96,9 +96,9 @@ class calculate_taxes_and_totals(object):
 				if taxes:
 					if item.item_tax_template not in taxes:
 						item.item_tax_template = taxes[0]
-						frappe.msgprint(
+						capkpi.msgprint(
 							_("Row {0}: Item Tax template updated as per validity and rate applied").format(
-								item.idx, frappe.bold(item.item_code)
+								item.idx, capkpi.bold(item.item_code)
 							)
 						)
 
@@ -319,7 +319,7 @@ class calculate_taxes_and_totals(object):
 			return
 
 		if hasattr(self.doc, "shipping_rule") and self.doc.shipping_rule:
-			shipping_rule = frappe.get_doc("Shipping Rule", self.doc.shipping_rule)
+			shipping_rule = capkpi.get_doc("Shipping Rule", self.doc.shipping_rule)
 			shipping_rule.apply(self.doc)
 
 			self._calculate()
@@ -461,7 +461,7 @@ class calculate_taxes_and_totals(object):
 		tax.item_wise_tax_detail[key] = [tax_rate, flt(item_wise_tax_amount)]
 
 	def round_off_totals(self, tax):
-		if tax.account_head in frappe.flags.round_off_applicable_accounts:
+		if tax.account_head in capkpi.flags.round_off_applicable_accounts:
 			tax.tax_amount = round(tax.tax_amount, 0)
 			tax.tax_amount_after_discount_amount = round(tax.tax_amount_after_discount_amount, 0)
 
@@ -472,7 +472,7 @@ class calculate_taxes_and_totals(object):
 
 	def round_off_base_values(self, tax):
 		# Round off to nearest integer based on regional settings
-		if tax.account_head in frappe.flags.round_off_applicable_accounts:
+		if tax.account_head in capkpi.flags.round_off_applicable_accounts:
 			tax.base_tax_amount = round(tax.base_tax_amount, 0)
 			tax.base_tax_amount_after_discount_amount = round(tax.base_tax_amount_after_discount_amount, 0)
 
@@ -598,7 +598,7 @@ class calculate_taxes_and_totals(object):
 	def apply_discount_amount(self):
 		if self.doc.discount_amount:
 			if not self.doc.apply_discount_on:
-				frappe.throw(_("Please select Apply Discount On"))
+				capkpi.throw(_("Please select Apply Discount On"))
 
 			self.doc.base_discount_amount = flt(
 				self.doc.discount_amount * self.doc.conversion_rate, self.doc.precision("base_discount_amount")
@@ -689,7 +689,7 @@ class calculate_taxes_and_totals(object):
 				)
 
 			if invoice_total > 0 and self.doc.total_advance > invoice_total:
-				frappe.throw(
+				capkpi.throw(
 					_("Advance amount cannot be greater than {0} {1}").format(
 						self.doc.party_account_currency, invoice_total
 					)
@@ -777,7 +777,7 @@ class calculate_taxes_and_totals(object):
 				and self.doc.get("is_consolidated")
 			):
 				write_off_limit = flt(
-					frappe.db.get_value("POS Profile", self.doc.pos_profile, "write_off_limit")
+					capkpi.db.get_value("POS Profile", self.doc.pos_profile, "write_off_limit")
 				)
 				if write_off_limit and abs(self.doc.outstanding_amount) <= write_off_limit:
 					self.doc.write_off_outstanding_amount_automatically = 1
@@ -851,7 +851,7 @@ class calculate_taxes_and_totals(object):
 			if item.pricing_rules and not self.doc.ignore_pricing_rule:
 				has_margin = False
 				for d in get_applied_pricing_rules(item.pricing_rules):
-					pricing_rule = frappe.get_cached_doc("Pricing Rule", d)
+					pricing_rule = capkpi.get_cached_doc("Pricing Rule", d)
 
 					if pricing_rule.margin_rate_or_amount and (
 						(
@@ -890,7 +890,7 @@ class calculate_taxes_and_totals(object):
 		self.doc.other_charges_calculation = get_itemised_tax_breakup_html(self.doc)
 
 	def set_total_amount_to_default_mop(self, total_amount_to_pay):
-		default_mode_of_payment = frappe.db.get_value(
+		default_mode_of_payment = capkpi.db.get_value(
 			"POS Payment Method",
 			{"parent": self.doc.pos_profile, "default": 1},
 			["mode_of_payment"],
@@ -912,7 +912,7 @@ class calculate_taxes_and_totals(object):
 def get_itemised_tax_breakup_html(doc):
 	if not doc.taxes:
 		return
-	frappe.flags.company = doc.company
+	capkpi.flags.company = doc.company
 
 	# get headers
 	tax_accounts = []
@@ -930,9 +930,9 @@ def get_itemised_tax_breakup_html(doc):
 	get_rounded_tax_amount(itemised_tax, doc.precision("tax_amount", "taxes"))
 
 	update_itemised_tax_data(doc)
-	frappe.flags.company = None
+	capkpi.flags.company = None
 
-	return frappe.render_template(
+	return capkpi.render_template(
 		"templates/includes/itemised_tax_breakup.html",
 		dict(
 			headers=headers,
@@ -944,7 +944,7 @@ def get_itemised_tax_breakup_html(doc):
 	)
 
 
-@frappe.whitelist()
+@capkpi.whitelist()
 def get_round_off_applicable_accounts(company, account_list):
 	account_list = get_regional_round_off_accounts(company, account_list)
 
@@ -985,7 +985,7 @@ def get_itemised_tax(taxes, with_tax_account=False):
 		item_tax_map = json.loads(tax.item_wise_tax_detail) if tax.item_wise_tax_detail else {}
 		if item_tax_map:
 			for item_code, tax_data in item_tax_map.items():
-				itemised_tax.setdefault(item_code, frappe._dict())
+				itemised_tax.setdefault(item_code, capkpi._dict())
 
 				tax_rate = 0.0
 				tax_amount = 0.0
@@ -996,7 +996,7 @@ def get_itemised_tax(taxes, with_tax_account=False):
 				else:
 					tax_rate = flt(tax_data)
 
-				itemised_tax[item_code][tax.description] = frappe._dict(
+				itemised_tax[item_code][tax.description] = capkpi._dict(
 					dict(tax_rate=tax_rate, tax_amount=tax_amount)
 				)
 
@@ -1007,7 +1007,7 @@ def get_itemised_tax(taxes, with_tax_account=False):
 
 
 def get_itemised_taxable_amount(items):
-	itemised_taxable_amount = frappe._dict()
+	itemised_taxable_amount = capkpi._dict()
 	for item in items:
 		item_code = item.item_code or item.item_name
 		itemised_taxable_amount.setdefault(item_code, 0)
@@ -1035,7 +1035,7 @@ class init_landed_taxes_and_totals(object):
 		company_currency = erp.get_company_currency(self.doc.company)
 		for d in self.doc.get(self.tax_field):
 			if not d.account_currency:
-				account_currency = frappe.db.get_value("Account", d.expense_account, "account_currency")
+				account_currency = capkpi.db.get_value("Account", d.expense_account, "account_currency")
 				d.account_currency = account_currency or company_currency
 
 	def set_exchange_rate(self):
@@ -1052,7 +1052,7 @@ class init_landed_taxes_and_totals(object):
 				)
 
 			if not d.exchange_rate:
-				frappe.throw(_("Row {0}: Exchange Rate is mandatory").format(d.idx))
+				capkpi.throw(_("Row {0}: Exchange Rate is mandatory").format(d.idx))
 
 	def set_amounts_in_company_currency(self):
 		for d in self.doc.get(self.tax_field):

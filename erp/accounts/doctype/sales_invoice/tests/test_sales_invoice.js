@@ -3,9 +3,9 @@ QUnit.module('Sales Invoice');
 QUnit.test("test sales Invoice", function(assert) {
 	assert.expect(4);
 	let done = assert.async();
-	frappe.run_serially([
+	capkpi.run_serially([
 		() => {
-			return frappe.tests.make('Sales Invoice', [
+			return capkpi.tests.make('Sales Invoice', [
 				{customer: 'Test Customer 1'},
 				{items: [
 					[
@@ -29,14 +29,14 @@ QUnit.test("test sales Invoice", function(assert) {
 			// get tax details
 			assert.ok(cur_frm.doc.taxes_and_charges=='TEST In State GST - FT', "Tax details correct");
 			// get tax account head details
-			assert.ok(cur_frm.doc.taxes[0].account_head=='CGST - '+frappe.get_abbr(frappe.defaults.get_default('Company')), " Account Head abbr correct");
+			assert.ok(cur_frm.doc.taxes[0].account_head=='CGST - '+capkpi.get_abbr(capkpi.defaults.get_default('Company')), " Account Head abbr correct");
 			// grand_total Calculated
 			assert.ok(cur_frm.doc.grand_total==590, "Grad Total correct");
 
 		},
-		() => frappe.tests.click_button('Submit'),
-		() => frappe.tests.click_button('Yes'),
-		() => frappe.timeout(0.3),
+		() => capkpi.tests.click_button('Submit'),
+		() => capkpi.tests.click_button('Yes'),
+		() => capkpi.timeout(0.3),
 		() => done()
 	]);
 });

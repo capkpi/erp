@@ -1,8 +1,8 @@
 // Copyright (c) 2017, CapKPI Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-frappe.provide("erp.accounts.dimensions");
-frappe.ui.form.on('Fee Schedule', {
+capkpi.provide("erp.accounts.dimensions");
+capkpi.ui.form.on('Fee Schedule', {
 	setup: function(frm) {
 		frm.add_fetch('fee_structure', 'receivable_account', 'receivable_account');
 		frm.add_fetch('fee_structure', 'income_account', 'income_account');
@@ -43,7 +43,7 @@ frappe.ui.form.on('Fee Schedule', {
 			};
 		});
 
-		frappe.realtime.on('fee_schedule_progress', function(data) {
+		capkpi.realtime.on('fee_schedule_progress', function(data) {
 			if (data.reload && data.reload === 1) {
 				frm.reload_doc();
 			}
@@ -73,7 +73,7 @@ frappe.ui.form.on('Fee Schedule', {
 		}
 		if (frm.doc.docstatus === 1 && !frm.doc.fee_creation_status || frm.doc.fee_creation_status === 'Failed') {
 			frm.add_custom_button(__('Create Fees'), function() {
-				frappe.call({
+				capkpi.call({
 					method: 'create_fees',
 					doc: frm.doc,
 					callback: function() {
@@ -84,10 +84,10 @@ frappe.ui.form.on('Fee Schedule', {
 		}
 		if (frm.doc.fee_creation_status === 'Successful') {
 			frm.add_custom_button(__('View Fees Records'), function() {
-				frappe.route_options = {
+				capkpi.route_options = {
 					fee_schedule: frm.doc.name
 				};
-				frappe.set_route('List', 'Fees');
+				capkpi.set_route('List', 'Fees');
 			});
 		}
 
@@ -95,26 +95,26 @@ frappe.ui.form.on('Fee Schedule', {
 
 	fee_structure: function(frm) {
 		if (frm.doc.fee_structure) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.education.doctype.fee_schedule.fee_schedule.get_fee_structure',
 				args: {
 					'target_doc': frm.doc.name,
 					'source_name': frm.doc.fee_structure
 				},
 				callback: function(r) {
-					var doc = frappe.model.sync(r.message);
-					frappe.set_route('Form', doc[0].doctype, doc[0].name);
+					var doc = capkpi.model.sync(r.message);
+					capkpi.set_route('Form', doc[0].doctype, doc[0].name);
 				}
 			});
 		}
 	}
 });
 
-frappe.ui.form.on('Fee Schedule Student Group', {
+capkpi.ui.form.on('Fee Schedule Student Group', {
 	student_group: function(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 		if (row.student_group && frm.doc.academic_year) {
-			frappe.call({
+			capkpi.call({
 				method: 'erp.education.doctype.fee_schedule.fee_schedule.get_total_students',
 				args: {
 					'student_group': row.student_group,
@@ -124,7 +124,7 @@ frappe.ui.form.on('Fee Schedule Student Group', {
 				},
 				callback: function(r) {
 					if (!r.exc) {
-						frappe.model.set_value(cdt, cdn, 'total_students', r.message);
+						capkpi.model.set_value(cdt, cdn, 'total_students', r.message);
 					}
 				}
 			});

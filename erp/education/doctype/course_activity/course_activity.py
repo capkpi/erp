@@ -2,9 +2,9 @@
 # For license information, please see license.txt
 
 
-import frappe
-from frappe import _
-from frappe.model.document import Document
+import capkpi
+from capkpi import _
+from capkpi.model.document import Document
 
 
 class CourseActivity(Document):
@@ -12,7 +12,7 @@ class CourseActivity(Document):
 		self.check_if_enrolled()
 
 	def check_if_enrolled(self):
-		if frappe.db.exists("Course Enrollment", self.enrollment):
+		if capkpi.db.exists("Course Enrollment", self.enrollment):
 			return True
 		else:
-			frappe.throw(_("Course Enrollment {0} does not exists").format(self.enrollment))
+			capkpi.throw(_("Course Enrollment {0} does not exists").format(self.enrollment))

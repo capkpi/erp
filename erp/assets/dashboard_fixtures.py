@@ -3,9 +3,9 @@
 
 import json
 
-import frappe
-from frappe import _
-from frappe.utils import get_date_str, nowdate
+import capkpi
+from capkpi import _
+from capkpi.utils import get_date_str, nowdate
 
 from erp.accounts.dashboard_fixtures import _get_fiscal_year
 from erp.buying.dashboard_fixtures import get_company_for_dashboards
@@ -16,12 +16,12 @@ def get_data():
 	fiscal_year = _get_fiscal_year(nowdate())
 
 	if not fiscal_year:
-		return frappe._dict()
+		return capkpi._dict()
 
 	year_start_date = get_date_str(fiscal_year.get("year_start_date"))
 	year_end_date = get_date_str(fiscal_year.get("year_end_date"))
 
-	return frappe._dict(
+	return capkpi._dict(
 		{
 			"dashboards": get_dashboards(),
 			"charts": get_charts(fiscal_year, year_start_date, year_end_date),
