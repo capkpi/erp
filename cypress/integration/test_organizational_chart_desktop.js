@@ -11,12 +11,12 @@ context('Organizational Chart', () => {
 
 		cy.window().its('frappe.csrf_token').then(csrf_token => {
 			return cy.request({
-				url: `/api/method/erpnext.tests.ui_test_helpers.create_employee_records`,
+				url: `/api/method/erp.tests.ui_test_helpers.create_employee_records`,
 				method: 'POST',
 				headers: {
 					Accept: 'application/json',
 					'Content-Type': 'application/json',
-					'X-Frappe-CSRF-Token': csrf_token
+					'X-CapKPI-CSRF-Token': csrf_token
 				},
 				timeout: 60000
 			}).then(res => {
@@ -41,7 +41,7 @@ context('Organizational Chart', () => {
 		cy.get('@first-child').get('.node-info').find('.node-title').contains('CEO');
 		cy.get('@first-child').get('.node-info').find('.node-connections').contains('· 2 Connections');
 
-		cy.call('erpnext.tests.ui_test_helpers.get_employee_records').then(employee_records => {
+		cy.call('erp.tests.ui_test_helpers.get_employee_records').then(employee_records => {
 			// children of 1st root visible
 			cy.get(`div[data-parent="${employee_records.message[0]}"]`).as('child-node');
 			cy.get('@child-node')
@@ -58,7 +58,7 @@ context('Organizational Chart', () => {
 	});
 
 	it('hides active nodes children and connectors on expanding sibling node', () => {
-		cy.call('erpnext.tests.ui_test_helpers.get_employee_records').then(employee_records => {
+		cy.call('erp.tests.ui_test_helpers.get_employee_records').then(employee_records => {
 			// click sibling
 			cy.get(`#${employee_records.message[1]}`)
 				.click()
@@ -71,7 +71,7 @@ context('Organizational Chart', () => {
 	});
 
 	it('collapses previous level nodes and refreshes connectors on expanding child node', () => {
-		cy.call('erpnext.tests.ui_test_helpers.get_employee_records').then(employee_records => {
+		cy.call('erp.tests.ui_test_helpers.get_employee_records').then(employee_records => {
 			// click child node
 			cy.get(`#${employee_records.message[3]}`)
 				.click()
@@ -92,7 +92,7 @@ context('Organizational Chart', () => {
 	});
 
 	it('expands previous level nodes', () => {
-		cy.call('erpnext.tests.ui_test_helpers.get_employee_records').then(employee_records => {
+		cy.call('erp.tests.ui_test_helpers.get_employee_records').then(employee_records => {
 			cy.get(`#${employee_records.message[0]}`)
 				.click()
 				.should('have.class', 'active');
@@ -106,7 +106,7 @@ context('Organizational Chart', () => {
 	});
 
 	it('edit node navigates to employee master', () => {
-		cy.call('erpnext.tests.ui_test_helpers.get_employee_records').then(employee_records => {
+		cy.call('erp.tests.ui_test_helpers.get_employee_records').then(employee_records => {
 			cy.get(`#${employee_records.message[0]}`).find('.btn-edit-node')
 				.click();
 

@@ -1,6 +1,6 @@
-## ERPNext includes these public works
+## ERP includes these public works
 
-For Frappe Framework, please see attributions.md at https://github.com/frappe/frappe/
+For CapKPI Framework, please see attributions.md at https://github.com/capkpi/capkpi/
 
 #### Images
 

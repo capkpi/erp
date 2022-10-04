@@ -61,7 +61,7 @@
 	"globals": {
 		"frappe": true,
 		"Vue": true,
-		"erpnext": true,
+		"erp": true,
 		"hub": true,
 		"$": true,
 		"jQuery": true,

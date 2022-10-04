@@ -1,0 +1,13 @@
+#page-welcome-to-erp ul li {
+	margin: 7px 0px;
+}
+
+#page-welcome-to-erp .video-placeholder-image {
+	width: 100%;
+	cursor: pointer;
+}
+
+#page-welcome-to-erp .youtube-icon {
+	width: 10%;
+	cursor: pointer;
+}

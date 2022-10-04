@@ -15,7 +15,7 @@ pull_request_rules:
       comment:
           message: |
             @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on an appropriate hotfix branch. 
-            https://github.com/frappe/erpnext/wiki/Pull-Request-Checklist#which-branch
+            https://github.com/capkpi/erp/wiki/Pull-Request-Checklist#which-branch
 
   - name: backport to version-13-hotfix
     conditions:

@@ -1,15 +1,15 @@
 {
-  "name": "erpnext",
-  "description": "Open Source ERP System powered by the Frappe Framework",
+  "name": "erp",
+  "description": "Open Source ERP System powered by the CapKPI Framework",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frappe/erpnext.git"
+    "url": "git+https://github.com/capkpi/erp.git"
   },
-  "homepage": "https://erpnext.com",
-  "author": "Frappe Technologies Pvt. Ltd.",
+  "homepage": "https://capkpi.com",
+  "author": "CapKPI Technologies Pvt. Ltd.",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/frappe/erpnext/issues"
+    "url": "https://github.com/capkpi/erp/issues"
   },
   "devDependencies": {},
   "dependencies": {

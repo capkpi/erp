@@ -85,6 +85,6 @@ jobs:
       - name: Run Patch Tests
         run: |
           cd ~/frappe-bench/
-          wget https://erpnext.com/files/v10-erpnext.sql.gz
-          bench --site test_site --force restore ~/frappe-bench/v10-erpnext.sql.gz
+          wget https://capkpi.com/files/v10-erp.sql.gz
+          bench --site test_site --force restore ~/frappe-bench/v10-erp.sql.gz
           bench --site test_site migrate

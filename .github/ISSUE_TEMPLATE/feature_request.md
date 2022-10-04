@@ -1,15 +1,15 @@
 ---
 name: Feature request
-about: Suggest an idea to improve ERPNext
+about: Suggest an idea to improve ERP
 labels: feature-request
 ---
 
 <!--
-Welcome to ERPNext issue tracker! Before creating an issue, please heed the following:
+Welcome to ERP issue tracker! Before creating an issue, please heed the following:
 
-1. This tracker should only be used to report bugs and request features / enhancements to ERPNext
-    - For questions and general support, checkout the manual https://erpnext.com/docs/user/manual/en or use https://discuss.erpnext.com
-    - For documentation issues, refer to https://github.com/frappe/erpnext_com
+1. This tracker should only be used to report bugs and request features / enhancements to ERP
+    - For questions and general support, checkout the manual https://capkpi.com/docs/user/manual/en or use https://discuss.capkpi.com
+    - For documentation issues, refer to https://github.com/capkpi/erp_com
 2. Use the search function before creating a new issue. Duplicates will be closed and directed to
    the original discussion.
 3. When making a feature request, make sure to be as verbose as possible. The better you convey your message, the     greater the drive to make it happen.
